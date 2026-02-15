@@ -41,50 +41,65 @@
 <body>
 <h2>AFU — Donation Entry</h2>
 <div id="welcomeMessage" class="welcome"></div>
+
 <div id="authCard" class="card">
   <h3 class="center">Sign in to continue</h3>
+
   <div id="g_id_onload"
        data-client_id="1016131808942-6m77i0gq14t71g01q8o8qkaon29ilsv6.apps.googleusercontent.com"
        data-context="signin"
        data-ux_mode="popup"
        data-callback="onGoogleSignIn">
   </div>
+
   <div class="g_id_signin"
        data-type="standard"
        data-theme="outline"
        data-size="large">
   </div>
 </div>
+
 <div id="appContent" class="hidden">
+
   <!-- Donation Entry -->
   <div id="step2" class="card">
+
     <label>UDI Number (1-999)</label>
-    <input id="udiDigits" placeholder="1–999" type="number" min="1" max="999">
+    <div style="display:flex; align-items:center; gap:8px;">
+      <input id="udiDigits" placeholder="1–999" type="number" min="1" max="999" style="flex:1;">
+      <button id="scanBtn" 
+              style="background:none; border:none; font-size:26px; cursor:pointer; padding:6px;">
+        📷
+      </button>
+    </div>
+
     <label>Donation Amount ($)</label>
     <input id="amount" type="number" step="0.01" min="0">
+
     <label>Fundraiser</label>
     <select id="fundraiser">
       <option value="Candle">Candle</option>
       <option value="5k">5k</option>
       <option value="School Sale">School Sale</option>
     </select>
+
     <button onclick="submitDonation()">Submit</button>
   </div>
+
   <!-- Confirmation -->
   <div id="step3" class="card hidden">
     <h3>Submission Successful!</h3>
     <p>Your UDI: <span id="finalUDI"></span></p>
     <button onclick="restart()">Submit Another</button>
   </div>
+
 </div>
 
 <script>
-  // Define callback BEFORE loading anything else
   window.onGoogleSignIn = function(response) {
     console.log("Google Sign-In callback fired");
     window.googleCredential = response.credential;
     
-    // Wait for app.js to load if it hasn't yet
     const checkAndCall = () => {
       if (typeof window.onSignedIn === 'function') {
         window.onSignedIn();
@@ -95,8 +110,7 @@
     };
     checkAndCall();
   };
-  
-  // Register service worker
+
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/service-worker.js').catch(err => {
       console.error("Service worker registration failed:", err);
@@ -104,10 +118,8 @@
   }
 </script>
 
-<!-- Load app.js -->
 <script src="app.js"></script>
-
-<!-- Load Google Sign-In library -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+
 </body>
 </html>
