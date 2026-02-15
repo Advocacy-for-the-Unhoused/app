@@ -214,3 +214,53 @@ window.restart = function () {
   document.getElementById("step3").classList.add("hidden");
   document.getElementById("step2").classList.remove("hidden");
 };
+
+// =====================================================
+// BARCODE SCANNER (ADDED — NO OTHER CODE MODIFIED)
+// =====================================================
+async function startScan() {
+  if (!("BarcodeDetector" in window)) {
+    alert("Barcode scanning is not supported on this device.");
+    return;
+  }
+
+  const detector = new BarcodeDetector({
+    formats: ["code_128", "ean_13", "qr_code"]
+  });
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment" }
+    });
+
+    const video = document.createElement("video");
+    video.srcObject = stream;
+    await video.play();
+
+    const scanFrame = async () => {
+      try {
+        const barcodes = await detector.detect(video);
+        if (barcodes.length > 0) {
+          const value = barcodes[0].rawValue;
+
+          // Extract last 3 digits for your UDI format
+          const digits = value.replace(/\D/g, "").slice(-3);
+
+          document.getElementById("udiDigits").value = digits;
+
+          stream.getTracks().forEach(t => t.stop());
+          return;
+        }
+      } catch (err) {
+        console.error(err);
+      }
+      requestAnimationFrame(scanFrame);
+    };
+
+    scanFrame();
+  } catch (err) {
+    alert("Camera access denied or unavailable.");
+  }
+}
+
+document.getElementById("scanBtn").addEventListener("click", startScan);
