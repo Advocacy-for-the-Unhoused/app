@@ -37,8 +37,6 @@
     }
     .center { text-align: center; }
   </style>
-  <!-- Load app.js BEFORE Google Sign-In -->
-  <script src="app.js"></script>
 </head>
 <body>
 <h2>AFU — Donation Entry</h2>
@@ -61,9 +59,9 @@
   <!-- Donation Entry -->
   <div id="step2" class="card">
     <label>Last Two Digits of UDI</label>
-    <input id="udiDigits" placeholder="01–48">
+    <input id="udiDigits" placeholder="01–48" type="number" min="1" max="48">
     <label>Donation Amount ($)</label>
-    <input id="amount" type="number">
+    <input id="amount" type="number" step="0.01" min="0">
     <label>Fundraiser</label>
     <select id="fundraiser">
       <option value="Candle">Candle</option>
@@ -80,22 +78,33 @@
   </div>
 </div>
 
+<!-- Load app.js FIRST, synchronously -->
+<script src="app.js"></script>
+
+<!-- Then define the callback -->
 <script>
   function onGoogleSignIn(response) {
+    console.log("Google Sign-In callback fired");
     window.googleCredential = response.credential;
-    if (window.onSignedIn) {
+    
+    // Make sure onSignedIn exists
+    if (typeof window.onSignedIn === 'function') {
       window.onSignedIn();
     } else {
-      console.error("window.onSignedIn not defined yet");
+      console.error("window.onSignedIn is not defined!");
+      alert("Error: App not loaded properly. Please refresh the page.");
     }
   }
   
+  // Register service worker
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/service-worker.js').catch(err => {
       console.error("Service worker registration failed:", err);
     });
   }
 </script>
+
+<!-- Load Google Sign-In library LAST -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </body>
 </html>
