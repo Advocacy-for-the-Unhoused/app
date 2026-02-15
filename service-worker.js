@@ -1,10 +1,9 @@
-const CACHE_NAME = "afu-cache-v5";
+const CACHE_NAME = "afu-cache-v6";
 const ASSETS = [
   "/",
   "/index.html",
   "/app.js",
   "/manifest.json"
-  // Remove the icon references for now since they might not exist
 ];
 
 self.addEventListener("install", event => {
@@ -13,7 +12,6 @@ self.addEventListener("install", event => {
     caches.open(CACHE_NAME).then(cache => {
       return cache.addAll(ASSETS).catch(err => {
         console.error("Cache addAll failed:", err);
-        // Still complete installation even if caching fails
         return Promise.resolve();
       });
     })
@@ -32,7 +30,6 @@ self.addEventListener("activate", event => {
 self.addEventListener("fetch", event => {
   const url = event.request.url;
   
-  // Don't cache Google APIs or Scripts
   if (url.includes("script.google.com") || 
       url.includes("accounts.google.com") || 
       url.includes("gsi/client")) {
