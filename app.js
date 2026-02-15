@@ -1,6 +1,6 @@
 // app.js
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxYhHHWXyVuuBDRxpgtsUxJStzeJh_mI_P_nCBzj6yOT9D5OlEk7ViGMe8KjAq7oQw/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyuYlDNvZ9rvw-k3PtCaz7P0TgTBZNt0NAiNlKVvdNSSXdjYMCXqr6mRcXG_Liny_ei/exec";
 
 let volunteerEmail = null;
 let volunteerName = null;
