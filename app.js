@@ -31,13 +31,16 @@ window.onSignedIn = async function () {
 
   volunteerEmail = payload.email;
 
-  // POST WITHOUT JSON HEADERS (NO PREFLIGHT)
+  // FORM-ENCODED POST (NO PREFLIGHT)
+  const body = `lookupEmail=${encodeURIComponent(volunteerEmail)}`;
+
   const res = await fetch(SCRIPT_URL, {
     method: "POST",
-    body: JSON.stringify({ lookupEmail: volunteerEmail })
+    body
   });
 
   const info = await res.json();
+
   volunteerName = info.firstName;
   branchLetter = info.branchCode;
   branchName = info.branchName;
@@ -104,10 +107,15 @@ async function syncDonations() {
   const pending = await getUnsyncedDonations();
   for (const rec of pending) {
     try {
+      const body = Object.entries(rec)
+        .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+        .join("&");
+
       const res = await fetch(SCRIPT_URL, {
         method: "POST",
-        body: JSON.stringify(rec)
+        body
       });
+
       const json = await res.json();
       if (json.success) await deleteDonation(rec.id);
     } catch {
@@ -159,12 +167,4 @@ window.submitDonation = async function () {
   await saveDonationOffline(record);
   await syncDonations();
 
-  document.getElementById("step2").classList.add("hidden");
-  document.getElementById("step3").classList.remove("hidden");
-  document.getElementById("finalUDI").innerText = udi;
-};
-
-window.restart = function () {
-  document.getElementById("step3").classList.add("hidden");
-  document.getElementById("step2").classList.remove("hidden");
-};
+  document.getElementById("step2").classList.add
