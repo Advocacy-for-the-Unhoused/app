@@ -6,105 +6,96 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#146c7d">
-
   <style>
     body { font-family: Arial; max-width: 500px; margin: auto; padding: 20px; background: #f5f6fa; }
     h2 { text-align: center; }
     .card { background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; }
     .hidden { display: none; }
     .welcome { font-size: 18px; font-weight: bold; text-align: center; margin-bottom: 15px; color: #146c7d; }
-
     input, select, button {
-  width: 100%;
-  padding: 10px;
-  margin: 8px 0;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  box-sizing: border-box;
-}
-button {
-  background: #146c7d;
-  color: white;
-  border: none;
-  cursor: pointer;
-  font-size: 16px;
-}
-button:hover {
-  background: #0f5462;
-}
-label {
-  display: block;
-  margin-top: 10px;
-  font-weight: bold;
-}
-.center { text-align: center; }
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      box-sizing: border-box;
+    }
+    button {
+      background: #146c7d;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover {
+      background: #0f5462;
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    .center { text-align: center; }
   </style>
-
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <!-- Load app.js BEFORE Google Sign-In -->
+  <script src="app.js"></script>
 </head>
 <body>
-
 <h2>AFU — Donation Entry</h2>
 <div id="welcomeMessage" class="welcome"></div>
-
 <div id="authCard" class="card">
   <h3 class="center">Sign in to continue</h3>
-
   <div id="g_id_onload"
        data-client_id="1016131808942-6m77i0gq14t71g01q8o8qkaon29ilsv6.apps.googleusercontent.com"
        data-context="signin"
        data-ux_mode="popup"
        data-callback="onGoogleSignIn">
   </div>
-
   <div class="g_id_signin"
        data-type="standard"
        data-theme="outline"
        data-size="large">
   </div>
 </div>
-
 <div id="appContent" class="hidden">
-
   <!-- Donation Entry -->
   <div id="step2" class="card">
     <label>Last Two Digits of UDI</label>
     <input id="udiDigits" placeholder="01–48">
-
     <label>Donation Amount ($)</label>
     <input id="amount" type="number">
-
     <label>Fundraiser</label>
     <select id="fundraiser">
       <option value="Candle">Candle</option>
       <option value="5k">5k</option>
       <option value="School Sale">School Sale</option>
     </select>
-
     <button onclick="submitDonation()">Submit</button>
   </div>
-
   <!-- Confirmation -->
   <div id="step3" class="card hidden">
     <h3>Submission Successful!</h3>
     <p>Your UDI: <span id="finalUDI"></span></p>
     <button onclick="restart()">Submit Another</button>
   </div>
-
 </div>
-
-<script src="app.js"></script>
 
 <script>
   function onGoogleSignIn(response) {
     window.googleCredential = response.credential;
-    window.onSignedIn();
+    if (window.onSignedIn) {
+      window.onSignedIn();
+    } else {
+      console.error("window.onSignedIn not defined yet");
+    }
   }
-
+  
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/service-worker.js');
+    navigator.serviceWorker.register('/service-worker.js').catch(err => {
+      console.error("Service worker registration failed:", err);
+    });
   }
 </script>
-
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 </body>
 </html>
