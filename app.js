@@ -1,6 +1,6 @@
 // app.js
 
-const SCRIPT_URL = "SCRIPT_URL_HERE"; // Apps Script web app URL
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxYhHHWXyVuuBDRxpgtsUxJStzeJh_mI_P_nCBzj6yOT9D5OlEk7ViGMe8KjAq7oQw/exec";
 let lastBranch = null;
 let lastTeam = null;
 let volunteerEmail = null;
