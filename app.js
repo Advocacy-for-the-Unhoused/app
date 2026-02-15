@@ -34,7 +34,6 @@ window.onSignedIn = async function () {
   volunteerEmail = payload.email;
   console.log("Signed in as:", volunteerEmail);
 
-  // FORM-ENCODED POST (NO PREFLIGHT)
   const body = `lookupEmail=${encodeURIComponent(volunteerEmail)}`;
   console.log("Sending lookup request with body:", body);
   console.log("URL:", SCRIPT_URL);
@@ -67,7 +66,6 @@ window.onSignedIn = async function () {
     document.getElementById("authCard").classList.add("hidden");
     document.getElementById("appContent").classList.remove("hidden");
     
-    // Try to sync any pending donations
     await syncDonations();
   } catch (err) {
     console.error("Error during lookup:", err);
@@ -180,7 +178,6 @@ window.submitDonation = async function () {
     return;
   }
 
-  // NEW FORMAT: Branch code + 3-digit number (e.g., A001, A123)
   const udi = branchLetter + digits.toString().padStart(3, '0');
 
   console.log("Creating UDI:", udi);
@@ -191,7 +188,7 @@ window.submitDonation = async function () {
     branchLetter,
     fundraiser,
     volunteerEmail,
-    volunteerName,          // ADD THIS LINE
+    volunteerName,
     timestamp: Date.now()
   };
 
@@ -199,7 +196,6 @@ window.submitDonation = async function () {
     await saveDonationOffline(record);
     await syncDonations();
     
-    // Show confirmation
     document.getElementById("finalUDI").innerText = udi;
     document.getElementById("step2").classList.add("hidden");
     document.getElementById("step3").classList.remove("hidden");
@@ -209,66 +205,15 @@ window.submitDonation = async function () {
     }
   } catch (err) {
     console.error("Error saving donation:", err);
-    alert("Error saving donation: " + err.message);
-  }
-};
-
-  // NEW FORMAT: Branch code + 3-digit number (e.g., A001, A123)
-  const udi = branchLetter + digits.toString().padStart(3, '0');
-
-  console.log("Creating UDI:", udi);
-
-  const record = {
-    udi,
-    amount: Number(amount),
-    branchLetter,
-    fundraiser,
-    volunteerEmail,
-    timestamp: Date.now()
-  };
-
- try {
-    await saveDonationOffline(record);
-    await syncDonations();
-    
-    // Show confirmation
-    document.getElementById("finalUDI").innerText = udi;
-    document.getElementById("step2").classList.add("hidden");
-    document.getElementById("step3").classList.remove("hidden");
-    
-    if (!navigator.onLine) {
-      alert("Saved offline. Will sync when connection is restored.");
-    }
-  } catch (err) {
-    console.error("Error saving donation:", err);
-    alert("Error saving donation: " + err.message);
-  }
-};
-
-  try {
-    await saveDonationOffline(record);
-    await syncDonations();
-    
-    // Show confirmation
-    document.getElementById("finalUDI").innerText = udi;
-    document.getElementById("step2").classList.add("hidden");
-    document.getElementById("step3").classList.remove("hidden");
-    
-    if (!navigator.onLine) {
-      alert("Saved offline. Will sync when connection is restored.");
-    }
-  } catch (err) {
     alert("Error saving donation: " + err.message);
   }
 };
 
 window.restart = function () {
-  // Clear form
   document.getElementById("udiDigits").value = "";
   document.getElementById("amount").value = "";
   document.getElementById("fundraiser").value = "Candle";
   
-  // Show form, hide confirmation
   document.getElementById("step3").classList.add("hidden");
   document.getElementById("step2").classList.remove("hidden");
 };
