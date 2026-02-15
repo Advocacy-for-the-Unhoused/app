@@ -1,6 +1,6 @@
 // app.js
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxsqG2skviumSElKeolgMWhBKmZ3I8_wTz8YOWb1UkaR8V4FkHCbPJXeBN0fXSeUK1L/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxsqG2skviumSElKeolgMWhBKmZ3I8_wTz8YOWb1UkaR8V4FkHCbPJXeBN0fXSeUK1L/exec";  // UPDATE THIS!
 
 let volunteerEmail = null;
 let volunteerName = null;
@@ -35,8 +35,7 @@ window.onSignedIn = async function () {
   console.log("Signed in as:", volunteerEmail);
 
   const body = `lookupEmail=${encodeURIComponent(volunteerEmail)}`;
-  console.log("Sending lookup request with body:", body);
-  console.log("URL:", SCRIPT_URL);
+  console.log("Sending lookup request");
 
   try {
     const res = await fetch(SCRIPT_URL, {
@@ -157,8 +156,6 @@ async function syncDonations() {
 window.addEventListener('online', syncDonations);
 
 // ===== DONATION UI =====
-function pad2(n) { return n.toString().padStart(2, '0'); }
-
 window.submitDonation = async function () {
   if (!volunteerEmail) {
     alert("Please sign in first.");
