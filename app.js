@@ -1,6 +1,6 @@
 // app.js
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxNUbWJ7-ZtvEaK8qub4z2M2zm2g6PX73_CnC07r2lGoAvEU2uSygghjNis5ymMUD_1/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxYhHHWXyVuuBDRxpgtsUxJStzeJh_mI_P_nCBzj6yOT9D5OlEk7ViGMe8KjAq7oQw/exec";
 
 let volunteerEmail = null;
 let volunteerName = null;
@@ -23,6 +23,8 @@ function parseJwt(token) {
 
 // ===== SIGN-IN HANDLER =====
 window.onSignedIn = async function () {
+  console.log("onSignedIn called!");
+  
   const payload = parseJwt(window.googleCredential || "");
   if (!payload || !payload.email) {
     alert("Could not read your Google account. Please try again.");
@@ -35,6 +37,7 @@ window.onSignedIn = async function () {
   // FORM-ENCODED POST (NO PREFLIGHT)
   const body = `lookupEmail=${encodeURIComponent(volunteerEmail)}`;
   console.log("Sending lookup request with body:", body);
+  console.log("URL:", SCRIPT_URL);
 
   try {
     const res = await fetch(SCRIPT_URL, {
@@ -129,7 +132,7 @@ async function syncDonations() {
   for (const rec of pending) {
     try {
       const body = Object.entries(rec)
-        .filter(([k]) => k !== 'id') // Don't send IndexedDB's auto-generated id
+        .filter(([k]) => k !== 'id')
         .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
         .join("&");
 
@@ -145,7 +148,6 @@ async function syncDonations() {
       if (json.success) {
         await deleteDonation(rec.id);
       } else if (json.error === "UDI exists") {
-        // UDI already in sheet, remove from queue
         await deleteDonation(rec.id);
       }
     } catch {
@@ -185,6 +187,8 @@ window.submitDonation = async function () {
 
   const udi = branchLetter + mm + dd + yy + "-" + pad2(digits);
 
+  console.log("Creating UDI:", udi);
+
   const record = {
     udi,
     amount: Number(amount),
@@ -196,7 +200,7 @@ window.submitDonation = async function () {
 
   try {
     await saveDonationOffline(record);
-    const synced = await syncDonations();
+    await syncDonations();
     
     // Show confirmation
     document.getElementById("finalUDI").innerText = udi;
@@ -221,17 +225,3 @@ window.restart = function () {
   document.getElementById("step3").classList.add("hidden");
   document.getElementById("step2").classList.remove("hidden");
 };
-```
-
-**Now test it and check your browser console:**
-
-1. Right-click on the page → "Inspect" → "Console" tab
-2. Sign in with Google
-3. Look at the console logs
-
-You should see output like:
-```
-Signed in as: youremail@gmail.com
-Sending lookup request with body: lookupEmail=youremail%40gmail.com
-Response status: 200
-Raw response: {"firstName":"John","branchCode":"A","branchName":"Hopkinton"}
