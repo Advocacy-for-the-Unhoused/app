@@ -26,6 +26,7 @@ window.onSignedIn = function() {
     return;
   }
   volunteerEmail = payload.email;
+  const volunteerName = payload.given_name || payload.name || "";
 
   document.getElementById("authCard").classList.add("hidden");
   document.getElementById("appContent").classList.remove("hidden");
