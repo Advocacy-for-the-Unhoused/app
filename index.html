@@ -23,6 +23,7 @@
     .small-note { font-size: 14px; color: #555; margin-top: 5px; }
     .center { text-align: center; }
     .locked { background-color: #e0e0e0; cursor: not-allowed; }
+    .welcome { font-size: 18px; font-weight: bold; text-align: center; margin-bottom: 15px; color: #146c7d; }
   </style>
 
   <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -30,15 +31,18 @@
 <body>
 
 <h2>AFU — Donation Entry</h2>
+<div id="welcomeMessage" class="welcome"></div>
 
 <div id="authCard" class="card">
   <h3 class="center">Sign in to continue</h3>
+
   <div id="g_id_onload"
        data-client_id="1016131808942-6m77i0gq14t71g01q8o8qkaon29ilsv6.apps.googleusercontent.com"
        data-context="signin"
        data-ux_mode="popup"
        data-callback="onGoogleSignIn">
   </div>
+
   <div class="center" style="margin-top:10px;">
     <div class="g_id_signin"
          data-type="standard"
@@ -53,7 +57,7 @@
 
 <div id="appContent" class="hidden">
 
-  <!-- Step 1: Branch + Team -->
+  <!-- Step 1 -->
   <div id="step1" class="card">
     <label>State → Branch</label>
     <select id="branch">
@@ -80,7 +84,7 @@
     <button onclick="gotoStep2()">Next</button>
   </div>
 
-  <!-- Step 2: Enter Donation + UDI digits -->
+  <!-- Step 2 -->
   <div id="step2" class="card hidden">
     <p>Branch: <span id="selectedBranch"></span>, Team: <span id="selectedTeam"></span></p>
     <p>Today's Date: <span id="todayDate"></span></p>
@@ -107,7 +111,7 @@
     <button onclick="submitDonation()">Submit</button>
   </div>
 
-  <!-- Step 3: Confirmation -->
+  <!-- Step 3 -->
   <div id="step3" class="card hidden center">
     <h3>✅ Submission Successful!</h3>
     <p>Your UDI: <span id="finalUDI"></span></p>
@@ -118,17 +122,17 @@
 </div>
 
 <script src="app.js"></script>
+
 <script>
   // Google Sign-In callback
   function onGoogleSignIn(response) {
-    // Decode token on backend ideally; here we just extract email via JWT parsing or send token to backend.
-    // For now, we store the credential and let app.js handle email extraction / validation.
     window.googleCredential = response.credential;
     window.onSignedIn();
   }
 
+  // Register service worker
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('service-worker.js');
+    navigator.serviceWorker.register('/service-worker.js');
   }
 </script>
 
