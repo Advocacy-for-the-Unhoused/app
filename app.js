@@ -1,25 +1,27 @@
 // app.js
 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxYhHHWXyVuuBDRxpgtsUxJStzeJh_mI_P_nCBzj6yOT9D5OlEk7ViGMe8KjAq7oQw/exec";
-let lastBranch = null;
-let lastTeam = null;
-let volunteerEmail = null;
 
-// --- Simple JWT email extraction (not security-grade; backend should verify token) ---
+let volunteerEmail = null;
+let volunteerName = null;
+let branchLetter = null;
+let branchName = null;
+
+// --- Simple JWT decode ---
 function parseJwt(token) {
   try {
     const base64Url = token.split('.')[1];
     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-    }).join(''));
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(c =>
+      '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+    ).join(''));
     return JSON.parse(jsonPayload);
-  } catch (e) {
+  } catch {
     return null;
   }
 }
 
-window.onSignedIn = function() {
+window.onSignedIn = async function () {
   const payload = parseJwt(window.googleCredential || "");
   if (!payload || !payload.email) {
     alert("Could not read your Google account. Please try again.");
@@ -27,26 +29,31 @@ window.onSignedIn = function() {
   }
 
   volunteerEmail = payload.email;
-  const volunteerName = payload.given_name || payload.name || "";
 
-  // ⭐ Show greeting
+  // Fetch member info from backend
+  const res = await fetch(`${SCRIPT_URL}?email=${encodeURIComponent(volunteerEmail)}`);
+  const info = await res.json();
+
+  volunteerName = info.firstName;
+  branchLetter = info.branchCode;
+  branchName = info.branchName;
+
   document.getElementById("welcomeMessage").innerText =
-    `Welcome, ${volunteerName}!`;
+    `Welcome, ${volunteerName}! (${branchName} Branch)`;
 
-  // Show the app
   document.getElementById("authCard").classList.add("hidden");
   document.getElementById("appContent").classList.remove("hidden");
 };
 
-// --- IndexedDB for offline donations ---
+// --- IndexedDB (unchanged) ---
 let dbPromise = null;
 
 function getDB() {
   if (dbPromise) return dbPromise;
   dbPromise = new Promise((resolve, reject) => {
     const request = indexedDB.open("AFU_DB", 1);
-    request.onupgradeneeded = (event) => {
-      const db = event.target.result;
+    request.onupgradeneeded = e => {
+      const db = e.target.result;
       if (!db.objectStoreNames.contains("donations")) {
         db.createObjectStore("donations", { keyPath: "id", autoIncrement: true });
       }
@@ -62,7 +69,7 @@ async function saveDonationOffline(record) {
   return new Promise((resolve, reject) => {
     const tx = db.transaction("donations", "readwrite");
     tx.objectStore("donations").add(record);
-    tx.oncomplete = () => resolve();
+    tx.oncomplete = resolve;
     tx.onerror = () => reject(tx.error);
   });
 }
@@ -71,8 +78,7 @@ async function getUnsyncedDonations() {
   const db = await getDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction("donations", "readonly");
-    const store = tx.objectStore("donations");
-    const req = store.getAll();
+    const req = tx.objectStore("donations").getAll();
     req.onsuccess = () => resolve(req.result || []);
     req.onerror = () => reject(req.error);
   });
@@ -83,7 +89,7 @@ async function deleteDonation(id) {
   return new Promise((resolve, reject) => {
     const tx = db.transaction("donations", "readwrite");
     tx.objectStore("donations").delete(id);
-    tx.oncomplete = () => resolve();
+    tx.oncomplete = resolve;
     tx.onerror = () => reject(tx.error);
   });
 }
@@ -100,91 +106,48 @@ async function syncDonations() {
         body: JSON.stringify(rec)
       });
       const json = await res.json();
-      if (json.success) {
-        await deleteDonation(rec.id);
-      }
-    } catch (e) {
-      break; // stop on first failure
+      if (json.success) await deleteDonation(rec.id);
+    } catch {
+      break;
     }
   }
 }
 
 window.addEventListener('online', syncDonations);
 
-// --- UI logic ---
-function pad2(n){ return n.toString().padStart(2,'0'); }
+// --- Donation UI ---
+function pad2(n) { return n.toString().padStart(2, '0'); }
 
-window.gotoStep2 = function() {
-  let branch = document.getElementById("branch").value;
-  let team = document.getElementById("team").value;
-
-  if (lastBranch && lastTeam && !branch && !team) {
-    branch = lastBranch;
-    team = lastTeam;
-  }
-
-  if (!branch) { alert("Please select a branch."); return; }
-  if (!team) { alert("Please select a team."); return; }
-
-  lastBranch = branch;
-  lastTeam = team;
-
-  document.getElementById("step1").classList.add("hidden");
-  document.getElementById("step2").classList.remove("hidden");
-
-  document.getElementById("selectedBranch").innerText = branch;
-  document.getElementById("selectedTeam").innerText = team;
-
-  const today = new Date();
-  const mm = pad2(today.getMonth()+1);
-  const dd = pad2(today.getDate());
-  const yy = pad2(today.getFullYear()%100);
-  document.getElementById("todayDate").innerText = mm+dd+yy;
-
-  const teamRanges = {1:[1,16],2:[17,32],3:[33,48]};
-  document.getElementById("udiDigits").dataset.min = teamRanges[team][0];
-  document.getElementById("udiDigits").dataset.max = teamRanges[team][1];
-  document.getElementById("udiDigits").placeholder = teamRanges[team][0]+"–"+teamRanges[team][1];
-
-  document.getElementById("udiDigits").value = "";
-  document.getElementById("amount").value = "";
-};
-
-window.submitDonation = async function() {
+window.submitDonation = async function () {
   if (!volunteerEmail) {
     alert("Please sign in first.");
     return;
   }
 
-  const branch = lastBranch;
-  const team = lastTeam;
   const digits = parseInt(document.getElementById("udiDigits").value);
   const amount = document.getElementById("amount").value;
   const fundraiser = document.getElementById("fundraiser").value;
-  const min = parseInt(document.getElementById("udiDigits").dataset.min);
-  const max = parseInt(document.getElementById("udiDigits").dataset.max);
 
-  if (!digits || digits<min || digits>max){
-    alert("UDI digits must be between "+min+"–"+max);
+  if (!digits || digits < 1 || digits > 48) {
+    alert("UDI digits must be between 01–48");
     return;
   }
-  if (!amount || amount<=0){ alert("Enter a valid donation amount."); return; }
-  if (!fundraiser){ alert("Please select a fundraiser."); return; }
+  if (!amount || amount <= 0) {
+    alert("Enter a valid donation amount.");
+    return;
+  }
 
   const today = new Date();
-  const mm = pad2(today.getMonth()+1);
+  const mm = pad2(today.getMonth() + 1);
   const dd = pad2(today.getDate());
-  const yy = pad2(today.getFullYear()%100);
-  const udi = branch + mm + dd + yy + "-" + pad2(digits);
+  const yy = pad2(today.getFullYear() % 100);
 
-  const statusEl = document.getElementById("status");
-  statusEl.innerText = "Saving donation...";
+  const udi = branchLetter + mm + dd + yy + "-" + pad2(digits);
 
   const record = {
     udi,
     amount: Number(amount),
-    branchLetter: branch,
-    team,
+    branchLetter,
     fundraiser,
     volunteerEmail,
     timestamp: Date.now()
@@ -196,38 +159,9 @@ window.submitDonation = async function() {
   document.getElementById("step2").classList.add("hidden");
   document.getElementById("step3").classList.remove("hidden");
   document.getElementById("finalUDI").innerText = udi;
-  statusEl.innerText = "";
 };
 
-window.restart = function() {
+window.restart = function () {
   document.getElementById("step3").classList.add("hidden");
-
-  if (lastBranch && lastTeam) {
-    document.getElementById("step2").classList.remove("hidden");
-
-    document.getElementById("selectedBranch").innerText = lastBranch;
-    document.getElementById("selectedTeam").innerText = lastTeam;
-
-    const today = new Date();
-    const mm = pad2(today.getMonth()+1);
-    const dd = pad2(today.getDate());
-    const yy = pad2(today.getFullYear()%100);
-    document.getElementById("todayDate").innerText = mm+dd+yy;
-
-    const teamRanges = {1:[1,16],2:[17,32],3:[33,48]};
-    document.getElementById("udiDigits").dataset.min = teamRanges[lastTeam][0];
-    document.getElementById("udiDigits").dataset.max = teamRanges[lastTeam][1];
-    document.getElementById("udiDigits").placeholder = teamRanges[lastTeam][0]+"–"+teamRanges[lastTeam][1];
-
-    document.getElementById("udiDigits").value = "";
-    document.getElementById("amount").value = "";
-  } else {
-    document.getElementById("step1").classList.remove("hidden");
-    document.getElementById("step2").classList.add("hidden");
-
-    document.getElementById("branch").value = "";
-    document.getElementById("team").value = "";
-    document.getElementById("udiDigits").value = "";
-    document.getElementById("amount").value = "";
-  }
+  document.getElementById("step2").classList.remove("hidden");
 };
