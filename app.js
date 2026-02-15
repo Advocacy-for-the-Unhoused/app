@@ -1,6 +1,6 @@
 // app.js
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxYhHHWXyVuuBDRxpgtsUxJStzeJh_mI_P_nCBzj6yOT9D5OlEk7ViGMe8KjAq7oQw/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzsK5-dq4AMZyuWScMIx9oRtXS9RqpAvu3LlX9Mt1_tS4_eAFFV5x3azBXIXbwgTH1R/exec";
 
 let volunteerEmail = null;
 let volunteerName = null;
@@ -179,6 +179,39 @@ window.submitDonation = async function () {
     alert("Enter a valid donation amount.");
     return;
   }
+
+  // NEW FORMAT: Branch code + 3-digit number (e.g., A001, A123)
+  const udi = branchLetter + digits.toString().padStart(3, '0');
+
+  console.log("Creating UDI:", udi);
+
+  const record = {
+    udi,
+    amount: Number(amount),
+    branchLetter,
+    fundraiser,
+    volunteerEmail,
+    volunteerName,          // ADD THIS LINE
+    timestamp: Date.now()
+  };
+
+  try {
+    await saveDonationOffline(record);
+    await syncDonations();
+    
+    // Show confirmation
+    document.getElementById("finalUDI").innerText = udi;
+    document.getElementById("step2").classList.add("hidden");
+    document.getElementById("step3").classList.remove("hidden");
+    
+    if (!navigator.onLine) {
+      alert("Saved offline. Will sync when connection is restored.");
+    }
+  } catch (err) {
+    console.error("Error saving donation:", err);
+    alert("Error saving donation: " + err.message);
+  }
+};
 
   // NEW FORMAT: Branch code + 3-digit number (e.g., A001, A123)
   const udi = branchLetter + digits.toString().padStart(3, '0');
