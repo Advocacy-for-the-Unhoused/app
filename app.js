@@ -34,22 +34,29 @@ window.onSignedIn = async function () {
   // FORM-ENCODED POST (NO PREFLIGHT)
   const body = `lookupEmail=${encodeURIComponent(volunteerEmail)}`;
 
-  const res = await fetch(SCRIPT_URL, {
-    method: "POST",
-    body
-  });
+  try {
+    const res = await fetch(SCRIPT_URL, {
+      method: "POST",
+      body
+    });
 
-  const info = await res.json();
+    const info = await res.json();
 
-  volunteerName = info.firstName;
-  branchLetter = info.branchCode;
-  branchName = info.branchName;
+    volunteerName = info.firstName;
+    branchLetter = info.branchCode;
+    branchName = info.branchName;
 
-  document.getElementById("welcomeMessage").innerText =
-    `Welcome, ${volunteerName}! (${branchName} Branch)`;
+    document.getElementById("welcomeMessage").innerText =
+      `Welcome, ${volunteerName}! (${branchName} Branch)`;
 
-  document.getElementById("authCard").classList.add("hidden");
-  document.getElementById("appContent").classList.remove("hidden");
+    document.getElementById("authCard").classList.add("hidden");
+    document.getElementById("appContent").classList.remove("hidden");
+    
+    // Try to sync any pending donations
+    await syncDonations();
+  } catch (err) {
+    alert("Could not connect to server. Please check your connection.");
+  }
 };
 
 // ===== INDEXEDDB =====
@@ -105,9 +112,11 @@ async function deleteDonation(id) {
 async function syncDonations() {
   if (!navigator.onLine) return;
   const pending = await getUnsyncedDonations();
+  
   for (const rec of pending) {
     try {
       const body = Object.entries(rec)
+        .filter(([k]) => k !== 'id') // Don't send IndexedDB's auto-generated id
         .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
         .join("&");
 
@@ -117,7 +126,12 @@ async function syncDonations() {
       });
 
       const json = await res.json();
-      if (json.success) await deleteDonation(rec.id);
+      if (json.success) {
+        await deleteDonation(rec.id);
+      } else if (json.error === "UDI exists") {
+        // UDI already in sheet, remove from queue
+        await deleteDonation(rec.id);
+      }
     } catch {
       break;
     }
@@ -164,7 +178,30 @@ window.submitDonation = async function () {
     timestamp: Date.now()
   };
 
-  await saveDonationOffline(record);
-  await syncDonations();
+  try {
+    await saveDonationOffline(record);
+    const synced = await syncDonations();
+    
+    // Show confirmation
+    document.getElementById("finalUDI").innerText = udi;
+    document.getElementById("step2").classList.add("hidden");
+    document.getElementById("step3").classList.remove("hidden");
+    
+    if (!navigator.onLine) {
+      alert("Saved offline. Will sync when connection is restored.");
+    }
+  } catch (err) {
+    alert("Error saving donation: " + err.message);
+  }
+};
 
-  document.getElementById("step2").classList.add
+window.restart = function () {
+  // Clear form
+  document.getElementById("udiDigits").value = "";
+  document.getElementById("amount").value = "";
+  document.getElementById("fundraiser").value = "Candle";
+  
+  // Show form, hide confirmation
+  document.getElementById("step3").classList.add("hidden");
+  document.getElementById("step2").classList.remove("hidden");
+};
