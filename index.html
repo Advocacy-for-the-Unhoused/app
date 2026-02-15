@@ -10,7 +10,7 @@
     body { font-family: Arial; max-width: 500px; margin: auto; padding: 20px; background: #f5f6fa; }
     h2 { text-align: center; }
     .card { background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; }
-    .hidden { display: none; }
+    .hidden { display: none !important; }
     .welcome { font-size: 18px; font-weight: bold; text-align: center; margin-bottom: 15px; color: #146c7d; }
     input, select, button {
       width: 100%;
@@ -36,6 +36,66 @@
       font-weight: bold;
     }
     .center { text-align: center; }
+    .input-group {
+      display: flex;
+      gap: 8px;
+      align-items: stretch;
+    }
+    .input-group input {
+      flex: 1;
+      margin: 0;
+    }
+    .input-group button {
+      width: auto;
+      padding: 10px 20px;
+      margin: 0;
+      white-space: nowrap;
+    }
+    
+    /* Camera Modal Styles */
+    #cameraModal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.95);
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    #scannerContainer {
+      width: 100%;
+      max-width: 500px;
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+    #reader {
+      width: 100%;
+      border: 2px solid #146c7d;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    #scanStatus {
+      text-align: center;
+      margin: 15px 0;
+      font-size: 16px;
+      color: #333;
+      min-height: 24px;
+    }
+    #closeScan {
+      width: 100%;
+      background: #dc3545;
+      margin-top: 10px;
+    }
+    #closeScan:hover {
+      background: #c82333;
+    }
   </style>
 </head>
 <body>
@@ -58,27 +118,21 @@
 <div id="appContent" class="hidden">
   <!-- Donation Entry -->
   <div id="step2" class="card">
-  <label>UDI Number (1-999)</label>
-  <div style="display: flex; gap: 8px;">
-    <input id="udiDigits" placeholder="1–999" type="number" min="1" max="999" style="flex: 1;">
-    <button id="scanBtn" type="button" style="width: auto; padding: 10px 20px;">📷 Scan</button>
+    <label>UDI Number (1-999)</label>
+    <div class="input-group">
+      <input id="udiDigits" placeholder="1–999" type="number" min="1" max="999">
+      <button id="scanBtn" type="button">📷 Scan</button>
+    </div>
+    <label>Donation Amount ($)</label>
+    <input id="amount" type="number" step="0.01" min="0">
+    <label>Fundraiser</label>
+    <select id="fundraiser">
+      <option value="Candle">Candle</option>
+      <option value="5k">5k</option>
+      <option value="School Sale">School Sale</option>
+    </select>
+    <button onclick="submitDonation()">Submit</button>
   </div>
-  <label>Donation Amount ($)</label>
-  <input id="amount" type="number" step="0.01" min="0">
-  <label>Fundraiser</label>
-  <select id="fundraiser">
-    <option value="Candle">Candle</option>
-    <option value="5k">5k</option>
-    <option value="School Sale">School Sale</option>
-  </select>
-  <button onclick="submitDonation()">Submit</button>
-</div>
-
-<!-- Camera preview (hidden by default) -->
-<div id="cameraModal" class="hidden" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: black; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-  <video id="scanVideo" style="max-width: 100%; max-height: 80vh;"></video>
-  <button id="closeScan" style="margin-top: 20px; background: red;">Close Scanner</button>
-</div>
   <!-- Confirmation -->
   <div id="step3" class="card hidden">
     <h3>Submission Successful!</h3>
@@ -87,13 +141,21 @@
   </div>
 </div>
 
+<!-- Camera Scanner Modal -->
+<div id="cameraModal" class="hidden">
+  <div id="scannerContainer">
+    <h3 style="margin-top: 0; text-align: center; color: #146c7d;">Scan Barcode</h3>
+    <div id="reader"></div>
+    <div id="scanStatus">Position barcode in the frame...</div>
+    <button id="closeScan">Close Scanner</button>
+  </div>
+</div>
+
 <script>
-  // Define callback BEFORE loading anything else
-  window.onGoogleSignIn = function(response) {
+  function onGoogleSignIn(response) {
     console.log("Google Sign-In callback fired");
     window.googleCredential = response.credential;
     
-    // Wait for app.js to load if it hasn't yet
     const checkAndCall = () => {
       if (typeof window.onSignedIn === 'function') {
         window.onSignedIn();
@@ -105,7 +167,6 @@
     checkAndCall();
   };
   
-  // Register service worker
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/service-worker.js').catch(err => {
       console.error("Service worker registration failed:", err);
@@ -113,10 +174,7 @@
   }
 </script>
 
-<!-- Load app.js -->
 <script src="app.js"></script>
-
-<!-- Load Google Sign-In library -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </body>
 </html>
