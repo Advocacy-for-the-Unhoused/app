@@ -1,10 +1,11 @@
 {
-  "name": "AFU",
-  "short_name": "AFU",
-  "start_url": "/AFU/index.html",
+  "name": "AFU Logger",
+  "short_name": "AFULogger",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#146c7d",
+  "theme_color": "#ffffff",
   "icons": [
     {
       "src": "icons/icon-192.png",
