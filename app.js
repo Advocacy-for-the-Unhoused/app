@@ -25,9 +25,15 @@ window.onSignedIn = function() {
     alert("Could not read your Google account. Please try again.");
     return;
   }
+
   volunteerEmail = payload.email;
   const volunteerName = payload.given_name || payload.name || "";
 
+  // ⭐ Show greeting
+  document.getElementById("welcomeMessage").innerText =
+    `Welcome, ${volunteerName}!`;
+
+  // Show the app
   document.getElementById("authCard").classList.add("hidden");
   document.getElementById("appContent").classList.remove("hidden");
 };
@@ -98,15 +104,14 @@ async function syncDonations() {
         await deleteDonation(rec.id);
       }
     } catch (e) {
-      // stop on first failure to avoid hammering
-      break;
+      break; // stop on first failure
     }
   }
 }
 
 window.addEventListener('online', syncDonations);
 
-// --- UI logic (adapted from your original) ---
+// --- UI logic ---
 function pad2(n){ return n.toString().padStart(2,'0'); }
 
 window.gotoStep2 = function() {
@@ -185,10 +190,7 @@ window.submitDonation = async function() {
     timestamp: Date.now()
   };
 
-  // Save offline first
   await saveDonationOffline(record);
-
-  // Try to sync immediately if online
   await syncDonations();
 
   document.getElementById("step2").classList.add("hidden");
@@ -229,4 +231,3 @@ window.restart = function() {
     document.getElementById("amount").value = "";
   }
 };
-
