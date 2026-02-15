@@ -216,10 +216,8 @@ window.restart = function () {
 };
 
 // =====================================================
-// BARCODE SCANNER (ADDED — NO OTHER CODE MODIFIED)
 // =====================================================
-// =====================================================
-// BARCODE SCANNER
+// BARCODE SCANNER (IMPROVED WITH LIVE PREVIEW)
 // =====================================================
 
 // Load html5-qrcode library dynamically
@@ -231,15 +229,31 @@ function loadQRScanner() {
     }
     const script = document.createElement('script');
     script.src = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
-    script.onload = resolve;
-    script.onerror = reject;
+    script.onload = () => {
+      console.log("html5-qrcode library loaded");
+      resolve();
+    };
+    script.onerror = () => {
+      console.error("Failed to load html5-qrcode library");
+      reject(new Error("Failed to load scanner library"));
+    };
     document.head.appendChild(script);
   });
 }
 
 let html5QrCode = null;
+let isScanning = false;
 
 async function startScan() {
+  if (isScanning) {
+    console.log("Scanner already running");
+    return;
+  }
+
+  console.log("Starting scanner...");
+  const statusEl = document.getElementById('scanStatus');
+  statusEl.textContent = "Loading camera...";
+
   try {
     await loadQRScanner();
     
@@ -248,53 +262,112 @@ async function startScan() {
     modal.classList.remove('hidden');
     
     // Initialize scanner
-    html5QrCode = new Html5Qrcode("scanVideo");
+    html5QrCode = new Html5Qrcode("reader");
+    isScanning = true;
     
     const config = {
       fps: 10,
-      qrbox: { width: 250, height: 250 }
+      qrbox: { width: 250, height: 250 },
+      aspectRatio: 1.0
     };
     
+    statusEl.textContent = "Position barcode in the frame...";
+    
     await html5QrCode.start(
-      { facingMode: "environment" },
+      { facingMode: "environment" }, // Use back camera
       config,
       (decodedText) => {
-        console.log("Scanned:", decodedText);
+        console.log("Barcode scanned:", decodedText);
+        statusEl.textContent = "✓ Scanned: " + decodedText;
         
-        // Extract digits from barcode
+        // Extract digits from barcode (last 3 digits)
         const digits = decodedText.replace(/\D/g, '');
         const lastThree = digits.slice(-3);
         
-        if (lastThree) {
+        console.log("Extracted digits:", lastThree);
+        
+        if (lastThree && lastThree.length === 3) {
           document.getElementById("udiDigits").value = parseInt(lastThree, 10);
-          stopScan();
+          
+          // Wait a moment so user can see the success message
+          setTimeout(() => {
+            stopScan();
+          }, 500);
+        } else {
+          statusEl.textContent = "Invalid barcode format. Try again...";
         }
       },
       (errorMessage) => {
-        // Scanning errors (can be ignored, happens continuously)
+        // Scanning errors happen continuously - this is normal
+        // Don't log every frame's error
       }
     );
+    
+    console.log("Scanner started successfully");
+    
   } catch (err) {
     console.error("Scanner error:", err);
-    alert("Could not start camera. Please enter UDI manually.");
-    stopScan();
+    statusEl.textContent = "Camera error: " + err.message;
+    isScanning = false;
+    
+    setTimeout(() => {
+      alert("Could not start camera. Please:\n1. Grant camera permission\n2. Make sure you're using HTTPS\n3. Try entering UDI manually");
+      stopScan();
+    }, 100);
   }
 }
 
 function stopScan() {
-  if (html5QrCode) {
-    html5QrCode.stop().then(() => {
-      html5QrCode.clear();
-      document.getElementById('cameraModal').classList.add('hidden');
-    }).catch(err => {
-      console.error("Error stopping scanner:", err);
-      document.getElementById('cameraModal').classList.add('hidden');
-    });
+  console.log("Stopping scanner...");
+  const statusEl = document.getElementById('scanStatus');
+  
+  if (html5QrCode && isScanning) {
+    html5QrCode.stop()
+      .then(() => {
+        console.log("Scanner stopped");
+        html5QrCode.clear();
+        html5QrCode = null;
+        isScanning = false;
+        document.getElementById('cameraModal').classList.add('hidden');
+        statusEl.textContent = "Position barcode in the frame...";
+      })
+      .catch(err => {
+        console.error("Error stopping scanner:", err);
+        html5QrCode = null;
+        isScanning = false;
+        document.getElementById('cameraModal').classList.add('hidden');
+        statusEl.textContent = "Position barcode in the frame...";
+      });
   } else {
+    isScanning = false;
     document.getElementById('cameraModal').classList.add('hidden');
+    statusEl.textContent = "Position barcode in the frame...";
   }
 }
 
-// Add event listeners
-document.getElementById("scanBtn").addEventListener("click", startScan);
-document.getElementById("closeScan").addEventListener("click", stopScan);
+// Add event listeners when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', attachScannerListeners);
+} else {
+  attachScannerListeners();
+}
+
+function attachScannerListeners() {
+  const scanBtn = document.getElementById("scanBtn");
+  const closeBtn = document.getElementById("closeScan");
+  
+  if (scanBtn) {
+    scanBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      startScan();
+    });
+  }
+  
+  if (closeBtn) {
+    closeBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      stopScan();
+    });
+  }
+})
+
