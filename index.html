@@ -58,18 +58,18 @@
 <div id="appContent" class="hidden">
   <!-- Donation Entry -->
   <div id="step2" class="card">
-    <label>Last Two Digits of UDI</label>
-    <input id="udiDigits" placeholder="01–48" type="number" min="1" max="48">
-    <label>Donation Amount ($)</label>
-    <input id="amount" type="number" step="0.01" min="0">
-    <label>Fundraiser</label>
-    <select id="fundraiser">
-      <option value="Candle">Candle</option>
-      <option value="5k">5k</option>
-      <option value="School Sale">School Sale</option>
-    </select>
-    <button onclick="submitDonation()">Submit</button>
-  </div>
+  <label>UDI Number (1-999)</label>
+  <input id="udiDigits" placeholder="1–999" type="number" min="1" max="999">
+  <label>Donation Amount ($)</label>
+  <input id="amount" type="number" step="0.01" min="0">
+  <label>Fundraiser</label>
+  <select id="fundraiser">
+    <option value="Candle">Candle</option>
+    <option value="5k">5k</option>
+    <option value="School Sale">School Sale</option>
+  </select>
+  <button onclick="submitDonation()">Submit</button>
+</div>
   <!-- Confirmation -->
   <div id="step3" class="card hidden">
     <h3>Submission Successful!</h3>
