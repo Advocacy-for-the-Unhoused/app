@@ -1,1 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AFU</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#146c7d">
 
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 500px; margin: auto; padding: 20px; background: #f5f6fa; }
+    h2 { color: #2c3e50; text-align: center; margin-bottom: 20px; }
+    .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    label { font-weight: bold; margin-top: 10px; display: block; }
+    input, select, button { width: 100%; padding: 12px; margin-top: 10px; font-size: 16px; border-radius: 6px; border: 1px solid #ccc; box-sizing: border-box; }
+    .row { display: flex; gap: 10px; }
+    .row input { flex: 1; }
+    button { background-color: #2ecc71; color: white; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
+    button:hover { background-color: #27ae60; }
+    .hidden { display: none; }
+    #status { margin-top: 15px; font-weight: bold; text-align: center; }
+    #finalUDI { font-weight: bold; color: #27ae60; }
+    .small-note { font-size: 14px; color: #555; margin-top: 5px; }
+    .center { text-align: center; }
+    .locked { background-color: #e0e0e0; cursor: not-allowed; }
+  </style>
+
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+
+<h2>AFU — Donation Entry</h2>
+
+<div id="authCard" class="card">
+  <h3 class="center">Sign in to continue</h3>
+  <div id="g_id_onload"
+       data-client_id="YOUR_GOOGLE_CLIENT_ID"
+       data-context="signin"
+       data-ux_mode="popup"
+       data-callback="onGoogleSignIn">
+  </div>
+  <div class="center" style="margin-top:10px;">
+    <div class="g_id_signin"
+         data-type="standard"
+         data-shape="rectangular"
+         data-theme="outline"
+         data-text="signin_with"
+         data-size="large"
+         data-logo_alignment="left">
+    </div>
+  </div>
+</div>
+
+<div id="appContent" class="hidden">
+
+  <!-- Step 1: Branch + Team -->
+  <div id="step1" class="card">
+    <label>State → Branch</label>
+    <select id="branch">
+      <option value="" disabled selected>Select Branch</option>
+      <optgroup label="Massachusetts">
+        <option value="A">Hopkinton</option>
+        <option value="H">Holliston</option>
+        <option value="W">Westford</option>
+        <option value="S">Shrewsbury</option>
+      </optgroup>
+      <optgroup label="Pennsylvania">
+        <option value="P">Pennsylvania</option>
+      </optgroup>
+    </select>
+
+    <label>Team</label>
+    <select id="team">
+      <option value="" disabled selected>Select Team</option>
+      <option value="1">Team 1</option>
+      <option value="2">Team 2</option>
+      <option value="3">Team 3</option>
+    </select>
+
+    <button onclick="gotoStep2()">Next</button>
+  </div>
+
+  <!-- Step 2: Enter Donation + UDI digits -->
+  <div id="step2" class="card hidden">
+    <p>Branch: <span id="selectedBranch"></span>, Team: <span id="selectedTeam"></span></p>
+    <p>Today's Date: <span id="todayDate"></span></p>
+
+    <div class="row">
+      <div>
+        <label>Last Two Digits of UDI</label>
+        <input id="udiDigits" placeholder="01–16">
+        <div class="small-note">Digits must be within your team range.</div>
+      </div>
+      <div>
+        <label>Donation Amount ($)</label>
+        <input id="amount" type="number" placeholder="Amount">
+      </div>
+    </div>
+
+    <label>Fundraiser</label>
+    <select id="fundraiser">
+      <option value="Candle" selected>Candle</option>
+      <option value="5k">5k</option>
+      <option value="School Sale">School Sale</option>
+    </select>
+
+    <button onclick="submitDonation()">Submit</button>
+  </div>
+
+  <!-- Step 3: Confirmation -->
+  <div id="step3" class="card hidden center">
+    <h3>✅ Submission Successful!</h3>
+    <p>Your UDI: <span id="finalUDI"></span></p>
+    <button onclick="restart()">Submit Another Donation</button>
+  </div>
+
+  <div id="status"></div>
+</div>
+
+<script src="app.js"></script>
+<script>
+  // Google Sign-In callback
+  function onGoogleSignIn(response) {
+    // Decode token on backend ideally; here we just extract email via JWT parsing or send token to backend.
+    // For now, we store the credential and let app.js handle email extraction / validation.
+    window.googleCredential = response.credential;
+    window.onSignedIn();
+  }
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js');
+  }
+</script>
+
+</body>
+</html>
