@@ -218,49 +218,83 @@ window.restart = function () {
 // =====================================================
 // BARCODE SCANNER (ADDED — NO OTHER CODE MODIFIED)
 // =====================================================
-async function startScan() {
-  if (!("BarcodeDetector" in window)) {
-    alert("Barcode scanning is not supported on this device.");
-    return;
-  }
+// =====================================================
+// BARCODE SCANNER
+// =====================================================
 
-  const detector = new BarcodeDetector({
-    formats: ["code_128", "ean_13", "qr_code"]
+// Load html5-qrcode library dynamically
+function loadQRScanner() {
+  return new Promise((resolve, reject) => {
+    if (window.Html5Qrcode) {
+      resolve();
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
+    script.onload = resolve;
+    script.onerror = reject;
+    document.head.appendChild(script);
   });
+}
 
+let html5QrCode = null;
+
+async function startScan() {
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "environment" }
-    });
-
-    const video = document.createElement("video");
-    video.srcObject = stream;
-    await video.play();
-
-    const scanFrame = async () => {
-      try {
-        const barcodes = await detector.detect(video);
-        if (barcodes.length > 0) {
-          const value = barcodes[0].rawValue;
-
-          // Extract last 3 digits for your UDI format
-          const digits = value.replace(/\D/g, "").slice(-3);
-
-          document.getElementById("udiDigits").value = digits;
-
-          stream.getTracks().forEach(t => t.stop());
-          return;
-        }
-      } catch (err) {
-        console.error(err);
-      }
-      requestAnimationFrame(scanFrame);
+    await loadQRScanner();
+    
+    // Show camera modal
+    const modal = document.getElementById('cameraModal');
+    modal.classList.remove('hidden');
+    
+    // Initialize scanner
+    html5QrCode = new Html5Qrcode("scanVideo");
+    
+    const config = {
+      fps: 10,
+      qrbox: { width: 250, height: 250 }
     };
-
-    scanFrame();
+    
+    await html5QrCode.start(
+      { facingMode: "environment" },
+      config,
+      (decodedText) => {
+        console.log("Scanned:", decodedText);
+        
+        // Extract digits from barcode
+        const digits = decodedText.replace(/\D/g, '');
+        const lastThree = digits.slice(-3);
+        
+        if (lastThree) {
+          document.getElementById("udiDigits").value = parseInt(lastThree, 10);
+          stopScan();
+        }
+      },
+      (errorMessage) => {
+        // Scanning errors (can be ignored, happens continuously)
+      }
+    );
   } catch (err) {
-    alert("Camera access denied or unavailable.");
+    console.error("Scanner error:", err);
+    alert("Could not start camera. Please enter UDI manually.");
+    stopScan();
   }
 }
 
+function stopScan() {
+  if (html5QrCode) {
+    html5QrCode.stop().then(() => {
+      html5QrCode.clear();
+      document.getElementById('cameraModal').classList.add('hidden');
+    }).catch(err => {
+      console.error("Error stopping scanner:", err);
+      document.getElementById('cameraModal').classList.add('hidden');
+    });
+  } else {
+    document.getElementById('cameraModal').classList.add('hidden');
+  }
+}
+
+// Add event listeners
 document.getElementById("scanBtn").addEventListener("click", startScan);
+document.getElementById("closeScan").addEventListener("click", stopScan);
