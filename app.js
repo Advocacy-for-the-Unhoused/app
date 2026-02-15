@@ -31,10 +31,9 @@ window.onSignedIn = async function () {
 
   volunteerEmail = payload.email;
 
-  // Fetch member info via POST
+  // POST WITHOUT JSON HEADERS (NO PREFLIGHT)
   const res = await fetch(SCRIPT_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ lookupEmail: volunteerEmail })
   });
 
@@ -107,7 +106,6 @@ async function syncDonations() {
     try {
       const res = await fetch(SCRIPT_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(rec)
       });
       const json = await res.json();
