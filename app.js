@@ -171,8 +171,8 @@ window.submitDonation = async function () {
   const amount = document.getElementById("amount").value;
   const fundraiser = document.getElementById("fundraiser").value;
 
-  if (!digits || digits < 1 || digits > 48) {
-    alert("UDI digits must be between 01–48");
+  if (!digits || digits < 1 || digits > 999) {
+    alert("UDI digits must be between 1–999");
     return;
   }
   if (!amount || amount <= 0) {
@@ -180,12 +180,8 @@ window.submitDonation = async function () {
     return;
   }
 
-  const today = new Date();
-  const mm = pad2(today.getMonth() + 1);
-  const dd = pad2(today.getDate());
-  const yy = pad2(today.getFullYear() % 100);
-
-  const udi = branchLetter + mm + dd + yy + "-" + pad2(digits);
+  // NEW FORMAT: Branch code + 3-digit number (e.g., A001, A123)
+  const udi = branchLetter + digits.toString().padStart(3, '0');
 
   console.log("Creating UDI:", udi);
 
@@ -197,6 +193,24 @@ window.submitDonation = async function () {
     volunteerEmail,
     timestamp: Date.now()
   };
+
+ try {
+    await saveDonationOffline(record);
+    await syncDonations();
+    
+    // Show confirmation
+    document.getElementById("finalUDI").innerText = udi;
+    document.getElementById("step2").classList.add("hidden");
+    document.getElementById("step3").classList.remove("hidden");
+    
+    if (!navigator.onLine) {
+      alert("Saved offline. Will sync when connection is restored.");
+    }
+  } catch (err) {
+    console.error("Error saving donation:", err);
+    alert("Error saving donation: " + err.message);
+  }
+};
 
   try {
     await saveDonationOffline(record);
