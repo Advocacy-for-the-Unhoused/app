@@ -7,7 +7,7 @@ let volunteerName = null;
 let branchLetter = null;
 let branchName = null;
 
-// --- Simple JWT decode ---
+// ===== JWT PARSE =====
 function parseJwt(token) {
   try {
     const base64Url = token.split('.')[1];
@@ -21,6 +21,7 @@ function parseJwt(token) {
   }
 }
 
+// ===== SIGN-IN HANDLER =====
 window.onSignedIn = async function () {
   const payload = parseJwt(window.googleCredential || "");
   if (!payload || !payload.email) {
@@ -30,10 +31,14 @@ window.onSignedIn = async function () {
 
   volunteerEmail = payload.email;
 
-  // Fetch member info from backend
-  const res = await fetch(`${SCRIPT_URL}?email=${encodeURIComponent(volunteerEmail)}`);
-  const info = await res.json();
+  // Fetch member info via POST
+  const res = await fetch(SCRIPT_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ lookupEmail: volunteerEmail })
+  });
 
+  const info = await res.json();
   volunteerName = info.firstName;
   branchLetter = info.branchCode;
   branchName = info.branchName;
@@ -45,7 +50,7 @@ window.onSignedIn = async function () {
   document.getElementById("appContent").classList.remove("hidden");
 };
 
-// --- IndexedDB (unchanged) ---
+// ===== INDEXEDDB =====
 let dbPromise = null;
 
 function getDB() {
@@ -94,7 +99,7 @@ async function deleteDonation(id) {
   });
 }
 
-// --- Sync engine ---
+// ===== SYNC ENGINE =====
 async function syncDonations() {
   if (!navigator.onLine) return;
   const pending = await getUnsyncedDonations();
@@ -115,7 +120,7 @@ async function syncDonations() {
 
 window.addEventListener('online', syncDonations);
 
-// --- Donation UI ---
+// ===== DONATION UI =====
 function pad2(n) { return n.toString().padStart(2, '0'); }
 
 window.submitDonation = async function () {
