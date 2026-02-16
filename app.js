@@ -1,11 +1,13 @@
 // app.js
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbymX8RyrLX7Jmk20FaoYMtVmic4UDWvEKXwMheE7KllAlBLvUktubE9WCtCxMh96StH/exec";  // UPDATE THIS!
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxsqG2skviumSElKeolgMWhBKmZ3I8_wTz8YOWb1UkaR8V4FkHCbPJXeBN0fXSeUK1L/exec";
 
 let volunteerEmail = null;
 let volunteerName = null;
 let branchLetter = null;
 let branchName = null;
+
+console.log("App.js loaded successfully!");
 
 // ===== JWT PARSE =====
 function parseJwt(token) {
@@ -216,11 +218,8 @@ window.restart = function () {
 };
 
 // =====================================================
+// BARCODE SCANNER
 // =====================================================
-// BARCODE SCANNER (IMPROVED WITH LIVE PREVIEW)
-// =====================================================
-
-// Load html5-qrcode library dynamically
 function loadQRScanner() {
   return new Promise((resolve, reject) => {
     if (window.Html5Qrcode) {
@@ -257,11 +256,9 @@ async function startScan() {
   try {
     await loadQRScanner();
     
-    // Show camera modal
     const modal = document.getElementById('cameraModal');
     modal.classList.remove('hidden');
     
-    // Initialize scanner
     html5QrCode = new Html5Qrcode("reader");
     isScanning = true;
     
@@ -274,13 +271,12 @@ async function startScan() {
     statusEl.textContent = "Position barcode in the frame...";
     
     await html5QrCode.start(
-      { facingMode: "environment" }, // Use back camera
+      { facingMode: "environment" },
       config,
       (decodedText) => {
         console.log("Barcode scanned:", decodedText);
         statusEl.textContent = "✓ Scanned: " + decodedText;
         
-        // Extract digits from barcode (last 3 digits)
         const digits = decodedText.replace(/\D/g, '');
         const lastThree = digits.slice(-3);
         
@@ -288,8 +284,6 @@ async function startScan() {
         
         if (lastThree && lastThree.length === 3) {
           document.getElementById("udiDigits").value = parseInt(lastThree, 10);
-          
-          // Wait a moment so user can see the success message
           setTimeout(() => {
             stopScan();
           }, 500);
@@ -298,8 +292,7 @@ async function startScan() {
         }
       },
       (errorMessage) => {
-        // Scanning errors happen continuously - this is normal
-        // Don't log every frame's error
+        // Scanning errors happen continuously - ignore
       }
     );
     
@@ -345,7 +338,7 @@ function stopScan() {
   }
 }
 
-// Add event listeners when DOM is ready
+// Attach event listeners
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', attachScannerListeners);
 } else {
@@ -369,5 +362,4 @@ function attachScannerListeners() {
       stopScan();
     });
   }
-})
-
+}
