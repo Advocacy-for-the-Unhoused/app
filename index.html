@@ -2,64 +2,192 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>AFU</title>
+  <title>AFU — Donation Logger</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#146c7d">
+  <meta name="theme-color" content="#C8522D">
+  <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Montserrat:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
   <style>
-    body { font-family: Arial; max-width: 500px; margin: auto; padding: 20px; background: #f5f6fa; }
-    h2 { text-align: center; }
-    .card { background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; }
-    .hidden { display: none !important; }
-    .welcome { font-size: 18px; font-weight: bold; text-align: center; margin-bottom: 15px; color: #146c7d; }
-    input, select, button {
+    :root {
+      --camp-orange: #C8522D;
+      --camp-cream: #F9F6F0;
+      --camp-dark: #1A1311;
+    }
+
+    body {
+      margin: 0;
+      background-color: var(--camp-dark);
+      font-family: 'Montserrat', sans-serif;
+      color: var(--camp-dark);
+      line-height: 1.8;
+      padding: 40px 20px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    h1 {
+      font-family: 'Abril Fatface', serif;
+      font-size: clamp(2rem, 8vw, 3.5rem);
+      color: var(--camp-cream);
+      text-align: center;
+      margin: 0 0 10px 0;
+    }
+
+    h1 span {
+      color: var(--camp-orange);
+      font-style: italic;
+    }
+
+    .subtitle {
+      font-family: 'Abril Fatface', serif;
+      font-size: clamp(0.9rem, 2.5vw, 1.2rem);
+      color: var(--camp-orange);
+      text-align: center;
+      margin-bottom: 40px;
+      letter-spacing: 1px;
+    }
+
+    .card {
+      background: white;
+      border: 4px solid var(--camp-dark);
+      padding: 40px;
+      max-width: 500px;
       width: 100%;
-      padding: 10px;
-      margin: 8px 0;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      box-sizing: border-box;
+      box-shadow: 15px 15px 0px var(--camp-orange);
+      margin-bottom: 30px;
     }
-    button {
-      background: #146c7d;
-      color: white;
-      border: none;
-      cursor: pointer;
-      font-size: 16px;
+
+    .hidden {
+      display: none !important;
     }
-    button:hover {
-      background: #0f5462;
+
+    .welcome {
+      font-size: 1.1rem;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 30px;
+      color: var(--camp-dark);
+      padding: 15px;
+      background: var(--camp-cream);
+      border-radius: 8px;
     }
+
+    h3 {
+      font-family: 'Abril Fatface', serif;
+      font-size: 1.8rem;
+      margin-top: 0;
+      margin-bottom: 20px;
+      color: var(--camp-dark);
+    }
+
     label {
       display: block;
-      margin-top: 10px;
-      font-weight: bold;
+      margin-top: 15px;
+      margin-bottom: 5px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--camp-dark);
     }
-    .center { text-align: center; }
+
+    input, select {
+      width: 100%;
+      padding: 12px;
+      margin: 0;
+      border: 2px solid var(--camp-dark);
+      border-radius: 0;
+      box-sizing: border-box;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 1rem;
+      background: white;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--camp-orange);
+      box-shadow: 0 0 0 3px rgba(200, 82, 45, 0.1);
+    }
+
+    button {
+      width: 100%;
+      padding: 15px;
+      margin-top: 20px;
+      border: 3px solid var(--camp-dark);
+      background: var(--camp-orange);
+      color: white;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border-radius: 0;
+    }
+
+    button:hover {
+      background: var(--camp-dark);
+      transform: translate(3px, 3px);
+      box-shadow: -3px -3px 0px var(--camp-orange);
+    }
+
+    button:active {
+      transform: translate(0, 0);
+      box-shadow: none;
+    }
+
     .input-group {
       display: flex;
-      gap: 8px;
+      gap: 10px;
       align-items: stretch;
+      margin-top: 5px;
     }
+
     .input-group input {
       flex: 1;
-      margin: 0;
     }
+
     .input-group button {
       width: auto;
-      padding: 10px 20px;
+      padding: 12px 20px;
       margin: 0;
-      white-space: nowrap;
+      font-size: 1.2rem;
     }
-    
-    /* Camera Modal Styles */
+
+    .center {
+      text-align: center;
+    }
+
+    /* Success message styling */
+    #step3 h3 {
+      color: var(--camp-orange);
+      margin-bottom: 10px;
+    }
+
+    #step3 p {
+      font-size: 1.1rem;
+      margin: 20px 0;
+    }
+
+    #finalUDI {
+      font-weight: 700;
+      color: var(--camp-orange);
+      font-size: 1.3rem;
+      font-family: 'Abril Fatface', serif;
+    }
+
+    /* Camera Modal */
     #cameraModal {
       position: fixed;
       top: 0;
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(0, 0, 0, 0.95);
+      background: rgba(26, 19, 17, 0.95);
       z-index: 1000;
       display: flex;
       flex-direction: column;
@@ -67,40 +195,79 @@
       justify-content: center;
       padding: 20px;
     }
+
     #scannerContainer {
-      width: 100%;
-      max-width: 500px;
       background: white;
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      border: 4px solid var(--camp-dark);
+      padding: 30px;
+      max-width: 500px;
+      width: 100%;
+      box-shadow: 15px 15px 0px var(--camp-orange);
     }
+
+    #scannerContainer h3 {
+      margin-top: 0;
+      text-align: center;
+      color: var(--camp-dark);
+      font-family: 'Abril Fatface', serif;
+    }
+
     #reader {
       width: 100%;
-      border: 2px solid #146c7d;
-      border-radius: 8px;
+      border: 3px solid var(--camp-dark);
       overflow: hidden;
+      margin: 20px 0;
     }
+
     #scanStatus {
       text-align: center;
       margin: 15px 0;
-      font-size: 16px;
-      color: #333;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--camp-dark);
       min-height: 24px;
     }
+
     #closeScan {
       width: 100%;
-      background: #dc3545;
+      background: var(--camp-dark);
+      border-color: var(--camp-orange);
       margin-top: 10px;
     }
+
     #closeScan:hover {
-      background: #c82333;
+      background: var(--camp-orange);
+      border-color: var(--camp-dark);
+    }
+
+    /* Google Sign-In button container */
+    .g_id_signin {
+      display: flex;
+      justify-content: center;
+      margin-top: 20px;
+    }
+
+    @media (max-width: 600px) {
+      .card {
+        padding: 25px;
+        box-shadow: 10px 10px 0px var(--camp-orange);
+      }
+      
+      #scannerContainer {
+        padding: 20px;
+        box-shadow: 10px 10px 0px var(--camp-orange);
+      }
     }
   </style>
 </head>
 <body>
-<h2>AFU — Donation Entry</h2>
+
+<h1>Advocacy for the <span>Unhoused</span></h1>
+<div class="subtitle">Donation Entry System</div>
+
 <div id="welcomeMessage" class="welcome"></div>
+
+<!-- Sign-in Card -->
 <div id="authCard" class="card">
   <h3 class="center">Sign in to continue</h3>
   <div id="g_id_onload"
@@ -115,27 +282,35 @@
        data-size="large">
   </div>
 </div>
+
+<!-- Main App Content -->
 <div id="appContent" class="hidden">
-  <!-- Donation Entry -->
+  <!-- Donation Entry Form -->
   <div id="step2" class="card">
+    <h3>Log Donation</h3>
+    
     <label>UDI Number (1-999)</label>
     <div class="input-group">
       <input id="udiDigits" placeholder="1–999" type="number" min="1" max="999">
-      <button id="scanBtn" type="button">📷 Scan</button>
+      <button id="scanBtn" type="button">📷</button>
     </div>
+    
     <label>Donation Amount ($)</label>
-    <input id="amount" type="number" step="0.01" min="0">
+    <input id="amount" type="number" step="0.01" min="0" placeholder="0.00">
+    
     <label>Fundraiser</label>
     <select id="fundraiser">
       <option value="Candle">Candle</option>
       <option value="5k">5k</option>
       <option value="School Sale">School Sale</option>
     </select>
-    <button onclick="submitDonation()">Submit</button>
+    
+    <button onclick="submitDonation()">Submit Donation</button>
   </div>
-  <!-- Confirmation -->
+
+  <!-- Confirmation Screen -->
   <div id="step3" class="card hidden">
-    <h3>Submission Successful!</h3>
+    <h3>✓ Submission Successful!</h3>
     <p>Your UDI: <span id="finalUDI"></span></p>
     <button onclick="restart()">Submit Another</button>
   </div>
@@ -144,7 +319,7 @@
 <!-- Camera Scanner Modal -->
 <div id="cameraModal" class="hidden">
   <div id="scannerContainer">
-    <h3 style="margin-top: 0; text-align: center; color: #146c7d;">Scan Barcode</h3>
+    <h3>Scan Barcode</h3>
     <div id="reader"></div>
     <div id="scanStatus">Position barcode in the frame...</div>
     <button id="closeScan">Close Scanner</button>
@@ -165,7 +340,7 @@
       }
     };
     checkAndCall();
-  };
+  }
   
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/service-worker.js').catch(err => {
