@@ -55,6 +55,13 @@ window.onSignedIn = async function () {
     const info = JSON.parse(responseText);
     console.log("Parsed info:", info);
 
+    // CHECK IF USER WAS FOUND IN ROSTER
+    if (!info.firstName || info.firstName === "User" || !info.branchCode || info.branchCode === "X") {
+      console.error("User not found in roster!");
+      alert(`Sorry, the email ${volunteerEmail} is not registered as a volunteer.\n\nPlease contact your branch coordinator to be added to the roster.`);
+      return;
+    }
+
     volunteerName = info.firstName;
     branchLetter = info.branchCode;
     branchName = info.branchName;
@@ -63,6 +70,7 @@ window.onSignedIn = async function () {
 
     document.getElementById("welcomeMessage").innerText =
       `Welcome, ${volunteerName}! (${branchName} Branch)`;
+    document.getElementById("welcomeMessage").style.display = "block";
 
     document.getElementById("authCard").classList.add("hidden");
     document.getElementById("appContent").classList.remove("hidden");
@@ -70,7 +78,7 @@ window.onSignedIn = async function () {
     await syncDonations();
   } catch (err) {
     console.error("Error during lookup:", err);
-    alert("Could not connect to server. Error: " + err.message);
+    alert("Could not connect to server. Please check your internet connection and try again.\n\nError: " + err.message);
   }
 };
 
