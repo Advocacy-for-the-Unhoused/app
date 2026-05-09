@@ -524,8 +524,6 @@
     checkAndCall();
   }
 
-  // REMOVED: duplicate toggleUDIPanel — now handled exclusively in app.js
-
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/service-worker.js').catch(err => {
       console.error("Service worker registration failed:", err);
