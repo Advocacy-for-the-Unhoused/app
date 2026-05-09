@@ -230,11 +230,16 @@
       display: flex;
       flex-direction: column;
       align-items: stretch;
+      /* FIX: clip the box-shadow bleed from nested cards */
+      overflow: hidden;
+      /* FIX: add right padding so the orange shadow is visible and not clipped */
+      padding-right: 15px;
+      box-sizing: border-box;
     }
 
     /* ── UDI Generator ── */
     #udiSection {
-      width: 100%;
+      width: 100%; /* FIX: explicitly constrain to parent width */
     }
 
     .udi-divider {
