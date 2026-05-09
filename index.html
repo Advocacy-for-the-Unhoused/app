@@ -36,10 +36,7 @@
       margin: 0 0 10px 0;
     }
 
-    h1 span {
-      color: var(--camp-orange);
-      font-style: italic;
-    }
+    h1 span { color: var(--camp-orange); font-style: italic; }
 
     .subtitle {
       font-family: 'Abril Fatface', serif;
@@ -60,9 +57,7 @@
       margin-bottom: 30px;
     }
 
-    .hidden {
-      display: none !important;
-    }
+    .hidden { display: none !important; }
 
     .welcome {
       font-size: 1.1rem;
@@ -73,7 +68,7 @@
       padding: 15px;
       background: var(--camp-cream);
       border-radius: 8px;
-      display: none; /* Hidden by default */
+      display: none;
     }
 
     h3 {
@@ -136,8 +131,13 @@
       box-shadow: -3px -3px 0px var(--camp-orange);
     }
 
-    button:active {
-      transform: translate(0, 0);
+    button:active { transform: translate(0,0); box-shadow: none; }
+
+    button:disabled {
+      background: #aaa;
+      border-color: #888;
+      cursor: not-allowed;
+      transform: none;
       box-shadow: none;
     }
 
@@ -148,9 +148,7 @@
       margin-top: 5px;
     }
 
-    .input-group input {
-      flex: 1;
-    }
+    .input-group input { flex: 1; }
 
     .input-group button {
       width: auto;
@@ -159,20 +157,10 @@
       font-size: 1.2rem;
     }
 
-    .center {
-      text-align: center;
-    }
+    .center { text-align: center; }
 
-    /* Success message styling */
-    #step3 h3 {
-      color: var(--camp-orange);
-      margin-bottom: 10px;
-    }
-
-    #step3 p {
-      font-size: 1.1rem;
-      margin: 20px 0;
-    }
+    #step3 h3 { color: var(--camp-orange); margin-bottom: 10px; }
+    #step3 p { font-size: 1.1rem; margin: 20px 0; }
 
     #finalUDI {
       font-weight: 700;
@@ -181,14 +169,11 @@
       font-family: 'Abril Fatface', serif;
     }
 
-    /* Camera Modal */
+    /* ── Camera Modal ── */
     #cameraModal {
       position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(26, 19, 17, 0.95);
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(26,19,17,0.95);
       z-index: 1000;
       display: flex;
       flex-direction: column;
@@ -209,7 +194,6 @@
     #scannerContainer h3 {
       margin-top: 0;
       text-align: center;
-      color: var(--camp-dark);
       font-family: 'Abril Fatface', serif;
     }
 
@@ -236,28 +220,169 @@
       margin-top: 10px;
     }
 
-    #closeScan:hover {
-      background: var(--camp-orange);
-      border-color: var(--camp-dark);
+    #closeScan:hover { background: var(--camp-orange); border-color: var(--camp-dark); }
+
+    .g_id_signin { display: flex; justify-content: center; margin-top: 20px; }
+
+    /* ── UDI Generator ── */
+    #udiSection {
+      width: 100%;
+      max-width: 500px;
     }
 
-    /* Google Sign-In button container */
-    .g_id_signin {
+    .udi-divider {
       display: flex;
-      justify-content: center;
-      margin-top: 20px;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .udi-divider::before,
+    .udi-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(249,246,240,0.15);
+    }
+
+    .udi-divider span {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: rgba(249,246,240,0.3);
+      white-space: nowrap;
+    }
+
+    #udiToggle {
+      width: 100%;
+      background: transparent;
+      border: 2px dashed rgba(249,246,240,0.2);
+      color: rgba(249,246,240,0.45);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 14px;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+      margin-bottom: 0;
+      box-shadow: none;
+      transform: none;
+    }
+
+    #udiToggle:hover {
+      border-color: var(--camp-orange);
+      color: var(--camp-orange);
+      background: transparent;
+      transform: none;
+      box-shadow: none;
+    }
+
+    #udiToggle .arrow {
+      display: inline-block;
+      margin-left: 8px;
+      transition: transform 0.25s;
+    }
+
+    #udiToggle.open .arrow { transform: rotate(180deg); }
+
+    #udiPanel {
+      overflow: hidden;
+      max-height: 0;
+      transition: max-height 0.35s ease;
+    }
+
+    #udiPanel.open { max-height: 800px; }
+
+    #udiPanel .card { margin-top: 16px; }
+
+    /* Loading bar */
+    .udi-loading { display: none; margin-top: 18px; }
+
+    .udi-bar-track {
+      width: 100%;
+      height: 5px;
+      background: rgba(26,19,17,0.12);
+      overflow: hidden;
+    }
+
+    .udi-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--camp-orange);
+      transition: width 28s linear;
+    }
+
+    .udi-loading-text {
+      margin-top: 10px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--camp-orange);
+    }
+
+    /* UDI results */
+    .udi-result { display: none; margin-top: 20px; }
+
+    .udi-result-label {
+      font-family: 'Abril Fatface', serif;
+      font-size: 1.2rem;
+      color: var(--camp-dark);
+      margin-bottom: 12px;
+    }
+
+    .udi-links a {
+      display: block;
+      padding: 12px 14px;
+      background: var(--camp-dark);
+      color: var(--camp-cream);
+      font-weight: 700;
+      font-size: 0.82rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      text-decoration: none;
+      margin-bottom: 8px;
+      transition: background 0.2s;
+    }
+
+    .udi-links a:hover { background: var(--camp-orange); }
+
+    .udi-next {
+      margin-top: 16px;
+      padding: 16px;
+      border-left: 4px solid var(--camp-orange);
+      background: var(--camp-cream);
+      font-size: 0.85rem;
+      line-height: 1.8;
+      color: var(--camp-dark);
+    }
+
+    .udi-next strong { font-weight: 700; }
+
+    .udi-tip { margin-top: 10px; font-size: 0.75rem; color: #888; }
+
+    .udi-error {
+      display: none;
+      margin-top: 16px;
+      padding: 14px;
+      background: #fff0ed;
+      border-left: 4px solid var(--camp-orange);
+      font-size: 0.85rem;
+      color: var(--camp-dark);
+    }
+
+    /* Read-only branch display */
+    input[readonly] {
+      background: #f0f0f0;
+      color: #555;
+      cursor: default;
     }
 
     @media (max-width: 600px) {
-      .card {
-        padding: 25px;
-        box-shadow: 10px 10px 0px var(--camp-orange);
-      }
-      
-      #scannerContainer {
-        padding: 20px;
-        box-shadow: 10px 10px 0px var(--camp-orange);
-      }
+      .card { padding: 25px; box-shadow: 10px 10px 0px var(--camp-orange); }
+      #scannerContainer { padding: 20px; box-shadow: 10px 10px 0px var(--camp-orange); }
     }
   </style>
 </head>
@@ -286,38 +411,88 @@
 
 <!-- Main App Content -->
 <div id="appContent" class="hidden">
-  <!-- Donation Entry Form -->
+
+  <!-- Donation Entry Form (UNCHANGED) -->
   <div id="step2" class="card">
     <h3>Log Donation</h3>
-    
+
     <label>UDI Number (1-999)</label>
     <div class="input-group">
       <input id="udiDigits" placeholder="1–999" type="number" min="1" max="999">
       <button id="scanBtn" type="button">📷</button>
     </div>
-    
+
     <label>Donation Amount ($)</label>
     <input id="amount" type="number" step="0.01" min="0" placeholder="0.00">
-    
+
     <label>Fundraiser</label>
     <select id="fundraiser">
       <option value="Candle">Candle</option>
       <option value="5k">5k</option>
       <option value="School Sale">School Sale</option>
     </select>
-    
+
     <button onclick="submitDonation()">Submit Donation</button>
   </div>
 
-  <!-- Confirmation Screen -->
+  <!-- Confirmation Screen (UNCHANGED) -->
   <div id="step3" class="card hidden">
     <h3>✓ Submission Successful!</h3>
     <p>Your UDI: <span id="finalUDI"></span></p>
     <button onclick="restart()">Submit Another</button>
   </div>
-</div>
 
-<!-- Camera Scanner Modal -->
+  <!-- ── UDI Slip Generator ── -->
+  <div id="udiSection">
+    <div class="udi-divider"><span>Branch Tools</span></div>
+
+    <button id="udiToggle" onclick="toggleUDIPanel()">
+      🖨 Print UDI Slips <span class="arrow">▾</span>
+    </button>
+
+    <div id="udiPanel">
+      <div class="card">
+        <h3>Generate Slips</h3>
+        <p style="font-size:0.85rem;color:#555;line-height:1.6;margin-bottom:6px;">
+          Generates 16 donor slips for your branch. Takes ~30 seconds.
+        </p>
+
+        <label for="udiDate">Fundraiser Date</label>
+        <input id="udiDate" type="date">
+
+        <label>Branch</label>
+        <input id="udiBranchDisplay" type="text" readonly>
+
+        <button id="udiGenBtn" onclick="runGenerateSlips()">Generate Slips</button>
+
+        <div class="udi-loading" id="udiLoading">
+          <div class="udi-bar-track">
+            <div class="udi-bar-fill" id="udiBarFill"></div>
+          </div>
+          <div class="udi-loading-text" id="udiLoadingText">Starting…</div>
+        </div>
+
+        <div class="udi-error" id="udiError"></div>
+
+        <div class="udi-result" id="udiResult">
+          <div class="udi-result-label">Slips Ready</div>
+          <div class="udi-links" id="udiLinks"></div>
+          <div class="udi-next">
+            <strong>Next steps:</strong><br><br>
+            Print with <strong>Ctrl + P</strong> (or Share → Print on mobile).<br>
+            Set to <strong>16 pages per sheet, double-sided</strong>.<br><br>
+            Cut the slips and hand to donors so they can track their donation.
+            <div class="udi-tip">Tip: print on cardstock for higher-quality slips.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- ── End UDI Slip Generator ── -->
+
+</div><!-- /appContent -->
+
+<!-- Camera Scanner Modal (UNCHANGED) -->
 <div id="cameraModal" class="hidden">
   <div id="scannerContainer">
     <h3>Scan Barcode</h3>
@@ -331,18 +506,16 @@
   function onGoogleSignIn(response) {
     console.log("Google Sign-In callback fired");
     window.googleCredential = response.credential;
-    
     const checkAndCall = () => {
       if (typeof window.onSignedIn === 'function') {
         window.onSignedIn();
       } else {
-        console.log("Waiting for app.js to load...");
         setTimeout(checkAndCall, 100);
       }
     };
     checkAndCall();
   }
-  
+
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/service-worker.js').catch(err => {
       console.error("Service worker registration failed:", err);
