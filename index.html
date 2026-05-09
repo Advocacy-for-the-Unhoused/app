@@ -1,425 +1,539 @@
-// app.js
-
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzapd9SVUWjhWguEeuuEGxe7gc6MACxWDBC45dCorCn6rjVYqVa6HAxPO7nWzFTkY1q/exec";
-
-let volunteerEmail = null;
-let volunteerName = null;
-let branchLetter = null;
-let branchName = null;
-
-console.log("App.js loaded successfully!");
-
-// ===== JWT PARSE =====
-function parseJwt(token) {
-  try {
-    const base64Url = token.split('.')[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(atob(base64).split('').map(c =>
-      '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
-    ).join(''));
-    return JSON.parse(jsonPayload);
-  } catch {
-    return null;
-  }
-}
-
-// ===== SIGN-IN HANDLER =====
-window.onSignedIn = async function () {
-  console.log("onSignedIn called!");
-
-  const payload = parseJwt(window.googleCredential || "");
-  if (!payload || !payload.email) {
-    alert("Could not read your Google account. Please try again.");
-    return;
-  }
-
-  volunteerEmail = payload.email;
-  console.log("Signed in as:", volunteerEmail);
-
-  const body = `lookupEmail=${encodeURIComponent(volunteerEmail)}`;
-  console.log("Sending lookup request");
-
-  try {
-    const res = await fetch(SCRIPT_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body
-    });
-
-    console.log("Response status:", res.status);
-    const responseText = await res.text();
-    console.log("Raw response:", responseText);
-
-    const info = JSON.parse(responseText);
-    console.log("Parsed info:", info);
-
-    if (!info.firstName || info.firstName === "User" || !info.branchCode || info.branchCode === "X") {
-      console.error("User not found in roster!");
-      alert(`Sorry, the email ${volunteerEmail} is not registered as a volunteer.\n\nPlease contact your branch coordinator to be added to the roster.`);
-      return;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AFU — Donation Logger</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#C8522D">
+  <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Montserrat:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --camp-orange: #C8522D;
+      --camp-cream: #F9F6F0;
+      --camp-dark: #1A1311;
     }
 
-    volunteerName = info.firstName;
-    branchLetter = info.branchCode;
-    branchName = info.branchName;
+    body {
+      margin: 0;
+      background-color: var(--camp-dark);
+      font-family: 'Montserrat', sans-serif;
+      color: var(--camp-dark);
+      line-height: 1.8;
+      padding: 40px 20px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
 
-    console.log("Set variables:", { volunteerName, branchLetter, branchName });
+    h1 {
+      font-family: 'Abril Fatface', serif;
+      font-size: clamp(2rem, 8vw, 3.5rem);
+      color: var(--camp-cream);
+      text-align: center;
+      margin: 0 0 10px 0;
+    }
 
-    document.getElementById("welcomeMessage").innerText =
-      `Welcome, ${volunteerName}! (${branchName} Branch)`;
-    document.getElementById("welcomeMessage").style.display = "block";
+    h1 span { color: var(--camp-orange); font-style: italic; }
 
-    document.getElementById("authCard").classList.add("hidden");
-    document.getElementById("appContent").classList.remove("hidden");
+    .subtitle {
+      font-family: 'Abril Fatface', serif;
+      font-size: clamp(0.9rem, 2.5vw, 1.2rem);
+      color: var(--camp-orange);
+      text-align: center;
+      margin-bottom: 40px;
+      letter-spacing: 1px;
+    }
 
-    document.getElementById("udiBranchDisplay").value =
-      `${branchLetter} — ${branchName}`;
+    .card {
+      background: white;
+      border: 4px solid var(--camp-dark);
+      padding: 40px;
+      width: 100%;
+      box-sizing: border-box;
+      box-shadow: 15px 15px 0px var(--camp-orange);
+      margin-bottom: 30px;
+    }
 
-    await syncDonations();
-  } catch (err) {
-    console.error("Error during lookup:", err);
-    alert("Could not connect to server. Please check your internet connection and try again.\n\nError: " + err.message);
-  }
-};
+    .hidden { display: none !important; }
 
-// ===== INDEXEDDB =====
-let dbPromise = null;
+    .welcome {
+      font-size: 1.1rem;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 30px;
+      color: var(--camp-dark);
+      padding: 15px;
+      background: var(--camp-cream);
+      border-radius: 8px;
+      display: none;
+    }
 
-function getDB() {
-  if (dbPromise) return dbPromise;
-  dbPromise = new Promise((resolve, reject) => {
-    const request = indexedDB.open("AFU_DB", 1);
-    request.onupgradeneeded = e => {
-      const db = e.target.result;
-      if (!db.objectStoreNames.contains("donations")) {
-        db.createObjectStore("donations", { keyPath: "id", autoIncrement: true });
+    h3 {
+      font-family: 'Abril Fatface', serif;
+      font-size: 1.8rem;
+      margin-top: 0;
+      margin-bottom: 20px;
+      color: var(--camp-dark);
+    }
+
+    label {
+      display: block;
+      margin-top: 15px;
+      margin-bottom: 5px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--camp-dark);
+    }
+
+    input, select {
+      width: 100%;
+      padding: 12px;
+      margin: 0;
+      border: 2px solid var(--camp-dark);
+      border-radius: 0;
+      box-sizing: border-box;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 1rem;
+      background: white;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--camp-orange);
+      box-shadow: 0 0 0 3px rgba(200, 82, 45, 0.1);
+    }
+
+    button {
+      width: 100%;
+      padding: 15px;
+      margin-top: 20px;
+      border: 3px solid var(--camp-dark);
+      background: var(--camp-orange);
+      color: white;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border-radius: 0;
+    }
+
+    button:hover {
+      background: var(--camp-dark);
+      transform: translate(3px, 3px);
+      box-shadow: -3px -3px 0px var(--camp-orange);
+    }
+
+    button:active { transform: translate(0,0); box-shadow: none; }
+
+    button:disabled {
+      background: #aaa;
+      border-color: #888;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 10px;
+      align-items: stretch;
+      margin-top: 5px;
+    }
+
+    .input-group input { flex: 1; }
+
+    .input-group button {
+      width: auto;
+      padding: 12px 20px;
+      margin: 0;
+      font-size: 1.2rem;
+    }
+
+    .center { text-align: center; }
+
+    #step3 h3 { color: var(--camp-orange); margin-bottom: 10px; }
+    #step3 p { font-size: 1.1rem; margin: 20px 0; }
+
+    #finalUDI {
+      font-weight: 700;
+      color: var(--camp-orange);
+      font-size: 1.3rem;
+      font-family: 'Abril Fatface', serif;
+    }
+
+    /* ── Camera Modal ── */
+    #cameraModal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(26,19,17,0.95);
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    #scannerContainer {
+      background: white;
+      border: 4px solid var(--camp-dark);
+      padding: 30px;
+      max-width: 500px;
+      width: 100%;
+      box-shadow: 15px 15px 0px var(--camp-orange);
+    }
+
+    #scannerContainer h3 {
+      margin-top: 0;
+      text-align: center;
+      font-family: 'Abril Fatface', serif;
+    }
+
+    #reader {
+      width: 100%;
+      border: 3px solid var(--camp-dark);
+      overflow: hidden;
+      margin: 20px 0;
+    }
+
+    #scanStatus {
+      text-align: center;
+      margin: 15px 0;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--camp-dark);
+      min-height: 24px;
+    }
+
+    #closeScan {
+      width: 100%;
+      background: var(--camp-dark);
+      border-color: var(--camp-orange);
+      margin-top: 10px;
+    }
+
+    #closeScan:hover { background: var(--camp-orange); border-color: var(--camp-dark); }
+
+    .g_id_signin { display: flex; justify-content: center; margin-top: 20px; }
+
+    #appContent {
+      width: 100%;
+      max-width: 500px;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      overflow: hidden;
+      padding-right: 15px;
+      box-sizing: border-box;
+    }
+
+    /* ── UDI Generator ── */
+    #udiSection {
+      width: 100%;
+    }
+
+    .udi-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .udi-divider::before,
+    .udi-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(249,246,240,0.15);
+    }
+
+    .udi-divider span {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: rgba(249,246,240,0.3);
+      white-space: nowrap;
+    }
+
+    #udiToggle {
+      width: 100%;
+      background: transparent;
+      border: 2px dashed rgba(249,246,240,0.2);
+      color: rgba(249,246,240,0.45);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 14px;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+      margin-bottom: 0;
+      box-shadow: none;
+      transform: none;
+    }
+
+    #udiToggle:hover {
+      border-color: var(--camp-orange);
+      color: var(--camp-orange);
+      background: transparent;
+      transform: none;
+      box-shadow: none;
+    }
+
+    #udiToggle .arrow {
+      display: inline-block;
+      margin-left: 8px;
+      transition: transform 0.25s;
+    }
+
+    #udiToggle.open .arrow { transform: rotate(180deg); }
+
+    #udiPanel {
+      overflow: hidden;
+      max-height: 0;
+      transition: max-height 0.35s ease;
+    }
+
+    #udiPanel.open { max-height: 2000px; }
+
+    #udiPanel .card { margin-top: 16px; overflow: visible; }
+
+    /* Loading bar */
+    .udi-loading { display: none; margin-top: 18px; }
+
+    .udi-bar-track {
+      width: 100%;
+      height: 5px;
+      background: rgba(26,19,17,0.12);
+      overflow: hidden;
+    }
+
+    .udi-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--camp-orange);
+      transition: width 28s linear;
+    }
+
+    .udi-loading-text {
+      margin-top: 10px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--camp-orange);
+    }
+
+    /* UDI results */
+    .udi-result { display: none; margin-top: 20px; }
+
+    .udi-result-label {
+      font-family: 'Abril Fatface', serif;
+      font-size: 1.2rem;
+      color: var(--camp-dark);
+      margin-bottom: 12px;
+    }
+
+    .udi-links a {
+      display: block;
+      padding: 12px 14px;
+      background: var(--camp-dark);
+      color: var(--camp-cream);
+      font-weight: 700;
+      font-size: 0.82rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      text-decoration: none;
+      margin-bottom: 8px;
+      transition: background 0.2s;
+    }
+
+    .udi-links a:hover { background: var(--camp-orange); }
+
+    .udi-next {
+      margin-top: 16px;
+      padding: 16px;
+      border-left: 4px solid var(--camp-orange);
+      background: var(--camp-cream);
+      font-size: 0.85rem;
+      line-height: 1.8;
+      color: var(--camp-dark);
+    }
+
+    .udi-next strong { font-weight: 700; }
+
+    .udi-tip { margin-top: 10px; font-size: 0.75rem; color: #888; }
+
+    .udi-error {
+      display: none;
+      margin-top: 16px;
+      padding: 14px;
+      background: #fff0ed;
+      border-left: 4px solid var(--camp-orange);
+      font-size: 0.85rem;
+      color: var(--camp-dark);
+    }
+
+    input[readonly] {
+      background: #f0f0f0;
+      color: #555;
+      cursor: default;
+    }
+
+    @media (max-width: 600px) {
+      .card { padding: 25px; box-shadow: 10px 10px 0px var(--camp-orange); }
+      #scannerContainer { padding: 20px; box-shadow: 10px 10px 0px var(--camp-orange); }
+    }
+  </style>
+</head>
+<body>
+
+<h1>Advocacy for the <span>Unhoused</span></h1>
+<div class="subtitle">Donation Entry System</div>
+
+<div id="welcomeMessage" class="welcome"></div>
+
+<!-- Sign-in Card -->
+<div id="authCard" class="card" style="max-width:500px;">
+  <h3 class="center">Sign in to continue</h3>
+  <div id="g_id_onload"
+       data-client_id="1016131808942-6m77i0gq14t71g01q8o8qkaon29ilsv6.apps.googleusercontent.com"
+       data-context="signin"
+       data-ux_mode="popup"
+       data-callback="onGoogleSignIn">
+  </div>
+  <div class="g_id_signin"
+       data-type="standard"
+       data-theme="outline"
+       data-size="large">
+  </div>
+</div>
+
+<!-- Main App Content -->
+<div id="appContent" class="hidden">
+
+  <div id="step2" class="card">
+    <h3>Log Donation</h3>
+
+    <label>UDI Number (1-999)</label>
+    <div class="input-group">
+      <input id="udiDigits" placeholder="1–999" type="number" min="1" max="999">
+      <button id="scanBtn" type="button">📷</button>
+    </div>
+
+    <label>Donation Amount ($)</label>
+    <input id="amount" type="number" step="0.01" min="0" placeholder="0.00">
+
+    <label>Fundraiser</label>
+    <select id="fundraiser">
+      <option value="Candle">Candle</option>
+      <option value="5k">5k</option>
+      <option value="School Sale">School Sale</option>
+    </select>
+
+    <button onclick="submitDonation()">Submit Donation</button>
+  </div>
+
+  <div id="step3" class="card hidden">
+    <h3>✓ Submission Successful!</h3>
+    <p>Your UDI: <span id="finalUDI"></span></p>
+    <button onclick="restart()">Submit Another</button>
+  </div>
+
+  <!-- ── UDI Slip Generator ── -->
+  <div id="udiSection">
+    <div class="udi-divider"><span>Branch Tools</span></div>
+
+    <button id="udiToggle">
+      🖨 Print UDI Slips <span class="arrow">▾</span>
+    </button>
+
+    <div id="udiPanel">
+      <div class="card">
+        <h3>Generate Slips</h3>
+        <p style="font-size:0.85rem;color:#555;line-height:1.6;margin-bottom:6px;">
+          Generates 16 donor slips for your branch. Takes ~30 seconds.
+        </p>
+
+        <label for="udiDate">Fundraiser Date</label>
+        <input id="udiDate" type="date">
+
+        <label>Branch</label>
+        <input id="udiBranchDisplay" type="text" readonly>
+
+        <!-- CHANGED: removed onclick="runGenerateSlips()" — now wired in app.js -->
+        <button id="udiGenBtn">Generate Slips</button>
+
+        <div class="udi-loading" id="udiLoading">
+          <div class="udi-bar-track">
+            <div class="udi-bar-fill" id="udiBarFill"></div>
+          </div>
+          <div class="udi-loading-text" id="udiLoadingText">Starting…</div>
+        </div>
+
+        <div class="udi-error" id="udiError"></div>
+
+        <div class="udi-result" id="udiResult">
+          <div class="udi-result-label">Slips Ready</div>
+          <div class="udi-links" id="udiLinks"></div>
+          <div class="udi-next">
+            <strong>Next steps:</strong><br><br>
+            Print with <strong>Ctrl + P</strong> (or Share → Print on mobile).<br>
+            Set to <strong>16 pages per sheet, double-sided</strong>.<br><br>
+            Cut the slips and hand to donors so they can track their donation.
+            <div class="udi-tip">Tip: print on cardstock for higher-quality slips.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- ── End UDI Slip Generator ── -->
+
+</div><!-- /appContent -->
+
+<!-- Camera Scanner Modal -->
+<div id="cameraModal" class="hidden">
+  <div id="scannerContainer">
+    <h3>Scan Barcode</h3>
+    <div id="reader"></div>
+    <div id="scanStatus">Position barcode in the frame...</div>
+    <button id="closeScan">Close Scanner</button>
+  </div>
+</div>
+
+<script>
+  function onGoogleSignIn(response) {
+    console.log("Google Sign-In callback fired");
+    window.googleCredential = response.credential;
+    const checkAndCall = () => {
+      if (typeof window.onSignedIn === 'function') {
+        window.onSignedIn();
+      } else {
+        setTimeout(checkAndCall, 100);
       }
     };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-  return dbPromise;
-}
-
-async function saveDonationOffline(record) {
-  const db = await getDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction("donations", "readwrite");
-    tx.objectStore("donations").add(record);
-    tx.oncomplete = resolve;
-    tx.onerror = () => reject(tx.error);
-  });
-}
-
-async function getUnsyncedDonations() {
-  const db = await getDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction("donations", "readonly");
-    const req = tx.objectStore("donations").getAll();
-    req.onsuccess = () => resolve(req.result || []);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-async function deleteDonation(id) {
-  const db = await getDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction("donations", "readwrite");
-    tx.objectStore("donations").delete(id);
-    tx.oncomplete = resolve;
-    tx.onerror = () => reject(tx.error);
-  });
-}
-
-// ===== SYNC ENGINE =====
-async function syncDonations() {
-  if (!navigator.onLine) return;
-  const pending = await getUnsyncedDonations();
-
-  for (const rec of pending) {
-    try {
-      const body = Object.entries(rec)
-        .filter(([k]) => k !== 'id')
-        .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
-        .join("&");
-
-      const res = await fetch(SCRIPT_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body
-      });
-
-      const json = await res.json();
-      if (json.success) {
-        await deleteDonation(rec.id);
-      } else if (json.error === "UDI exists") {
-        await deleteDonation(rec.id);
-      }
-    } catch {
-      break;
-    }
-  }
-}
-
-window.addEventListener('online', syncDonations);
-
-// ===== DONATION UI =====
-window.submitDonation = async function () {
-  if (!volunteerEmail) {
-    alert("Please sign in first.");
-    return;
+    checkAndCall();
   }
 
-  const digits = parseInt(document.getElementById("udiDigits").value);
-  const amount = document.getElementById("amount").value;
-  const fundraiser = document.getElementById("fundraiser").value;
+  // REMOVED: duplicate toggleUDIPanel — now handled exclusively in app.js
 
-  if (!digits || digits < 1 || digits > 999) {
-    alert("UDI digits must be between 1–999");
-    return;
-  }
-  if (!amount || amount <= 0) {
-    alert("Enter a valid donation amount.");
-    return;
-  }
-
-  const udi = branchLetter + digits.toString().padStart(3, '0');
-  console.log("Creating UDI:", udi);
-
-  const record = {
-    udi,
-    amount: Number(amount),
-    branchLetter,
-    fundraiser,
-    volunteerEmail,
-    volunteerName,
-    timestamp: Date.now()
-  };
-
-  try {
-    await saveDonationOffline(record);
-    await syncDonations();
-
-    document.getElementById("finalUDI").innerText = udi;
-    document.getElementById("step2").classList.add("hidden");
-    document.getElementById("step3").classList.remove("hidden");
-
-    if (!navigator.onLine) {
-      alert("Saved offline. Will sync when connection is restored.");
-    }
-  } catch (err) {
-    console.error("Error saving donation:", err);
-    alert("Error saving donation: " + err.message);
-  }
-};
-
-window.restart = function () {
-  document.getElementById("udiDigits").value = "";
-  document.getElementById("amount").value = "";
-  document.getElementById("fundraiser").value = "Candle";
-  document.getElementById("step3").classList.add("hidden");
-  document.getElementById("step2").classList.remove("hidden");
-};
-
-// =====================================================
-// BARCODE SCANNER
-// =====================================================
-function loadQRScanner() {
-  return new Promise((resolve, reject) => {
-    if (window.Html5Qrcode) { resolve(); return; }
-    const script = document.createElement('script');
-    script.src = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
-    script.onload = () => { console.log("html5-qrcode library loaded"); resolve(); };
-    script.onerror = () => reject(new Error("Failed to load scanner library"));
-    document.head.appendChild(script);
-  });
-}
-
-let html5QrCode = null;
-let isScanning = false;
-
-async function startScan() {
-  if (isScanning) return;
-  console.log("Starting scanner...");
-  const statusEl = document.getElementById('scanStatus');
-  statusEl.textContent = "Loading camera...";
-
-  try {
-    await loadQRScanner();
-    document.getElementById('cameraModal').classList.remove('hidden');
-    html5QrCode = new Html5Qrcode("reader");
-    isScanning = true;
-
-    const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
-    statusEl.textContent = "Position barcode in the frame...";
-
-    await html5QrCode.start(
-      { facingMode: "environment" },
-      config,
-      (decodedText) => {
-        console.log("Barcode scanned:", decodedText);
-        statusEl.textContent = "✓ Scanned: " + decodedText;
-        const digits = decodedText.replace(/\D/g, '');
-        const lastThree = digits.slice(-3);
-        console.log("Extracted digits:", lastThree);
-        if (lastThree && lastThree.length === 3) {
-          document.getElementById("udiDigits").value = parseInt(lastThree, 10);
-          setTimeout(() => { stopScan(); }, 500);
-        } else {
-          statusEl.textContent = "Invalid barcode format. Try again...";
-        }
-      },
-      () => {}
-    );
-
-    console.log("Scanner started successfully");
-  } catch (err) {
-    console.error("Scanner error:", err);
-    statusEl.textContent = "Camera error: " + err.message;
-    isScanning = false;
-    setTimeout(() => {
-      alert("Could not start camera. Please:\n1. Grant camera permission\n2. Make sure you're using HTTPS\n3. Try entering UDI manually");
-      stopScan();
-    }, 100);
-  }
-}
-
-function stopScan() {
-  console.log("Stopping scanner...");
-  const statusEl = document.getElementById('scanStatus');
-  if (html5QrCode && isScanning) {
-    html5QrCode.stop()
-      .then(() => {
-        html5QrCode.clear();
-        html5QrCode = null;
-        isScanning = false;
-        document.getElementById('cameraModal').classList.add('hidden');
-        statusEl.textContent = "Position barcode in the frame...";
-      })
-      .catch(err => {
-        console.error("Error stopping scanner:", err);
-        html5QrCode = null;
-        isScanning = false;
-        document.getElementById('cameraModal').classList.add('hidden');
-        statusEl.textContent = "Position barcode in the frame...";
-      });
-  } else {
-    isScanning = false;
-    document.getElementById('cameraModal').classList.add('hidden');
-    statusEl.textContent = "Position barcode in the frame...";
-  }
-}
-
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', attachScannerListeners);
-} else {
-  attachScannerListeners();
-}
-
-// CHANGED: now also wires up udiToggle and udiGenBtn here
-function attachScannerListeners() {
-  const scanBtn   = document.getElementById("scanBtn");
-  const closeBtn  = document.getElementById("closeScan");
-  const udiToggle = document.getElementById("udiToggle");
-  const udiGenBtn = document.getElementById("udiGenBtn");
-
-  if (scanBtn)   scanBtn.addEventListener("click",   (e) => { e.preventDefault(); startScan(); });
-  if (closeBtn)  closeBtn.addEventListener("click",  (e) => { e.preventDefault(); stopScan(); });
-  if (udiToggle) udiToggle.addEventListener("click", (e) => { e.preventDefault(); window.toggleUDIPanel(); });
-  if (udiGenBtn) udiGenBtn.addEventListener("click", (e) => { e.preventDefault(); window.runGenerateSlips(); });
-}
-
-// =====================================================
-// UDI SLIP GENERATOR
-// =====================================================
-
-window.toggleUDIPanel = function () {
-  const toggle = document.getElementById("udiToggle");
-  const panel  = document.getElementById("udiPanel");
-  const isOpen = panel.classList.contains("open");
-
-  if (isOpen) {
-    panel.classList.remove("open");
-    toggle.classList.remove("open");
-  } else {
-    panel.classList.add("open");
-    toggle.classList.add("open");
-  }
-};
-
-window.runGenerateSlips = async function () {
-  const dateVal = document.getElementById("udiDate").value;
-
-  if (!dateVal) {
-    alert("Please select a fundraiser date.");
-    return;
-  }
-
-  if (!branchLetter) {
-    alert("Branch not detected. Please sign in first.");
-    return;
-  }
-
-  const loadingEl  = document.getElementById("udiLoading");
-  const resultEl   = document.getElementById("udiResult");
-  const errorEl    = document.getElementById("udiError");
-  const btn        = document.getElementById("udiGenBtn");
-  const barFill    = document.getElementById("udiBarFill");
-  const loadingTxt = document.getElementById("udiLoadingText");
-
-  resultEl.style.display = "none";
-  errorEl.style.display  = "none";
-  loadingEl.style.display = "block";
-  btn.disabled = true;
-
-  barFill.style.width = "0%";
-  requestAnimationFrame(() => { barFill.style.width = "100%"; });
-
-  const steps = [
-    { text: "Finding next available number…", ms: 4000 },
-    { text: "Building your document…",        ms: 5000 },
-    { text: "Adding QR codes…",               ms: 4000 },
-    { text: "Generating barcodes…",           ms: 5000 },
-    { text: "Adding finishing touches…",      ms: 4000 },
-    { text: "Finalizing and saving…",         ms: 4000 },
-  ];
-  let elapsed = 0;
-  steps.forEach(s => {
-    setTimeout(() => { loadingTxt.textContent = s.text; }, elapsed);
-    elapsed += s.ms;
-  });
-
-  try {
-    const body = [
-      `action=generateSlips`,
-      `dateString=${encodeURIComponent(dateVal)}`,
-      `branchCode=${encodeURIComponent(branchLetter)}`
-    ].join("&");
-
-    const res  = await fetch(SCRIPT_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/service-worker.js').catch(err => {
+      console.error("Service worker registration failed:", err);
     });
-
-    const data = await res.json();
-
-    loadingEl.style.display = "none";
-    btn.disabled = false;
-
-    if (data.error) throw new Error(data.error);
-
-    document.getElementById("udiLinks").innerHTML = `
-      <a href="${data.docUrl}" target="_blank" rel="noopener">Open Google Doc →</a>
-      <a href="${data.pdfUrl}" target="_blank" rel="noopener">Download PDF →</a>
-    `;
-    resultEl.style.display = "block";
-
-  } catch (err) {
-    console.error("UDI generation error:", err);
-    loadingEl.style.display = "none";
-    btn.disabled = false;
-    errorEl.style.display = "block";
-    errorEl.innerHTML = `<strong>Error:</strong> ${err.message}`;
   }
-};
+</script>
+
+<script src="app.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+</body>
+</html>
