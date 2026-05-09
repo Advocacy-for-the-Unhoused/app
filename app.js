@@ -72,7 +72,6 @@ window.onSignedIn = async function () {
     document.getElementById("authCard").classList.add("hidden");
     document.getElementById("appContent").classList.remove("hidden");
 
-    // Populate the read-only branch field in the UDI generator
     document.getElementById("udiBranchDisplay").value =
       `${branchLetter} — ${branchName}`;
 
@@ -270,7 +269,7 @@ async function startScan() {
           statusEl.textContent = "Invalid barcode format. Try again...";
         }
       },
-      () => {} // continuous scan errors — ignore
+      () => {}
     );
 
     console.log("Scanner started successfully");
@@ -317,11 +316,17 @@ if (document.readyState === 'loading') {
   attachScannerListeners();
 }
 
+// CHANGED: now also wires up udiToggle and udiGenBtn here
 function attachScannerListeners() {
-  const scanBtn = document.getElementById("scanBtn");
-  const closeBtn = document.getElementById("closeScan");
-  if (scanBtn) scanBtn.addEventListener("click", (e) => { e.preventDefault(); startScan(); });
-  if (closeBtn) closeBtn.addEventListener("click", (e) => { e.preventDefault(); stopScan(); });
+  const scanBtn   = document.getElementById("scanBtn");
+  const closeBtn  = document.getElementById("closeScan");
+  const udiToggle = document.getElementById("udiToggle");
+  const udiGenBtn = document.getElementById("udiGenBtn");
+
+  if (scanBtn)   scanBtn.addEventListener("click",   (e) => { e.preventDefault(); startScan(); });
+  if (closeBtn)  closeBtn.addEventListener("click",  (e) => { e.preventDefault(); stopScan(); });
+  if (udiToggle) udiToggle.addEventListener("click", (e) => { e.preventDefault(); window.toggleUDIPanel(); });
+  if (udiGenBtn) udiGenBtn.addEventListener("click", (e) => { e.preventDefault(); window.runGenerateSlips(); });
 }
 
 // =====================================================
@@ -355,7 +360,6 @@ window.runGenerateSlips = async function () {
     return;
   }
 
-  // Reset UI
   const loadingEl  = document.getElementById("udiLoading");
   const resultEl   = document.getElementById("udiResult");
   const errorEl    = document.getElementById("udiError");
@@ -368,11 +372,9 @@ window.runGenerateSlips = async function () {
   loadingEl.style.display = "block";
   btn.disabled = true;
 
-  // Animate progress bar
   barFill.style.width = "0%";
   requestAnimationFrame(() => { barFill.style.width = "100%"; });
 
-  // Animate loading steps
   const steps = [
     { text: "Finding next available number…", ms: 4000 },
     { text: "Building your document…",        ms: 5000 },
