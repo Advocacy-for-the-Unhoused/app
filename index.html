@@ -446,7 +446,7 @@
   <div id="udiSection">
     <div class="udi-divider"><span>Branch Tools</span></div>
 
-    <button id="udiToggle" onclick="toggleUDIPanel()">
+    <button id="udiToggle">
       🖨 Print UDI Slips <span class="arrow">▾</span>
     </button>
 
@@ -515,6 +515,17 @@
     };
     checkAndCall();
   }
+
+  function toggleUDIPanel() {
+    const toggle = document.getElementById("udiToggle");
+    const panel  = document.getElementById("udiPanel");
+    panel.classList.toggle("open");
+    toggle.classList.toggle("open");
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    document.getElementById("udiToggle").addEventListener("click", toggleUDIPanel);
+  });
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/service-worker.js').catch(err => {
