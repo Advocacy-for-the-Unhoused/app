@@ -458,7 +458,8 @@
   <div id="udiSection">
     <div class="udi-divider"><span>Branch Tools</span></div>
 
-    <button id="udiToggle">
+    <!-- FIX: onclick directly in HTML, same pattern as submitDonation -->
+    <button id="udiToggle" onclick="toggleUDIPanel()">
       🖨 Print UDI Slips <span class="arrow">▾</span>
     </button>
 
@@ -475,7 +476,8 @@
         <label>Branch</label>
         <input id="udiBranchDisplay" type="text" readonly>
 
-        <button id="udiGenBtn">Generate Slips</button>
+        <!-- FIX: onclick directly in HTML, same pattern as submitDonation -->
+        <button id="udiGenBtn" onclick="runGenerateSlips()">Generate Slips</button>
 
         <div class="udi-loading" id="udiLoading">
           <div class="udi-bar-track">
