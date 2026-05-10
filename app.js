@@ -165,7 +165,7 @@ async function syncDonations() {
 window.addEventListener('online', syncDonations);
 
 // ===== DONATION UI =====
-window.submitDonation = async function () {
+function submitDonation() {
   if (!volunteerEmail) {
     alert("Please sign in first.");
     return;
@@ -197,10 +197,7 @@ window.submitDonation = async function () {
     timestamp: Date.now()
   };
 
-  try {
-    await saveDonationOffline(record);
-    await syncDonations();
-
+  saveDonationOffline(record).then(() => syncDonations()).then(() => {
     document.getElementById("finalUDI").innerText = udi;
     document.getElementById("step2").classList.add("hidden");
     document.getElementById("step3").classList.remove("hidden");
@@ -208,19 +205,19 @@ window.submitDonation = async function () {
     if (!navigator.onLine) {
       alert("Saved offline. Will sync when connection is restored.");
     }
-  } catch (err) {
+  }).catch(err => {
     console.error("Error saving donation:", err);
     alert("Error saving donation: " + err.message);
-  }
-};
+  });
+}
 
-window.restart = function () {
+function restart() {
   document.getElementById("udiDigits").value = "";
   document.getElementById("amount").value = "";
   document.getElementById("fundraiser").value = "Candle";
   document.getElementById("step3").classList.add("hidden");
   document.getElementById("step2").classList.remove("hidden");
-};
+}
 
 // =====================================================
 // BARCODE SCANNER
@@ -229,192 +226,4 @@ function loadQRScanner() {
   return new Promise((resolve, reject) => {
     if (window.Html5Qrcode) { resolve(); return; }
     const script = document.createElement('script');
-    script.src = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
-    script.onload = () => { console.log("html5-qrcode library loaded"); resolve(); };
-    script.onerror = () => reject(new Error("Failed to load scanner library"));
-    document.head.appendChild(script);
-  });
-}
-
-let html5QrCode = null;
-let isScanning = false;
-
-async function startScan() {
-  if (isScanning) return;
-  console.log("Starting scanner...");
-  const statusEl = document.getElementById('scanStatus');
-  statusEl.textContent = "Loading camera...";
-
-  try {
-    await loadQRScanner();
-    document.getElementById('cameraModal').classList.remove('hidden');
-    html5QrCode = new Html5Qrcode("reader");
-    isScanning = true;
-
-    const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
-    statusEl.textContent = "Position barcode in the frame...";
-
-    await html5QrCode.start(
-      { facingMode: "environment" },
-      config,
-      (decodedText) => {
-        console.log("Barcode scanned:", decodedText);
-        statusEl.textContent = "✓ Scanned: " + decodedText;
-        const digits = decodedText.replace(/\D/g, '');
-        const lastThree = digits.slice(-3);
-        console.log("Extracted digits:", lastThree);
-        if (lastThree && lastThree.length === 3) {
-          document.getElementById("udiDigits").value = parseInt(lastThree, 10);
-          setTimeout(() => { stopScan(); }, 500);
-        } else {
-          statusEl.textContent = "Invalid barcode format. Try again...";
-        }
-      },
-      () => {}
-    );
-
-    console.log("Scanner started successfully");
-  } catch (err) {
-    console.error("Scanner error:", err);
-    statusEl.textContent = "Camera error: " + err.message;
-    isScanning = false;
-    setTimeout(() => {
-      alert("Could not start camera. Please:\n1. Grant camera permission\n2. Make sure you're using HTTPS\n3. Try entering UDI manually");
-      stopScan();
-    }, 100);
-  }
-}
-
-function stopScan() {
-  console.log("Stopping scanner...");
-  const statusEl = document.getElementById('scanStatus');
-  if (html5QrCode && isScanning) {
-    html5QrCode.stop()
-      .then(() => {
-        html5QrCode.clear();
-        html5QrCode = null;
-        isScanning = false;
-        document.getElementById('cameraModal').classList.add('hidden');
-        statusEl.textContent = "Position barcode in the frame...";
-      })
-      .catch(err => {
-        console.error("Error stopping scanner:", err);
-        html5QrCode = null;
-        isScanning = false;
-        document.getElementById('cameraModal').classList.add('hidden');
-        statusEl.textContent = "Position barcode in the frame...";
-      });
-  } else {
-    isScanning = false;
-    document.getElementById('cameraModal').classList.add('hidden');
-    statusEl.textContent = "Position barcode in the frame...";
-  }
-}
-
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', attachScannerListeners);
-} else {
-  attachScannerListeners();
-}
-
-// Scanner only — UDI buttons now use onclick in HTML
-function attachScannerListeners() {
-  const scanBtn  = document.getElementById("scanBtn");
-  const closeBtn = document.getElementById("closeScan");
-  if (scanBtn)  scanBtn.addEventListener("click",  (e) => { e.preventDefault(); startScan(); });
-  if (closeBtn) closeBtn.addEventListener("click", (e) => { e.preventDefault(); stopScan(); });
-}
-
-// =====================================================
-// UDI SLIP GENERATOR
-// =====================================================
-
-window.toggleUDIPanel = function () {
-  const toggle = document.getElementById("udiToggle");
-  const panel  = document.getElementById("udiPanel");
-  const isOpen = panel.classList.contains("open");
-  if (isOpen) {
-    panel.classList.remove("open");
-    toggle.classList.remove("open");
-  } else {
-    panel.classList.add("open");
-    toggle.classList.add("open");
-  }
-};
-
-window.runGenerateSlips = async function () {
-  const dateVal = document.getElementById("udiDate").value;
-
-  if (!dateVal) {
-    alert("Please select a fundraiser date.");
-    return;
-  }
-
-  if (!branchLetter) {
-    alert("Branch not detected. Please sign in first.");
-    return;
-  }
-
-  const loadingEl  = document.getElementById("udiLoading");
-  const resultEl   = document.getElementById("udiResult");
-  const errorEl    = document.getElementById("udiError");
-  const btn        = document.getElementById("udiGenBtn");
-  const barFill    = document.getElementById("udiBarFill");
-  const loadingTxt = document.getElementById("udiLoadingText");
-
-  resultEl.style.display  = "none";
-  errorEl.style.display   = "none";
-  loadingEl.style.display = "block";
-  btn.disabled = true;
-
-  barFill.style.width = "0%";
-  requestAnimationFrame(() => { barFill.style.width = "100%"; });
-
-  const steps = [
-    { text: "Finding next available number…", ms: 4000 },
-    { text: "Building your document…",        ms: 5000 },
-    { text: "Adding QR codes…",               ms: 4000 },
-    { text: "Generating barcodes…",           ms: 5000 },
-    { text: "Adding finishing touches…",      ms: 4000 },
-    { text: "Finalizing and saving…",         ms: 4000 },
-  ];
-  let elapsed = 0;
-  steps.forEach(s => {
-    setTimeout(() => { loadingTxt.textContent = s.text; }, elapsed);
-    elapsed += s.ms;
-  });
-
-  try {
-    const body = [
-      `action=generateSlips`,
-      `dateString=${encodeURIComponent(dateVal)}`,
-      `branchCode=${encodeURIComponent(branchLetter)}`
-    ].join("&");
-
-    const res = await fetch(SCRIPT_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body
-    });
-
-    const data = await res.json();
-
-    loadingEl.style.display = "none";
-    btn.disabled = false;
-
-    if (data.error) throw new Error(data.error);
-
-    document.getElementById("udiLinks").innerHTML = `
-      <a href="${data.docUrl}" target="_blank" rel="noopener">Open Google Doc →</a>
-      <a href="${data.pdfUrl}" target="_blank" rel="noopener">Download PDF →</a>
-    `;
-    resultEl.style.display = "block";
-
-  } catch (err) {
-    console.error("UDI generation error:", err);
-    loadingEl.style.display = "none";
-    btn.disabled = false;
-    errorEl.style.display = "block";
-    errorEl.innerHTML = `<strong>Error:</strong> ${err.message}`;
-  }
-};
+    script.src
