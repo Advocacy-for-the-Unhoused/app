@@ -7,7 +7,7 @@ let volunteerName = null;
 let branchLetter = null;
 let branchName = null;
 
-console.log("App.js loaded successfully!");
+console.log("App.js v2 loaded!");
 
 // ===== JWT PARSE =====
 function parseJwt(token) {
