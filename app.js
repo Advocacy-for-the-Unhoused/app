@@ -76,7 +76,6 @@ window.onSignedIn = async function () {
       `${branchLetter} — ${branchName}`;
 
     await syncDonations();
-    attachScannerListeners(); // re-attach now that appContent is visible
 
   } catch (err) {
     console.error("Error during lookup:", err);
@@ -318,20 +317,12 @@ if (document.readyState === 'loading') {
   attachScannerListeners();
 }
 
+// Scanner only — UDI buttons now use onclick in HTML
 function attachScannerListeners() {
-  const scanBtn   = document.getElementById("scanBtn");
-  const closeBtn  = document.getElementById("closeScan");
-  const udiToggle = document.getElementById("udiToggle");
-  const udiGenBtn = document.getElementById("udiGenBtn");
-
-  console.log("attachScannerListeners called");
-  console.log("udiToggle found:", !!udiToggle);
-  console.log("udiGenBtn found:", !!udiGenBtn);
-
-  if (scanBtn)   scanBtn.addEventListener("click",   (e) => { e.preventDefault(); startScan(); });
-  if (closeBtn)  closeBtn.addEventListener("click",  (e) => { e.preventDefault(); stopScan(); });
-  if (udiToggle) udiToggle.addEventListener("click", (e) => { e.preventDefault(); console.log("udiToggle clicked!"); window.toggleUDIPanel(); });
-  if (udiGenBtn) udiGenBtn.addEventListener("click", (e) => { e.preventDefault(); console.log("udiGenBtn clicked!"); window.runGenerateSlips(); });
+  const scanBtn  = document.getElementById("scanBtn");
+  const closeBtn = document.getElementById("closeScan");
+  if (scanBtn)  scanBtn.addEventListener("click",  (e) => { e.preventDefault(); startScan(); });
+  if (closeBtn) closeBtn.addEventListener("click", (e) => { e.preventDefault(); stopScan(); });
 }
 
 // =====================================================
@@ -339,14 +330,9 @@ function attachScannerListeners() {
 // =====================================================
 
 window.toggleUDIPanel = function () {
-  console.log("toggleUDIPanel called!");
   const toggle = document.getElementById("udiToggle");
   const panel  = document.getElementById("udiPanel");
-  console.log("panel:", panel);
-  console.log("toggle:", toggle);
   const isOpen = panel.classList.contains("open");
-  console.log("isOpen:", isOpen);
-
   if (isOpen) {
     panel.classList.remove("open");
     toggle.classList.remove("open");
@@ -376,8 +362,8 @@ window.runGenerateSlips = async function () {
   const barFill    = document.getElementById("udiBarFill");
   const loadingTxt = document.getElementById("udiLoadingText");
 
-  resultEl.style.display = "none";
-  errorEl.style.display  = "none";
+  resultEl.style.display  = "none";
+  errorEl.style.display   = "none";
   loadingEl.style.display = "block";
   btn.disabled = true;
 
