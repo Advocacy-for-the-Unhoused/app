@@ -230,14 +230,14 @@
       display: flex;
       flex-direction: column;
       align-items: stretch;
-      overflow: hidden;
-      padding-right: 15px;
       box-sizing: border-box;
     }
 
     /* ── UDI Generator ── */
     #udiSection {
       width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
     }
 
     .udi-divider {
@@ -305,7 +305,12 @@
 
     #udiPanel.open { max-height: 2000px; }
 
-    #udiPanel .card { margin-top: 16px; overflow: visible; }
+    #udiPanel .card {
+      margin-top: 16px;
+      overflow: visible;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
 
     /* Loading bar */
     .udi-loading { display: none; margin-top: 18px; }
@@ -470,7 +475,6 @@
         <label>Branch</label>
         <input id="udiBranchDisplay" type="text" readonly>
 
-        <!-- CHANGED: removed onclick="runGenerateSlips()" — now wired in app.js -->
         <button id="udiGenBtn">Generate Slips</button>
 
         <div class="udi-loading" id="udiLoading">
