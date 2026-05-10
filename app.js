@@ -76,6 +76,8 @@ window.onSignedIn = async function () {
       `${branchLetter} — ${branchName}`;
 
     await syncDonations();
+    attachScannerListeners(); // re-attach now that appContent is visible
+
   } catch (err) {
     console.error("Error during lookup:", err);
     alert("Could not connect to server. Please check your internet connection and try again.\n\nError: " + err.message);
@@ -316,7 +318,6 @@ if (document.readyState === 'loading') {
   attachScannerListeners();
 }
 
-// CHANGED: now also wires up udiToggle and udiGenBtn here
 function attachScannerListeners() {
   const scanBtn   = document.getElementById("scanBtn");
   const closeBtn  = document.getElementById("closeScan");
@@ -396,7 +397,7 @@ window.runGenerateSlips = async function () {
       `branchCode=${encodeURIComponent(branchLetter)}`
     ].join("&");
 
-    const res  = await fetch(SCRIPT_URL, {
+    const res = await fetch(SCRIPT_URL, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body
