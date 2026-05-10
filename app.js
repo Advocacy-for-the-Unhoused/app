@@ -324,10 +324,14 @@ function attachScannerListeners() {
   const udiToggle = document.getElementById("udiToggle");
   const udiGenBtn = document.getElementById("udiGenBtn");
 
+  console.log("attachScannerListeners called");
+  console.log("udiToggle found:", !!udiToggle);
+  console.log("udiGenBtn found:", !!udiGenBtn);
+
   if (scanBtn)   scanBtn.addEventListener("click",   (e) => { e.preventDefault(); startScan(); });
   if (closeBtn)  closeBtn.addEventListener("click",  (e) => { e.preventDefault(); stopScan(); });
-  if (udiToggle) udiToggle.addEventListener("click", (e) => { e.preventDefault(); window.toggleUDIPanel(); });
-  if (udiGenBtn) udiGenBtn.addEventListener("click", (e) => { e.preventDefault(); window.runGenerateSlips(); });
+  if (udiToggle) udiToggle.addEventListener("click", (e) => { e.preventDefault(); console.log("udiToggle clicked!"); window.toggleUDIPanel(); });
+  if (udiGenBtn) udiGenBtn.addEventListener("click", (e) => { e.preventDefault(); console.log("udiGenBtn clicked!"); window.runGenerateSlips(); });
 }
 
 // =====================================================
@@ -335,9 +339,13 @@ function attachScannerListeners() {
 // =====================================================
 
 window.toggleUDIPanel = function () {
+  console.log("toggleUDIPanel called!");
   const toggle = document.getElementById("udiToggle");
   const panel  = document.getElementById("udiPanel");
+  console.log("panel:", panel);
+  console.log("toggle:", toggle);
   const isOpen = panel.classList.contains("open");
+  console.log("isOpen:", isOpen);
 
   if (isOpen) {
     panel.classList.remove("open");
