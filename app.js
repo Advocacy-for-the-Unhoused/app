@@ -530,6 +530,7 @@ async function loadMyHours() {
     listEl.innerHTML = '<p class="hours-error">Could not load history. Check your connection.</p>';
   }
 }
+window.loadHoursHistory = loadMyHours;
 
 // ── THE FIX ──────────────────────────────────────────
 // Expose loadMyHours under the name switchTab('hours') expects.
