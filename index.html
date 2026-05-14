@@ -20,13 +20,12 @@
       font-family: 'Montserrat', sans-serif;
       color: var(--camp-dark);
       line-height: 1.8;
-      padding: 40px 20px 0;
+      padding: 40px 20px;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: flex-start;
-      box-sizing: border-box;
+      justify-content: center;
     }
 
     h1 {
@@ -232,14 +231,15 @@
       flex-direction: column;
       align-items: stretch;
       box-sizing: border-box;
-      /* bottom padding clears the fixed nav bar */
-      padding-bottom: calc(72px + env(safe-area-inset-bottom));
     }
 
-    /* ── Tab Views ── */
-    .tab-view { width: 100%; }
+    /* ── UDI Generator ── */
+    #udiSection {
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
 
-    /* ── Section Divider ── */
     .udi-divider {
       display: flex;
       align-items: center;
@@ -264,8 +264,7 @@
       white-space: nowrap;
     }
 
-    /* ── Collapsible UDI Toggle (Print Slips) ── */
-    #udiToggle {
+    #udiToggle, #hoursToggle {
       width: 100%;
       background: transparent;
       border: 2px dashed rgba(249,246,240,0.2);
@@ -278,11 +277,11 @@
       cursor: pointer;
       transition: border-color 0.2s, color 0.2s;
       margin-bottom: 0;
-      margin-top: 0;
       box-shadow: none;
+      transform: none;
     }
 
-    #udiToggle:hover {
+    #udiToggle:hover, #hoursToggle:hover {
       border-color: var(--camp-orange);
       color: var(--camp-orange);
       background: transparent;
@@ -290,31 +289,30 @@
       box-shadow: none;
     }
 
-    #udiToggle .arrow {
+    #udiToggle .arrow, #hoursToggle .arrow {
       display: inline-block;
       margin-left: 8px;
       transition: transform 0.25s;
     }
 
-    #udiToggle.open .arrow { transform: rotate(180deg); }
+    #udiToggle.open .arrow, #hoursToggle.open .arrow { transform: rotate(180deg); }
 
-    /* Collapsible panel: collapsed by default */
-    #udiPanel {
+    #udiPanel, #hoursPanel {
       overflow: hidden;
       max-height: 0;
       transition: max-height 0.35s ease;
     }
 
-    #udiPanel.open { max-height: 4000px; }
+    #udiPanel.open, #hoursPanel.open { max-height: 4000px; }
 
-    #udiPanel .card {
+    #udiPanel .card, #hoursPanel .card {
       margin-top: 16px;
       overflow: visible;
       max-width: 100%;
       box-sizing: border-box;
     }
 
-    /* ── Loading bar ── */
+    /* Loading bar */
     .udi-loading { display: none; margin-top: 18px; }
 
     .udi-bar-track {
@@ -340,7 +338,7 @@
       color: var(--camp-orange);
     }
 
-    /* ── UDI results ── */
+    /* UDI results */
     .udi-result { display: none; margin-top: 20px; }
 
     .udi-result-label {
@@ -397,6 +395,13 @@
     }
 
     /* ── Hours Tracker ── */
+    #hoursSection {
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+      margin-top: 20px;
+    }
+
     .hours-total-badge {
       background: var(--camp-dark);
       color: var(--camp-cream);
@@ -510,87 +515,6 @@
 
     .hours-error { color: var(--camp-orange); }
 
-    /* ── Admin "No Access" Card ── */
-    .admin-no-access {
-      text-align: center;
-      padding: 40px 20px;
-    }
-
-    .admin-no-access .lock-icon {
-      font-size: 3rem;
-      margin-bottom: 16px;
-      display: block;
-    }
-
-    .admin-no-access p {
-      font-size: 1rem;
-      color: #555;
-      margin: 0;
-      line-height: 1.6;
-    }
-
-    /* ── Bottom Nav ── */
-    .bottom-nav {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: var(--camp-dark);
-      border-top: 1px solid rgba(249,246,240,0.1);
-      display: flex;
-      z-index: 200;
-      padding-bottom: env(safe-area-inset-bottom);
-    }
-
-    .nav-item {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-      padding: 10px 0 8px;
-      background: transparent;
-      border: none;
-      border-radius: 0;
-      box-shadow: none;
-      cursor: pointer;
-      color: rgba(249,246,240,0.3);
-      font-family: 'Montserrat', sans-serif;
-      font-size: 0.68rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      width: auto;
-      margin: 0;
-      transition: color 0.2s;
-    }
-
-    .nav-item:hover {
-      color: rgba(249,246,240,0.65);
-      background: transparent;
-      transform: none;
-      box-shadow: none;
-    }
-
-    .nav-item.active { color: var(--camp-orange); }
-
-    .nav-item .nav-icon {
-      font-size: 1.3rem;
-      line-height: 1;
-    }
-
-    .nav-item .nav-dot {
-      width: 4px;
-      height: 4px;
-      border-radius: 50%;
-      background: var(--camp-orange);
-      margin-top: 2px;
-      opacity: 0;
-    }
-
-    .nav-item.active .nav-dot { opacity: 1; }
-
     @media (max-width: 600px) {
       .card { padding: 25px; box-shadow: 10px 10px 0px var(--camp-orange); }
       #scannerContainer { padding: 20px; box-shadow: 10px 10px 0px var(--camp-orange); }
@@ -602,7 +526,9 @@
 <h1>Advocacy for the <span>Unhoused</span></h1>
 <div class="subtitle">Donation Entry System</div>
 
-<!-- Sign-in Card (shown before auth) -->
+<div id="welcomeMessage" class="welcome"></div>
+
+<!-- Sign-in Card -->
 <div id="authCard" class="card" style="max-width:500px;">
   <h3 class="center">Sign in to continue</h3>
   <div id="g_id_onload"
@@ -618,177 +544,134 @@
   </div>
 </div>
 
-<!-- ═══════════════ Main App Content ═══════════════ -->
+<!-- Main App Content -->
 <div id="appContent" class="hidden">
 
-  <!-- ────────────────────────────────────────────────
-       TAB 1 — DONATIONS
-  ──────────────────────────────────────────────── -->
-  <div id="tabDonations" class="tab-view">
+  <div id="step2" class="card">
+    <h3>Log Donation</h3>
 
-    <div id="welcomeMessage" class="welcome"></div>
-
-    <!-- Donation Logger -->
-    <div id="step2" class="card">
-      <h3>Log Donation</h3>
-
-      <label>UDI Number (1-999)</label>
-      <div class="input-group">
-        <input id="udiDigits" placeholder="1–999" type="number" min="1" max="999">
-        <button id="scanBtn" type="button">📷</button>
-      </div>
-
-      <label>Donation Amount ($)</label>
-      <input id="amount" type="number" step="0.01" min="0" placeholder="0.00">
-
-      <label>Fundraiser</label>
-      <select id="fundraiser">
-        <option value="Candle">Candle</option>
-        <option value="5k">5k</option>
-        <option value="School Sale">School Sale</option>
-      </select>
-
-      <button onclick="submitDonation()">Submit Donation</button>
+    <label>UDI Number (1-999)</label>
+    <div class="input-group">
+      <input id="udiDigits" placeholder="1–999" type="number" min="1" max="999">
+      <button id="scanBtn" type="button">📷</button>
     </div>
 
-    <!-- Submission Confirmation -->
-    <div id="step3" class="card hidden">
-      <h3>✓ Submission Successful!</h3>
-      <p>Your UDI: <span id="finalUDI"></span></p>
-      <button onclick="restart()">Submit Another</button>
-    </div>
+    <label>Donation Amount ($)</label>
+    <input id="amount" type="number" step="0.01" min="0" placeholder="0.00">
 
-    <!-- ── Print Slips (collapsible) ── -->
-    <div id="udiSection">
-      <div class="udi-divider"><span>Print Slips</span></div>
+    <label>Fundraiser</label>
+    <select id="fundraiser">
+      <option value="Candle">Candle</option>
+      <option value="5k">5k</option>
+      <option value="School Sale">School Sale</option>
+    </select>
 
-      <button id="udiToggle" onclick="toggleUDIPanel()">
-        🖨 Print UDI Slips <span class="arrow">▾</span>
-      </button>
+    <button onclick="submitDonation()">Submit Donation</button>
+  </div>
 
-      <div id="udiPanel">
-        <div class="card">
-          <h3>Generate Slips</h3>
-          <p style="font-size:0.85rem;color:#555;line-height:1.6;margin-bottom:6px;">
-            Generates 16 donor slips for your branch. Takes ~30 seconds.
-          </p>
+  <div id="step3" class="card hidden">
+    <h3>✓ Submission Successful!</h3>
+    <p>Your UDI: <span id="finalUDI"></span></p>
+    <button onclick="restart()">Submit Another</button>
+  </div>
 
-          <label for="udiDate">Fundraiser Date</label>
-          <input id="udiDate" type="date">
+  <!-- ── UDI Slip Generator ── -->
+  <div id="udiSection">
+    <div class="udi-divider"><span>Branch Tools</span></div>
 
-          <label>Branch</label>
-          <input id="udiBranchDisplay" type="text" readonly>
+    <button id="udiToggle" onclick="toggleUDIPanel()">
+      🖨 Print UDI Slips <span class="arrow">▾</span>
+    </button>
 
-          <button id="udiGenBtn" onclick="runGenerateSlips()">Generate Slips</button>
+    <div id="udiPanel">
+      <div class="card">
+        <h3>Generate Slips</h3>
+        <p style="font-size:0.85rem;color:#555;line-height:1.6;margin-bottom:6px;">
+          Generates 16 donor slips for your branch. Takes ~30 seconds.
+        </p>
 
-          <div class="udi-loading" id="udiLoading">
-            <div class="udi-bar-track">
-              <div class="udi-bar-fill" id="udiBarFill"></div>
-            </div>
-            <div class="udi-loading-text" id="udiLoadingText">Starting…</div>
+        <label for="udiDate">Fundraiser Date</label>
+        <input id="udiDate" type="date">
+
+        <label>Branch</label>
+        <input id="udiBranchDisplay" type="text" readonly>
+
+        <button id="udiGenBtn" onclick="runGenerateSlips()">Generate Slips</button>
+
+        <div class="udi-loading" id="udiLoading">
+          <div class="udi-bar-track">
+            <div class="udi-bar-fill" id="udiBarFill"></div>
           </div>
+          <div class="udi-loading-text" id="udiLoadingText">Starting…</div>
+        </div>
 
-          <div class="udi-error" id="udiError"></div>
+        <div class="udi-error" id="udiError"></div>
 
-          <div class="udi-result" id="udiResult">
-            <div class="udi-result-label">Slips Ready</div>
-            <div class="udi-links" id="udiLinks"></div>
-            <div class="udi-next">
-              <strong>Next steps:</strong><br><br>
-              Print with <strong>Ctrl + P</strong> (or Share → Print on mobile).<br>
-              Set to <strong>16 pages per sheet, double-sided</strong>.<br><br>
-              Cut the slips and hand to donors so they can track their donation.
-              <div class="udi-tip">Tip: print on cardstock for higher-quality slips.</div>
-            </div>
+        <div class="udi-result" id="udiResult">
+          <div class="udi-result-label">Slips Ready</div>
+          <div class="udi-links" id="udiLinks"></div>
+          <div class="udi-next">
+            <strong>Next steps:</strong><br><br>
+            Print with <strong>Ctrl + P</strong> (or Share → Print on mobile).<br>
+            Set to <strong>16 pages per sheet, double-sided</strong>.<br><br>
+            Cut the slips and hand to donors so they can track their donation.
+            <div class="udi-tip">Tip: print on cardstock for higher-quality slips.</div>
           </div>
         </div>
       </div>
     </div>
-    <!-- ── End Print Slips ── -->
-
   </div>
-  <!-- ── End Donations Tab ── -->
+  <!-- ── End UDI Slip Generator ── -->
 
+  <!-- ── My Hours ── -->
+  <div id="hoursSection">
+    <div class="udi-divider"><span>My Hours</span></div>
 
-  <!-- ────────────────────────────────────────────────
-       TAB 2 — HOURS
-  ──────────────────────────────────────────────── -->
-  <div id="tabHours" class="tab-view hidden">
+    <button id="hoursToggle" onclick="toggleHoursPanel()">
+      ⏱ My Volunteer Hours <span class="arrow">▾</span>
+    </button>
 
-    <!-- My History FIRST -->
-    <div class="card">
-      <h3>My History</h3>
-      <div id="hoursTotalBadge"></div>
-      <div id="hoursHistoryList">
-        <p class="hours-empty">Loading your history…</p>
+    <div id="hoursPanel">
+
+      <!-- Submit request form -->
+      <div class="card">
+        <h3>Log an Event</h3>
+        <p style="font-size:0.85rem;color:#555;line-height:1.6;margin-bottom:6px;">
+          Submit your hours after an event. A coordinator will review and approve.
+        </p>
+
+        <label for="hoursEvent">Event</label>
+        <select id="hoursEvent">
+          <option value="">Loading events…</option>
+        </select>
+
+        <label for="hoursDate">Event Date</label>
+        <input id="hoursDate" type="date">
+
+        <label for="hoursAmount">Hours</label>
+        <input id="hoursAmount" type="number" min="0.5" step="0.5" placeholder="e.g. 2">
+
+        <button id="hoursSubmitBtn" onclick="submitHoursRequest()">Submit for Approval</button>
+
+        <div id="hoursSubmitMsg" class="hours-msg"></div>
       </div>
-    </div>
 
-    <!-- Log an Event SECOND -->
-    <div class="card">
-      <h3>Log an Event</h3>
-      <p style="font-size:0.85rem;color:#555;line-height:1.6;margin-bottom:6px;">
-        Submit your hours after an event. A coordinator will review and approve.
-      </p>
-
-      <label for="hoursEvent">Event</label>
-      <select id="hoursEvent">
-        <option value="">Loading events…</option>
-      </select>
-
-      <label for="hoursDate">Event Date</label>
-      <input id="hoursDate" type="date">
-
-      <label for="hoursAmount">Hours</label>
-      <input id="hoursAmount" type="number" min="0.5" step="0.5" placeholder="e.g. 2">
-
-      <button id="hoursSubmitBtn" onclick="submitHoursRequest()">Submit for Approval</button>
-
-      <div id="hoursSubmitMsg" class="hours-msg"></div>
-    </div>
-
-  </div>
-  <!-- ── End Hours Tab ── -->
-
-
-  <!-- ────────────────────────────────────────────────
-       TAB 3 — ADMIN TOOLS
-  ──────────────────────────────────────────────── -->
-  <div id="tabAdmin" class="tab-view hidden">
-    <div class="card">
-      <h3>Admin Tools</h3>
-      <div class="admin-no-access">
-        <span class="lock-icon">🔒</span>
-        <p>You do not have access to this section.<br>Contact a coordinator if you believe this is an error.</p>
+      <!-- History -->
+      <div class="card">
+        <h3>My History</h3>
+        <div id="hoursTotalBadge"></div>
+        <div id="hoursHistoryList">
+          <p class="hours-empty">Open this panel to load your history.</p>
+        </div>
       </div>
+
     </div>
   </div>
-  <!-- ── End Admin Tab ── -->
-
-
-  <!-- ── Bottom Nav (3 tabs) ── -->
-  <nav class="bottom-nav">
-    <button class="nav-item active" id="navDonations" onclick="switchTab('donations')" aria-label="Donations">
-      <span class="nav-icon">🤝</span>
-      <span>Donate</span>
-      <span class="nav-dot"></span>
-    </button>
-    <button class="nav-item" id="navHours" onclick="switchTab('hours')" aria-label="Hours">
-      <span class="nav-icon">⏱</span>
-      <span>Hours</span>
-      <span class="nav-dot"></span>
-    </button>
-    <button class="nav-item" id="navAdmin" onclick="switchTab('admin')" aria-label="Admin Tools">
-      <span class="nav-icon">⚙️</span>
-      <span>Admin</span>
-      <span class="nav-dot"></span>
-    </button>
-  </nav>
+  <!-- ── End My Hours ── -->
 
 </div><!-- /appContent -->
 
-
-<!-- ── Camera Scanner Modal ── -->
+<!-- Camera Scanner Modal -->
 <div id="cameraModal" class="hidden">
   <div id="scannerContainer">
     <h3>Scan Barcode</h3>
@@ -798,61 +681,7 @@
   </div>
 </div>
 
-
 <script>
-  /* ─────────────────────────────────────────
-     Tab switching
-  ───────────────────────────────────────── */
-  function switchTab(tab) {
-    // Hide all tab views and deactivate all nav items
-    document.querySelectorAll('.tab-view').forEach(v => v.classList.add('hidden'));
-    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-
-    if (tab === 'donations') {
-      document.getElementById('tabDonations').classList.remove('hidden');
-      document.getElementById('navDonations').classList.add('active');
-
-    } else if (tab === 'hours') {
-      document.getElementById('tabHours').classList.remove('hidden');
-      document.getElementById('navHours').classList.add('active');
-      // Fire hours history load if app.js exposes it
-      // (previously triggered by the hours panel toggle)
-      if (typeof window.loadHoursHistory === 'function') {
-        window.loadHoursHistory();
-      }
-
-    } else if (tab === 'admin') {
-      document.getElementById('tabAdmin').classList.remove('hidden');
-      document.getElementById('navAdmin').classList.add('active');
-    }
-  }
-
-  /* ─────────────────────────────────────────
-     UDI panel toggle (collapsible on Donate tab)
-     — kept functional so app.js calls work
-  ───────────────────────────────────────── */
-  function toggleUDIPanel() {
-    const panel  = document.getElementById('udiPanel');
-    const toggle = document.getElementById('udiToggle');
-    const isOpen = panel.classList.contains('open');
-    panel.classList.toggle('open',  !isOpen);
-    toggle.classList.toggle('open', !isOpen);
-  }
-
-  /* ─────────────────────────────────────────
-     Hours panel toggle stub
-     — Hours is now a full tab; any legacy calls
-       from app.js are safely swallowed here.
-  ───────────────────────────────────────── */
-  function toggleHoursPanel() {
-    // No-op: hours is now navigated via the bottom tab bar.
-    // If app.js calls this expecting to trigger a data load,
-    // switchTab('hours') should be called instead.
-  }
-
-  /* ─────────────────────────────────────────
-     Google Sign-In callback
-  ───────────────────────────────────────── */
   function onGoogleSignIn(response) {
     console.log("Google Sign-In callback fired");
     window.googleCredential = response.credential;
@@ -866,9 +695,6 @@
     checkAndCall();
   }
 
-  /* ─────────────────────────────────────────
-     Service Worker
-  ───────────────────────────────────────── */
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/service-worker.js').catch(err => {
       console.error("Service worker registration failed:", err);
@@ -876,8 +702,7 @@
   }
 </script>
 
-<!-- Bump cache-bust version on every meaningful change -->
-<script src="app.js?v=6"></script>
+<script src="app.js?v=4"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </body>
 </html>
