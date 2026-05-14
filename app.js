@@ -1,12 +1,12 @@
-// app.js v3
-console.log("App.js v3 loaded!");
+// app.js v4
+console.log("App.js v4 loaded!");
 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwM8DrClchV9B5bfKYMaDURSRzTqlHA3mIVfKLe5HNO85zQYys2rL55WXSDEz89_PxS/exec";
 
 let volunteerEmail = null;
-let volunteerName = null;
-let branchLetter = null;
-let branchName = null;
+let volunteerName  = null;
+let branchLetter   = null;
+let branchName     = null;
 
 // ===== JWT PARSE =====
 function parseJwt(token) {
@@ -59,8 +59,8 @@ window.onSignedIn = async function () {
     }
 
     volunteerName = info.firstName;
-    branchLetter = info.branchCode;
-    branchName = info.branchName;
+    branchLetter  = info.branchCode;
+    branchName    = info.branchName;
 
     console.log("Set variables:", { volunteerName, branchLetter, branchName });
 
@@ -97,7 +97,7 @@ function getDB() {
       }
     };
     request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
+    request.onerror  = () => reject(request.error);
   });
   return dbPromise;
 }
@@ -108,17 +108,17 @@ async function saveDonationOffline(record) {
     const tx = db.transaction("donations", "readwrite");
     tx.objectStore("donations").add(record);
     tx.oncomplete = resolve;
-    tx.onerror = () => reject(tx.error);
+    tx.onerror    = () => reject(tx.error);
   });
 }
 
 async function getUnsyncedDonations() {
   const db = await getDB();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction("donations", "readonly");
+    const tx  = db.transaction("donations", "readonly");
     const req = tx.objectStore("donations").getAll();
     req.onsuccess = () => resolve(req.result || []);
-    req.onerror = () => reject(req.error);
+    req.onerror   = () => reject(req.error);
   });
 }
 
@@ -128,7 +128,7 @@ async function deleteDonation(id) {
     const tx = db.transaction("donations", "readwrite");
     tx.objectStore("donations").delete(id);
     tx.oncomplete = resolve;
-    tx.onerror = () => reject(tx.error);
+    tx.onerror    = () => reject(tx.error);
   });
 }
 
@@ -144,16 +144,14 @@ async function syncDonations() {
         .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
         .join("&");
 
-      const res = await fetch(SCRIPT_URL, {
+      const res  = await fetch(SCRIPT_URL, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body
       });
-
       const json = await res.json();
-      if (json.success) {
-        await deleteDonation(rec.id);
-      } else if (json.error === "UDI exists") {
+
+      if (json.success || json.error === "UDI exists") {
         await deleteDonation(rec.id);
       }
     } catch {
@@ -166,13 +164,10 @@ window.addEventListener('online', syncDonations);
 
 // ===== DONATION UI =====
 function submitDonation() {
-  if (!volunteerEmail) {
-    alert("Please sign in first.");
-    return;
-  }
+  if (!volunteerEmail) { alert("Please sign in first."); return; }
 
-  const digits = parseInt(document.getElementById("udiDigits").value);
-  const amount = document.getElementById("amount").value;
+  const digits    = parseInt(document.getElementById("udiDigits").value);
+  const amount    = document.getElementById("amount").value;
   const fundraiser = document.getElementById("fundraiser").value;
 
   if (!digits || digits < 1 || digits > 999) {
@@ -197,22 +192,25 @@ function submitDonation() {
     timestamp: Date.now()
   };
 
-  saveDonationOffline(record).then(() => syncDonations()).then(() => {
-    document.getElementById("finalUDI").innerText = udi;
-    document.getElementById("step2").classList.add("hidden");
-    document.getElementById("step3").classList.remove("hidden");
-    if (!navigator.onLine) {
-      alert("Saved offline. Will sync when connection is restored.");
-    }
-  }).catch(err => {
-    console.error("Error saving donation:", err);
-    alert("Error saving donation: " + err.message);
-  });
+  saveDonationOffline(record)
+    .then(() => syncDonations())
+    .then(() => {
+      document.getElementById("finalUDI").innerText = udi;
+      document.getElementById("step2").classList.add("hidden");
+      document.getElementById("step3").classList.remove("hidden");
+      if (!navigator.onLine) {
+        alert("Saved offline. Will sync when connection is restored.");
+      }
+    })
+    .catch(err => {
+      console.error("Error saving donation:", err);
+      alert("Error saving donation: " + err.message);
+    });
 }
 
 function restart() {
-  document.getElementById("udiDigits").value = "";
-  document.getElementById("amount").value = "";
+  document.getElementById("udiDigits").value  = "";
+  document.getElementById("amount").value     = "";
   document.getElementById("fundraiser").value = "Candle";
   document.getElementById("step3").classList.add("hidden");
   document.getElementById("step2").classList.remove("hidden");
@@ -226,14 +224,14 @@ function loadQRScanner() {
     if (window.Html5Qrcode) { resolve(); return; }
     const script = document.createElement('script');
     script.src = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
-    script.onload = () => { console.log("html5-qrcode library loaded"); resolve(); };
+    script.onload  = () => { console.log("html5-qrcode library loaded"); resolve(); };
     script.onerror = () => reject(new Error("Failed to load scanner library"));
     document.head.appendChild(script);
   });
 }
 
 let html5QrCode = null;
-let isScanning = false;
+let isScanning  = false;
 
 async function startScan() {
   if (isScanning) return;
@@ -245,7 +243,7 @@ async function startScan() {
     await loadQRScanner();
     document.getElementById('cameraModal').classList.remove('hidden');
     html5QrCode = new Html5Qrcode("reader");
-    isScanning = true;
+    isScanning  = true;
 
     const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
     statusEl.textContent = "Position barcode in the frame...";
@@ -256,7 +254,7 @@ async function startScan() {
       (decodedText) => {
         console.log("Barcode scanned:", decodedText);
         statusEl.textContent = "✓ Scanned: " + decodedText;
-        const digits = decodedText.replace(/\D/g, '');
+        const digits    = decodedText.replace(/\D/g, '');
         const lastThree = digits.slice(-3);
         console.log("Extracted digits:", lastThree);
         if (lastThree && lastThree.length === 3) {
@@ -288,15 +286,15 @@ function stopScan() {
     html5QrCode.stop()
       .then(() => {
         html5QrCode.clear();
-        html5QrCode = null;
-        isScanning = false;
+        html5QrCode  = null;
+        isScanning   = false;
         document.getElementById('cameraModal').classList.add('hidden');
         statusEl.textContent = "Position barcode in the frame...";
       })
       .catch(err => {
         console.error("Error stopping scanner:", err);
-        html5QrCode = null;
-        isScanning = false;
+        html5QrCode  = null;
+        isScanning   = false;
         document.getElementById('cameraModal').classList.add('hidden');
         statusEl.textContent = "Position barcode in the frame...";
       });
@@ -324,31 +322,22 @@ function attachScannerListeners() {
 // UDI SLIP GENERATOR
 // =====================================================
 
+// toggleUDIPanel is called by the button in index.html.
+// #udiToggle and #udiPanel exist on the Donate tab, so this works as-is.
 function toggleUDIPanel() {
   const toggle = document.getElementById("udiToggle");
   const panel  = document.getElementById("udiPanel");
+  if (!toggle || !panel) return;
   const isOpen = panel.classList.contains("open");
-  if (isOpen) {
-    panel.classList.remove("open");
-    toggle.classList.remove("open");
-  } else {
-    panel.classList.add("open");
-    toggle.classList.add("open");
-  }
+  panel.classList.toggle("open",  !isOpen);
+  toggle.classList.toggle("open", !isOpen);
 }
 
 async function runGenerateSlips() {
   const dateVal = document.getElementById("udiDate").value;
 
-  if (!dateVal) {
-    alert("Please select a fundraiser date.");
-    return;
-  }
-
-  if (!branchLetter) {
-    alert("Branch not detected. Please sign in first.");
-    return;
-  }
+  if (!dateVal) { alert("Please select a fundraiser date."); return; }
+  if (!branchLetter) { alert("Branch not detected. Please sign in first."); return; }
 
   const loadingEl  = document.getElementById("udiLoading");
   const resultEl   = document.getElementById("udiResult");
@@ -386,12 +375,11 @@ async function runGenerateSlips() {
       `branchCode=${encodeURIComponent(branchLetter)}`
     ].join("&");
 
-    const res = await fetch(SCRIPT_URL, {
+    const res  = await fetch(SCRIPT_URL, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body
     });
-
     const data = await res.json();
 
     loadingEl.style.display = "none";
@@ -418,29 +406,22 @@ async function runGenerateSlips() {
 // VOLUNTEER HOURS TRACKER
 // =====================================================
 
+// toggleHoursPanel: #hoursToggle and #hoursPanel no longer exist in the DOM —
+// hours is now a full bottom-nav tab. Any legacy calls from old code are safely
+// swallowed. Data loading is now triggered by switchTab('hours') in index.html.
 function toggleHoursPanel() {
-  const toggle = document.getElementById("hoursToggle");
-  const panel  = document.getElementById("hoursPanel");
-  const isOpen = panel.classList.contains("open");
-  if (isOpen) {
-    panel.classList.remove("open");
-    toggle.classList.remove("open");
-  } else {
-    panel.classList.add("open");
-    toggle.classList.add("open");
-    loadMyHours();
-  }
+  // no-op
 }
 
-// Fetches event type names from row 1 of "volunteer hours" sheet (columns B onward)
+// Fetches event type names from the "volunteer hours" sheet
 async function loadEventTypes() {
   try {
-    const res = await fetch(SCRIPT_URL, {
+    const res  = await fetch(SCRIPT_URL, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: "action=getEventTypes"
     });
-    const data = await res.json();
+    const data   = await res.json();
     const select = document.getElementById("hoursEvent");
     if (data.eventTypes && data.eventTypes.length) {
       select.innerHTML =
@@ -456,23 +437,24 @@ async function loadEventTypes() {
   }
 }
 
-// Fetches this volunteer's rows from the "volunteer hours" sheet
+// Fetches this volunteer's rows from the "volunteer hours" sheet.
+// Called by switchTab('hours') in index.html, and after a successful submit.
 async function loadMyHours() {
   if (!volunteerEmail) return;
 
   const listEl  = document.getElementById("hoursHistoryList");
   const totalEl = document.getElementById("hoursTotalBadge");
 
-  listEl.innerHTML = '<p class="hours-loading">Loading…</p>';
+  listEl.innerHTML  = '<p class="hours-loading">Loading…</p>';
   totalEl.innerHTML = '';
 
   try {
-    const res = await fetch(SCRIPT_URL, {
+    const res  = await fetch(SCRIPT_URL, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: `action=getMyHours&email=${encodeURIComponent(volunteerEmail)}`
     });
-    const data = await res.json();
+    const data    = await res.json();
     const records = data.records || [];
 
     if (!records.length) {
@@ -498,7 +480,6 @@ async function loadMyHours() {
       </div>
     `;
 
-    // Sort: approved first, then pending; within each group newest date first
     const sorted = [...records].sort((a, b) => {
       const aApproved = String(a.approved).trim().toLowerCase() === "yes";
       const bApproved = String(b.approved).trim().toLowerCase() === "yes";
@@ -507,7 +488,7 @@ async function loadMyHours() {
     });
 
     listEl.innerHTML = sorted.map(r => {
-      const approved = String(r.approved).trim().toLowerCase() === "yes";
+      const approved      = String(r.approved).trim().toLowerCase() === "yes";
       const formattedDate = r.eventDate
         ? new Date(r.eventDate + 'T00:00:00').toLocaleDateString('en-US', {
             month: 'short', day: 'numeric', year: 'numeric'
@@ -535,7 +516,7 @@ async function loadMyHours() {
   }
 }
 
-// Submits a new hours request row to the sheet (Approved = "No" by default)
+// Submits a new hours request row (Approved = "No" by default on the sheet)
 async function submitHoursRequest() {
   if (!volunteerEmail) { alert("Please sign in first."); return; }
 
@@ -549,7 +530,7 @@ async function submitHoursRequest() {
   if (!eventDate) { alert("Please enter the event date."); return; }
   if (!hours || Number(hours) <= 0) { alert("Please enter a valid number of hours."); return; }
 
-  btn.disabled = true;
+  btn.disabled    = true;
   btn.textContent = "Submitting…";
   msgEl.style.display = "none";
 
@@ -562,29 +543,29 @@ async function submitHoursRequest() {
   ].join("&");
 
   try {
-    const res = await fetch(SCRIPT_URL, {
+    const res  = await fetch(SCRIPT_URL, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body
     });
     const data = await res.json();
 
-    btn.disabled = false;
+    btn.disabled    = false;
     btn.textContent = "Submit for Approval";
 
     if (data.success) {
-      msgEl.className = "hours-msg hours-msg-success";
+      msgEl.className   = "hours-msg hours-msg-success";
       msgEl.textContent = "✓ Submitted! Your coordinator will review it shortly.";
       msgEl.style.display = "block";
       document.getElementById("hoursDate").value   = "";
       document.getElementById("hoursAmount").value = "";
       document.getElementById("hoursEvent").selectedIndex = 0;
-      loadMyHours();
+      loadMyHours(); // refresh history after submit
     } else {
       throw new Error(data.error || "Unknown error");
     }
   } catch (err) {
-    btn.disabled = false;
+    btn.disabled    = false;
     btn.textContent = "Submit for Approval";
     msgEl.className = "hours-msg hours-msg-error";
     msgEl.textContent = "Error: " + err.message;
