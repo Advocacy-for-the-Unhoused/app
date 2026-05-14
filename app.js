@@ -80,6 +80,7 @@ window.onSignedIn = async function () {
 
     await syncDonations();
     await loadEventTypes();
+    await loadMyHours();
 
   } catch (err) {
     console.error("Error during lookup:", err);
