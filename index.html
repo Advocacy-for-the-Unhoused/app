@@ -815,10 +815,9 @@
     } else if (tab === 'hours') {
       document.getElementById('tabHours').classList.remove('hidden');
       document.getElementById('navHours').classList.add('active');
-      // Fire hours history load if app.js exposes it
-      // (previously triggered by the hours panel toggle)
-      if (typeof window.loadHoursHistory === 'function') {
-        window.loadHoursHistory();
+      // loadMyHours is defined in app.js — call it directly
+      if (typeof loadMyHours === 'function') {
+        loadMyHours();
       }
 
     } else if (tab === 'admin') {
@@ -828,27 +827,12 @@
   }
 
   /* ─────────────────────────────────────────
-     UDI panel toggle (collapsible on Donate tab)
-     — kept functional so app.js calls work
+     toggleUDIPanel / toggleHoursPanel are defined
+     in app.js — do NOT redefine them here or the
+     inline versions will be overwritten by app.js
+     at load time, causing confusion.
+     index.html only owns switchTab().
   ───────────────────────────────────────── */
-  function toggleUDIPanel() {
-    const panel  = document.getElementById('udiPanel');
-    const toggle = document.getElementById('udiToggle');
-    const isOpen = panel.classList.contains('open');
-    panel.classList.toggle('open',  !isOpen);
-    toggle.classList.toggle('open', !isOpen);
-  }
-
-  /* ─────────────────────────────────────────
-     Hours panel toggle stub
-     — Hours is now a full tab; any legacy calls
-       from app.js are safely swallowed here.
-  ───────────────────────────────────────── */
-  function toggleHoursPanel() {
-    // No-op: hours is now navigated via the bottom tab bar.
-    // If app.js calls this expecting to trigger a data load,
-    // switchTab('hours') should be called instead.
-  }
 
   /* ─────────────────────────────────────────
      Google Sign-In callback
