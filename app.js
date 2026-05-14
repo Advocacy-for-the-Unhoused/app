@@ -1,5 +1,5 @@
-// app.js v2
-console.log("App.js v2 loaded!");
+// app.js v3
+console.log("App.js v3 loaded!");
 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwM8DrClchV9B5bfKYMaDURSRzTqlHA3mIVfKLe5HNO85zQYys2rL55WXSDEz89_PxS/exec";
 
@@ -75,6 +75,7 @@ window.onSignedIn = async function () {
       `${branchLetter} — ${branchName}`;
 
     await syncDonations();
+    await loadEventTypes();
 
   } catch (err) {
     console.error("Error during lookup:", err);
@@ -410,5 +411,184 @@ async function runGenerateSlips() {
     btn.disabled = false;
     errorEl.style.display = "block";
     errorEl.innerHTML = `<strong>Error:</strong> ${err.message}`;
+  }
+}
+
+// =====================================================
+// VOLUNTEER HOURS TRACKER
+// =====================================================
+
+function toggleHoursPanel() {
+  const toggle = document.getElementById("hoursToggle");
+  const panel  = document.getElementById("hoursPanel");
+  const isOpen = panel.classList.contains("open");
+  if (isOpen) {
+    panel.classList.remove("open");
+    toggle.classList.remove("open");
+  } else {
+    panel.classList.add("open");
+    toggle.classList.add("open");
+    loadMyHours();
+  }
+}
+
+// Fetches event type names from row 1 of "volunteer hours" sheet (columns B onward)
+async function loadEventTypes() {
+  try {
+    const res = await fetch(SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: "action=getEventTypes"
+    });
+    const data = await res.json();
+    const select = document.getElementById("hoursEvent");
+    if (data.eventTypes && data.eventTypes.length) {
+      select.innerHTML =
+        '<option value="">— Select an event —</option>' +
+        data.eventTypes.map(e => `<option value="${e}">${e}</option>`).join("");
+    } else {
+      select.innerHTML = '<option value="">No events available</option>';
+    }
+  } catch (err) {
+    console.error("Error loading event types:", err);
+    document.getElementById("hoursEvent").innerHTML =
+      '<option value="">Could not load events</option>';
+  }
+}
+
+// Fetches this volunteer's rows from the "volunteer hours" sheet
+async function loadMyHours() {
+  if (!volunteerEmail) return;
+
+  const listEl  = document.getElementById("hoursHistoryList");
+  const totalEl = document.getElementById("hoursTotalBadge");
+
+  listEl.innerHTML = '<p class="hours-loading">Loading…</p>';
+  totalEl.innerHTML = '';
+
+  try {
+    const res = await fetch(SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: `action=getMyHours&email=${encodeURIComponent(volunteerEmail)}`
+    });
+    const data = await res.json();
+    const records = data.records || [];
+
+    if (!records.length) {
+      listEl.innerHTML = '<p class="hours-empty">No events logged yet.</p>';
+      return;
+    }
+
+    const approvedTotal = records
+      .filter(r => String(r.approved).trim().toLowerCase() === "yes")
+      .reduce((sum, r) => sum + Number(r.hours || 0), 0);
+
+    const pendingCount = records.filter(
+      r => String(r.approved).trim().toLowerCase() !== "yes"
+    ).length;
+
+    totalEl.innerHTML = `
+      <div class="hours-total-badge">
+        <div class="hours-total-num">${approvedTotal}</div>
+        <div class="hours-total-label">approved hrs</div>
+        ${pendingCount > 0
+          ? `<div class="hours-pending-note">${pendingCount} pending approval</div>`
+          : ''}
+      </div>
+    `;
+
+    // Sort: approved first, then pending; within each group newest date first
+    const sorted = [...records].sort((a, b) => {
+      const aApproved = String(a.approved).trim().toLowerCase() === "yes";
+      const bApproved = String(b.approved).trim().toLowerCase() === "yes";
+      if (aApproved !== bApproved) return bApproved ? 1 : -1;
+      return new Date(b.eventDate) - new Date(a.eventDate);
+    });
+
+    listEl.innerHTML = sorted.map(r => {
+      const approved = String(r.approved).trim().toLowerCase() === "yes";
+      const formattedDate = r.eventDate
+        ? new Date(r.eventDate + 'T00:00:00').toLocaleDateString('en-US', {
+            month: 'short', day: 'numeric', year: 'numeric'
+          })
+        : '—';
+      return `
+        <div class="hours-row">
+          <div class="hours-row-left">
+            <div class="hours-row-event">${r.eventName}</div>
+            <div class="hours-row-date">${formattedDate}</div>
+          </div>
+          <div class="hours-row-right">
+            <div class="hours-row-amt">${r.hours} hr${Number(r.hours) !== 1 ? 's' : ''}</div>
+            <div class="hours-row-status ${approved ? 'status-approved' : 'status-pending'}">
+              ${approved ? '✓ Approved' : '⏳ Pending'}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+  } catch (err) {
+    console.error("Error loading hours:", err);
+    listEl.innerHTML = '<p class="hours-error">Could not load history. Check your connection.</p>';
+  }
+}
+
+// Submits a new hours request row to the sheet (Approved = "No" by default)
+async function submitHoursRequest() {
+  if (!volunteerEmail) { alert("Please sign in first."); return; }
+
+  const eventName = document.getElementById("hoursEvent").value;
+  const eventDate = document.getElementById("hoursDate").value;
+  const hours     = document.getElementById("hoursAmount").value;
+  const msgEl     = document.getElementById("hoursSubmitMsg");
+  const btn       = document.getElementById("hoursSubmitBtn");
+
+  if (!eventName) { alert("Please select an event."); return; }
+  if (!eventDate) { alert("Please enter the event date."); return; }
+  if (!hours || Number(hours) <= 0) { alert("Please enter a valid number of hours."); return; }
+
+  btn.disabled = true;
+  btn.textContent = "Submitting…";
+  msgEl.style.display = "none";
+
+  const body = [
+    `action=submitHours`,
+    `email=${encodeURIComponent(volunteerEmail)}`,
+    `eventName=${encodeURIComponent(eventName)}`,
+    `eventDate=${encodeURIComponent(eventDate)}`,
+    `hours=${encodeURIComponent(hours)}`
+  ].join("&");
+
+  try {
+    const res = await fetch(SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body
+    });
+    const data = await res.json();
+
+    btn.disabled = false;
+    btn.textContent = "Submit for Approval";
+
+    if (data.success) {
+      msgEl.className = "hours-msg hours-msg-success";
+      msgEl.textContent = "✓ Submitted! Your coordinator will review it shortly.";
+      msgEl.style.display = "block";
+      document.getElementById("hoursDate").value   = "";
+      document.getElementById("hoursAmount").value = "";
+      document.getElementById("hoursEvent").selectedIndex = 0;
+      loadMyHours();
+    } else {
+      throw new Error(data.error || "Unknown error");
+    }
+  } catch (err) {
+    btn.disabled = false;
+    btn.textContent = "Submit for Approval";
+    msgEl.className = "hours-msg hours-msg-error";
+    msgEl.textContent = "Error: " + err.message;
+    msgEl.style.display = "block";
+    console.error("Hours submit error:", err);
   }
 }
