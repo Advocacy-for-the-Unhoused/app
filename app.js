@@ -1,5 +1,5 @@
-// app.js v4
-console.log("App.js v4 loaded!");
+// app.js v7
+console.log("App.js v7 loaded!");
 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwM8DrClchV9B5bfKYMaDURSRzTqlHA3mIVfKLe5HNO85zQYys2rL55WXSDEz89_PxS/exec";
 
@@ -53,8 +53,13 @@ window.onSignedIn = async function () {
     console.log("Parsed info:", info);
 
     if (!info.firstName || info.firstName === "User" || !info.branchCode || info.branchCode === "X") {
-      console.error("User not found in roster!");
-      alert(`Sorry, the email ${volunteerEmail} is not registered as a volunteer.\n\nPlease contact your branch coordinator to be added to the roster.`);
+      console.log("User not found — showing registration form");
+      // Pre-fill from the JWT we already have
+      document.getElementById("regFname").value = payload.given_name  || "";
+      document.getElementById("regLname").value = payload.family_name || "";
+      document.getElementById("regEmail").value = volunteerEmail;
+      document.getElementById("authCard").classList.add("hidden");
+      document.getElementById("registerCard").classList.remove("hidden");
       return;
     }
 
@@ -321,9 +326,6 @@ function attachScannerListeners() {
 // =====================================================
 // UDI SLIP GENERATOR
 // =====================================================
-
-// toggleUDIPanel is called by the button in index.html.
-// #udiToggle and #udiPanel exist on the Donate tab, so this works as-is.
 function toggleUDIPanel() {
   const toggle = document.getElementById("udiToggle");
   const panel  = document.getElementById("udiPanel");
@@ -405,15 +407,10 @@ async function runGenerateSlips() {
 // =====================================================
 // VOLUNTEER HOURS TRACKER
 // =====================================================
-
-// toggleHoursPanel: #hoursToggle and #hoursPanel no longer exist in the DOM —
-// hours is now a full bottom-nav tab. Any legacy calls from old code are safely
-// swallowed. Data loading is now triggered by switchTab('hours') in index.html.
 function toggleHoursPanel() {
-  // no-op
+  // no-op — hours is a full bottom-nav tab
 }
 
-// Fetches event type names from the "volunteer hours" sheet
 async function loadEventTypes() {
   try {
     const res  = await fetch(SCRIPT_URL, {
@@ -437,8 +434,6 @@ async function loadEventTypes() {
   }
 }
 
-// Fetches this volunteer's rows from the "volunteer hours" sheet.
-// Called by switchTab('hours') in index.html, and after a successful submit.
 async function loadMyHours() {
   if (!volunteerEmail) return;
 
@@ -516,7 +511,6 @@ async function loadMyHours() {
   }
 }
 
-// Submits a new hours request row (Approved = "No" by default on the sheet)
 async function submitHoursRequest() {
   if (!volunteerEmail) { alert("Please sign in first."); return; }
 
@@ -560,7 +554,7 @@ async function submitHoursRequest() {
       document.getElementById("hoursDate").value   = "";
       document.getElementById("hoursAmount").value = "";
       document.getElementById("hoursEvent").selectedIndex = 0;
-      loadMyHours(); // refresh history after submit
+      loadMyHours();
     } else {
       throw new Error(data.error || "Unknown error");
     }
@@ -572,4 +566,88 @@ async function submitHoursRequest() {
     msgEl.style.display = "block";
     console.error("Hours submit error:", err);
   }
+}
+
+// =====================================================
+// VOLUNTEER REGISTRATION
+// =====================================================
+let regPhotoBase64 = '';
+let regPhotoMime   = '';
+
+function handleRegPhoto(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  regPhotoMime = file.type;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    regPhotoBase64 = ev.target.result.split(',')[1];
+    document.getElementById('regPhotoPreview').src = ev.target.result;
+    document.getElementById('regPhotoPreview').style.display = 'block';
+    document.getElementById('regCamIcon').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function submitRegistration() {
+  const fname  = document.getElementById('regFname').value.trim();
+  const lname  = document.getElementById('regLname').value.trim();
+  const phone  = document.getElementById('regPhone').value.trim();
+  const branch = document.getElementById('regBranch').value;
+  const msgEl  = document.getElementById('regMsg');
+  const btn    = document.getElementById('regSubmitBtn');
+
+  if (!fname || !lname || !phone || !branch) {
+    alert('Please fill in all required fields.');
+    return;
+  }
+
+  btn.disabled    = true;
+  btn.textContent = 'Submitting…';
+  msgEl.style.display = 'none';
+
+  try {
+    const body = [
+      `action=registerVolunteer`,
+      `fname=${encodeURIComponent(fname)}`,
+      `lname=${encodeURIComponent(lname)}`,
+      `email=${encodeURIComponent(volunteerEmail)}`,
+      `phone=${encodeURIComponent(phone)}`,
+      `branch=${encodeURIComponent(branch)}`,
+      `photoBase64=${encodeURIComponent(regPhotoBase64)}`,
+      `photoMime=${encodeURIComponent(regPhotoMime)}`
+    ].join('&');
+
+    const res  = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      document.getElementById('registerCard').classList.add('hidden');
+      document.getElementById('registerSuccess').classList.remove('hidden');
+    } else {
+      throw new Error(data.error || 'Unknown error');
+    }
+  } catch (err) {
+    btn.disabled    = false;
+    btn.textContent = 'Register as a Volunteer';
+    msgEl.className = 'hours-msg hours-msg-error';
+    msgEl.textContent = 'Error: ' + err.message;
+    msgEl.style.display = 'block';
+    console.error('Registration error:', err);
+  }
+}
+
+function proceedAfterRegistration() {
+  // Grant access with a pending-state welcome message.
+  // branchLetter/branchName remain null until approved and re-verified next login.
+  document.getElementById('registerSuccess').classList.add('hidden');
+  document.getElementById('welcomeMessage').innerText = `Welcome! Your profile is pending Branch President approval.`;
+  document.getElementById('welcomeMessage').style.display = 'block';
+  document.getElementById('appContent').classList.remove('hidden');
+  // UDI slip generation requires branchLetter — hide that section for pending users
+  const udiSection = document.getElementById('udiSection');
+  if (udiSection) udiSection.style.display = 'none';
 }
