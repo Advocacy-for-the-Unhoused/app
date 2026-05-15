@@ -232,7 +232,6 @@
       flex-direction: column;
       align-items: stretch;
       box-sizing: border-box;
-      /* bottom padding clears the fixed nav bar */
       padding-bottom: calc(72px + env(safe-area-inset-bottom));
     }
 
@@ -264,7 +263,7 @@
       white-space: nowrap;
     }
 
-    /* ── Collapsible UDI Toggle (Print Slips) ── */
+    /* ── Collapsible UDI Toggle ── */
     #udiToggle {
       width: 100%;
       background: transparent;
@@ -298,7 +297,6 @@
 
     #udiToggle.open .arrow { transform: rotate(180deg); }
 
-    /* Collapsible panel: collapsed by default */
     #udiPanel {
       overflow: hidden;
       max-height: 0;
@@ -377,7 +375,6 @@
     }
 
     .udi-next strong { font-weight: 700; }
-
     .udi-tip { margin-top: 10px; font-size: 0.75rem; color: #888; }
 
     .udi-error {
@@ -529,6 +526,72 @@
       line-height: 1.6;
     }
 
+    /* ── Registration ── */
+    .reg-name-row {
+      display: flex;
+      gap: 12px;
+    }
+
+    .reg-name-row > div {
+      flex: 1;
+    }
+
+    .reg-name-row label {
+      margin-top: 0;
+    }
+
+    .reg-photo-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-top: 6px;
+    }
+
+    .reg-photo-circle {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      border: 2px dashed #bbb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      cursor: pointer;
+      flex-shrink: 0;
+      background: #fafafa;
+    }
+
+    .reg-photo-circle img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: none;
+    }
+
+    .reg-photo-hint {
+      font-size: 0.82rem;
+      color: #777;
+      line-height: 1.5;
+      font-weight: 400;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    #registerSuccess h3 { color: var(--camp-orange); }
+
+    .reg-pending-chip {
+      display: inline-block;
+      background: #fff0ed;
+      border: 2px solid var(--camp-orange);
+      color: var(--camp-orange);
+      font-weight: 700;
+      font-size: 0.8rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 6px 16px;
+      margin: 16px 0;
+    }
+
     /* ── Bottom Nav ── */
     .bottom-nav {
       position: fixed;
@@ -594,6 +657,7 @@
     @media (max-width: 600px) {
       .card { padding: 25px; box-shadow: 10px 10px 0px var(--camp-orange); }
       #scannerContainer { padding: 20px; box-shadow: 10px 10px 0px var(--camp-orange); }
+      .reg-name-row { flex-direction: column; gap: 0; }
     }
   </style>
 </head>
@@ -602,7 +666,7 @@
 <h1>Advocacy for the <span>Unhoused</span></h1>
 <div class="subtitle">Donation Entry System</div>
 
-<!-- Sign-in Card (shown before auth) -->
+<!-- ═══════════════ Sign-in Card ═══════════════ -->
 <div id="authCard" class="card" style="max-width:500px;">
   <h3 class="center">Sign in to continue</h3>
   <div id="g_id_onload"
@@ -616,6 +680,69 @@
        data-theme="outline"
        data-size="large">
   </div>
+</div>
+
+<!-- ═══════════════ Registration Card ═══════════════ -->
+<div id="registerCard" class="card hidden" style="max-width:500px;">
+  <h3>Register as a Volunteer</h3>
+  <p style="font-size:0.85rem;color:#555;line-height:1.6;margin-bottom:6px;">
+    Your Google account isn't on the roster yet. Fill in your details — your Branch President will approve your profile.
+  </p>
+
+  <div class="reg-name-row">
+    <div>
+      <label>First Name</label>
+      <input type="text" id="regFname" />
+    </div>
+    <div>
+      <label>Last Name</label>
+      <input type="text" id="regLname" />
+    </div>
+  </div>
+
+  <label>Email</label>
+  <input type="email" id="regEmail" readonly />
+
+  <label>Phone Number</label>
+  <input type="tel" id="regPhone" placeholder="(508) 555-0100" />
+
+  <label>Branch</label>
+  <select id="regBranch">
+    <option value="" disabled selected>Select your branch</option>
+    <option>Hopkinton</option>
+    <option>Westford</option>
+    <option>Holliston</option>
+    <option>Medway</option>
+  </select>
+
+  <label>Profile Photo</label>
+  <div class="reg-photo-row">
+    <div class="reg-photo-circle" onclick="document.getElementById('regFileInput').click()">
+      <img id="regPhotoPreview" alt="Profile preview" />
+      <span id="regCamIcon" style="font-size:1.5rem;">📷</span>
+    </div>
+    <span class="reg-photo-hint">Clear, face-forward photo.<br>Will appear on the volunteer team page.</span>
+  </div>
+  <input type="file" id="regFileInput" accept="image/*" style="display:none;" onchange="handleRegPhoto(event)" />
+
+  <button id="regSubmitBtn" onclick="submitRegistration()">Register as a Volunteer</button>
+
+  <div id="regMsg" class="hours-msg"></div>
+</div>
+
+<!-- ═══════════════ Registration Success Card ═══════════════ -->
+<div id="registerSuccess" class="card hidden" style="max-width:500px;text-align:center;">
+  <div style="font-size:2.5rem;margin-bottom:8px;">✅</div>
+  <h3>Welcome to HAU!</h3>
+  <p style="font-size:0.95rem;line-height:1.7;color:#444;">
+    Your registration has been submitted to the Branch Coordination team.
+  </p>
+  <div class="reg-pending-chip">⏳ Pending Branch President Approval</div>
+  <p style="font-size:0.85rem;line-height:1.7;color:#666;">
+    Your Branch President will review and approve your volunteer profile before it appears on the team page.
+    You have full access to the portal in the meantime.
+  </p>
+  <button onclick="proceedAfterRegistration()">Continue to App →</button>
 </div>
 
 <!-- ═══════════════ Main App Content ═══════════════ -->
@@ -715,7 +842,6 @@
   ──────────────────────────────────────────────── -->
   <div id="tabHours" class="tab-view hidden">
 
-    <!-- My History FIRST -->
     <div class="card">
       <h3>My History</h3>
       <div id="hoursTotalBadge"></div>
@@ -724,7 +850,6 @@
       </div>
     </div>
 
-    <!-- Log an Event SECOND -->
     <div class="card">
       <h3>Log an Event</h3>
       <p style="font-size:0.85rem;color:#555;line-height:1.6;margin-bottom:6px;">
@@ -766,7 +891,7 @@
   <!-- ── End Admin Tab ── -->
 
 
-  <!-- ── Bottom Nav (3 tabs) ── -->
+  <!-- ── Bottom Nav ── -->
   <nav class="bottom-nav">
     <button class="nav-item active" id="navDonations" onclick="switchTab('donations')" aria-label="Donations">
       <span class="nav-icon">🤝</span>
@@ -804,7 +929,6 @@
      Tab switching
   ───────────────────────────────────────── */
   function switchTab(tab) {
-    // Hide all tab views and deactivate all nav items
     document.querySelectorAll('.tab-view').forEach(v => v.classList.add('hidden'));
     document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
 
@@ -815,7 +939,6 @@
     } else if (tab === 'hours') {
       document.getElementById('tabHours').classList.remove('hidden');
       document.getElementById('navHours').classList.add('active');
-      // loadMyHours is defined in app.js — call it directly
       if (typeof loadMyHours === 'function') {
         loadMyHours();
       }
@@ -825,14 +948,6 @@
       document.getElementById('navAdmin').classList.add('active');
     }
   }
-
-  /* ─────────────────────────────────────────
-     toggleUDIPanel / toggleHoursPanel are defined
-     in app.js — do NOT redefine them here or the
-     inline versions will be overwritten by app.js
-     at load time, causing confusion.
-     index.html only owns switchTab().
-  ───────────────────────────────────────── */
 
   /* ─────────────────────────────────────────
      Google Sign-In callback
@@ -860,8 +975,7 @@
   }
 </script>
 
-<!-- Bump cache-bust version on every meaningful change -->
-<script src="app.js?v=6"></script>
+<script src="app.js?v=7"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </body>
 </html>
