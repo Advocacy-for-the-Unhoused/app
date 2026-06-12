@@ -1,5 +1,5 @@
-// app.js v7
-console.log("App.js v7 loaded!");
+// app.js v8
+console.log("App.js v8 loaded!");
 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwM8DrClchV9B5bfKYMaDURSRzTqlHA3mIVfKLe5HNO85zQYys2rL55WXSDEz89_PxS/exec";
 
@@ -69,15 +69,64 @@ window.onSignedIn = async function () {
 
     console.log("Set variables:", { volunteerName, branchLetter, branchName });
 
-    document.getElementById("welcomeMessage").innerText =
-      `Welcome, ${volunteerName}! (${branchName} Branch)`;
-    document.getElementById("welcomeMessage").style.display = "block";
+    // Expose profile so the dashboard stub can read it
+    window.volunteerProfile = {
+      firstName: volunteerName,
+      branchName,
+      branchCode: branchLetter,
+      email: volunteerEmail,
+      photoUrl: payload.picture || null,
+    };
+
+    // Wire loadDashboard to pull real stats + activity once data is ready
+    window.loadDashboard = async function() {
+      document.getElementById('dashName').textContent = volunteerName;
+      document.getElementById('dashBranch').textContent = branchName + ' Branch';
+      if (payload.picture) document.getElementById('dashAvatar').src = payload.picture;
+
+      // Fetch stats from the Apps Script
+      try {
+        const statsRes = await fetch(SCRIPT_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: `getDashboard=${encodeURIComponent(volunteerEmail)}&branch=${encodeURIComponent(branchLetter)}`
+        });
+        const stats = JSON.parse(await statsRes.text());
+
+        if (stats.hoursApproved != null)
+          document.getElementById('dashHours').textContent = stats.hoursApproved;
+        if (stats.donationCount != null)
+          document.getElementById('dashDonations').textContent = stats.donationCount;
+
+        if (stats.goalRaised != null && stats.goalTarget != null) {
+          const pct = Math.min(100, Math.round(stats.goalRaised / stats.goalTarget * 100));
+          document.getElementById('dashGoalRaised').textContent = '$' + stats.goalRaised.toLocaleString();
+          document.getElementById('dashGoalOf').textContent = 'of $' + stats.goalTarget.toLocaleString() + ' Goal — ' + pct + '%';
+          document.getElementById('dashGoalBar').style.width = pct + '%';
+        }
+
+        if (Array.isArray(stats.recentActivity) && stats.recentActivity.length > 0) {
+          const feed = document.getElementById('dashActivity');
+          feed.innerHTML = stats.recentActivity.map(item => `
+            <div class="activity-row">
+              <div class="activity-dot"></div>
+              <div class="activity-text">${item.text}</div>
+              ${item.time ? `<div class="activity-time">${item.time}</div>` : ''}
+            </div>
+          `).join('');
+        }
+      } catch (e) {
+        console.warn('Dashboard stats unavailable:', e);
+      }
+    };
 
     document.getElementById("authCard").classList.add("hidden");
     document.getElementById("appContent").classList.remove("hidden");
 
     document.getElementById("udiBranchDisplay").value =
       `${branchLetter} — ${branchName}`;
+
+    switchTab('home');
 
     await syncDonations();
     await loadEventTypes();
