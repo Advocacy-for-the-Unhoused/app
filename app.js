@@ -499,6 +499,12 @@ async function loadMyHours() {
       body: `action=getMyHours&email=${encodeURIComponent(volunteerEmail)}`
     });
     const data    = await res.json();
+
+    if (data.error) {
+      listEl.innerHTML = `<p class="hours-error">Server error: ${data.error}</p>`;
+      return;
+    }
+
     const records = data.records || [];
 
     if (!records.length) {
