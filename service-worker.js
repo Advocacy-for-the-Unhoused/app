@@ -1,4 +1,4 @@
-const CACHE_NAME = "afu-cache-v6";
+const CACHE_NAME = "afu-cache-v8";
 const ASSETS = [
   "/",
   "/index.html",
@@ -43,15 +43,17 @@ self.addEventListener("fetch", event => {
     return;
   }
   
+  // Strip query strings so cache-busting params (?v=8) don't produce stale hits
+  const cacheKey = new Request(event.request.url.split('?')[0]);
   event.respondWith(
-    caches.match(event.request).then(cached => {
+    caches.match(cacheKey).then(cached => {
       if (cached) return cached;
       return fetch(event.request).then(response => {
         if (!response || response.status !== 200 || response.type !== "basic") {
           return response;
         }
         const clone = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+        caches.open(CACHE_NAME).then(cache => cache.put(cacheKey, clone));
         return response;
       });
     })
