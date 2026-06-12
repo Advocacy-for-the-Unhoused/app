@@ -1763,7 +1763,7 @@
     </div>
 
     <!-- ── VIEW: REGISTRATION ── -->
-    <div id="view-registration">
+    <div id="view-registration" style="display:none;flex-direction:column;gap:16px;">
       <!-- no back in registration — auto-lookup routes here -->
 
       <div class="reg-card">
@@ -1909,7 +1909,7 @@
     </div>
 
     <!-- ── VIEW: PAYMENT ── -->
-    <div id="view-payment">
+    <div id="view-payment" style="display:none;flex-direction:column;gap:16px;">
       <button class="back-btn" onclick="showView('itinerary')"><i class="bi bi-arrow-left"></i> Itinerary</button>
       <div id="bill-card" class="bill-card">
         <div style="padding:40px;text-align:center;font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(26,19,17,0.3);">
@@ -1923,7 +1923,7 @@
     </div>
 
     <!-- ── VIEW: ADMIN ── -->
-    <div id="view-admin">
+    <div id="view-admin" style="display:none;flex-direction:column;gap:16px;">
       <div class="admin-header-bar">
         <div class="admin-header-bar-left">
           <div class="admin-eyebrow">Advocacy for the Unhoused</div>
@@ -2162,7 +2162,7 @@
     /* ──────────────────────────────────────────
        VIEW MANAGEMENT
     ────────────────────────────────────────── */
-    const VIEWS = ['lookup','registration','payment','admin'];
+    const VIEWS = ['lookup','registration','payment','admin','itinerary'];
     function showView(name) {
       VIEWS.forEach(v => {
         const el = document.getElementById('view-' + v);
@@ -2178,7 +2178,8 @@
         payment:      'Boston Trip · Your Bill',
         admin:        'Boston Trip · Finance Team',
       };
-      document.getElementById('header-subtitle').textContent = subtitles[name] || 'Boston Trip 2025';
+      const _hdrSub = document.getElementById('header-subtitle');
+      if (_hdrSub) _hdrSub.textContent = subtitles[name] || 'Boston Trip 2025';
     }
 
     function backToLookup() {
