@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>AFU — Donation Logger</title>
+  <title>AFU — Volunteer Portal</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#C8522D">
@@ -417,7 +417,7 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 2px;
-      color: rgba(249,246,240,0.5);
+      color: rgba(249,246,246,0.5);
     }
 
     .hours-pending-note {
@@ -527,18 +527,9 @@
     }
 
     /* ── Registration ── */
-    .reg-name-row {
-      display: flex;
-      gap: 12px;
-    }
-
-    .reg-name-row > div {
-      flex: 1;
-    }
-
-    .reg-name-row label {
-      margin-top: 0;
-    }
+    .reg-name-row { display: flex; gap: 12px; }
+    .reg-name-row > div { flex: 1; }
+    .reg-name-row label { margin-top: 0; }
 
     .reg-photo-row {
       display: flex;
@@ -638,10 +629,7 @@
 
     .nav-item.active { color: var(--camp-orange); }
 
-    .nav-item .nav-icon {
-      font-size: 1.3rem;
-      line-height: 1;
-    }
+    .nav-item .nav-icon { font-size: 1.3rem; line-height: 1; }
 
     .nav-item .nav-dot {
       width: 4px;
@@ -654,17 +642,300 @@
 
     .nav-item.active .nav-dot { opacity: 1; }
 
+    /* ══════════════════════════════════════
+       DASHBOARD HOME
+    ══════════════════════════════════════ */
+
+    /* Profile header card */
+    .dash-profile-card {
+      background: white;
+      border: 4px solid var(--camp-dark);
+      box-shadow: 10px 10px 0 var(--camp-orange);
+      padding: 20px 22px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      box-sizing: border-box;
+    }
+
+    .dash-avatar {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      border: 3px solid var(--camp-dark);
+      object-fit: cover;
+      flex-shrink: 0;
+      background: var(--camp-cream);
+    }
+
+    .dash-greeting {
+      font-family: 'Abril Fatface', serif;
+      font-size: clamp(1.3rem, 5vw, 1.8rem);
+      color: var(--camp-dark);
+      line-height: 1.15;
+      margin: 0 0 4px 0;
+    }
+
+    .dash-greeting span { color: var(--camp-orange); }
+
+    .dash-meta {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #999;
+      margin: 0;
+    }
+
+    /* Stats strip */
+    .dash-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .dash-stat {
+      background: rgba(249,246,240,0.04);
+      border: 1px solid rgba(249,246,240,0.1);
+      padding: 16px 18px;
+      box-sizing: border-box;
+    }
+
+    .dash-stat-num {
+      font-family: 'Abril Fatface', serif;
+      font-size: 2rem;
+      color: var(--camp-orange);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .dash-stat-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: rgba(249,246,240,0.35);
+    }
+
+    /* Fundraising goal */
+    .dash-goal {
+      background: white;
+      border: 3px solid var(--camp-dark);
+      box-shadow: 8px 8px 0 var(--camp-orange);
+      padding: 18px 22px 20px;
+      margin-bottom: 16px;
+      box-sizing: border-box;
+    }
+
+    .dash-goal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 4px;
+    }
+
+    .dash-goal-title {
+      font-family: 'Abril Fatface', serif;
+      font-size: 1rem;
+      color: var(--camp-dark);
+    }
+
+    .dash-goal-amount {
+      font-family: 'Abril Fatface', serif;
+      font-size: 1.4rem;
+      color: var(--camp-orange);
+    }
+
+    .dash-goal-sub {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #aaa;
+      margin-bottom: 10px;
+    }
+
+    .dash-progress-track {
+      width: 100%;
+      height: 10px;
+      background: #eee;
+      overflow: hidden;
+    }
+
+    .dash-progress-fill {
+      height: 100%;
+      background: var(--camp-orange);
+      transition: width 0.6s ease;
+    }
+
+    /* Feature tiles */
+    .dash-section-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: rgba(249,246,240,0.25);
+      margin: 0 0 12px 0;
+    }
+
+    .dash-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .dash-tile {
+      background: white;
+      border: 3px solid var(--camp-dark);
+      box-shadow: 6px 6px 0 var(--camp-orange);
+      padding: 20px 18px 18px;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      box-sizing: border-box;
+      text-align: left;
+      width: 100%;
+      margin: 0;
+      font-family: 'Montserrat', sans-serif;
+      color: var(--camp-dark);
+      border-radius: 0;
+    }
+
+    .dash-tile:hover {
+      transform: translate(3px, 3px);
+      box-shadow: 3px 3px 0 var(--camp-orange);
+      background: white;
+    }
+
+    .dash-tile:active { transform: translate(6px, 6px); box-shadow: none; }
+
+    .dash-tile-icon {
+      font-size: 1.6rem;
+      line-height: 1;
+      margin-bottom: 10px;
+      display: block;
+    }
+
+    .dash-tile-title {
+      font-family: 'Abril Fatface', serif;
+      font-size: 1rem;
+      color: var(--camp-dark);
+      line-height: 1.2;
+      margin-bottom: 4px;
+    }
+
+    .dash-tile-desc {
+      font-size: 0.72rem;
+      font-weight: 400;
+      color: #888;
+      line-height: 1.4;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    .dash-tile.coming-soon {
+      opacity: 0.4;
+      cursor: default;
+      box-shadow: 6px 6px 0 rgba(200,82,45,0.2);
+    }
+
+    .dash-tile.coming-soon:hover,
+    .dash-tile.coming-soon:active {
+      transform: none;
+      box-shadow: 6px 6px 0 rgba(200,82,45,0.2);
+      background: white;
+    }
+
+    .dash-chip {
+      display: inline-block;
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      background: var(--camp-dark);
+      color: rgba(249,246,240,0.5);
+      padding: 2px 7px;
+      margin-top: 6px;
+    }
+
+    /* Activity feed */
+    .dash-activity {
+      background: white;
+      border: 3px solid var(--camp-dark);
+      box-shadow: 8px 8px 0 var(--camp-orange);
+      padding: 20px 22px 14px;
+      margin-bottom: 16px;
+      box-sizing: border-box;
+    }
+
+    .dash-activity h4 {
+      font-family: 'Abril Fatface', serif;
+      font-size: 1rem;
+      margin: 0 0 14px 0;
+      color: var(--camp-dark);
+    }
+
+    .activity-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 9px 0;
+      border-bottom: 1px solid #eee;
+    }
+
+    .activity-row:last-child { border-bottom: none; }
+
+    .activity-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--camp-orange);
+      flex-shrink: 0;
+      margin-top: 6px;
+    }
+
+    .activity-text {
+      font-size: 0.82rem;
+      color: #555;
+      line-height: 1.5;
+      flex: 1;
+    }
+
+    .activity-time {
+      font-size: 0.7rem;
+      color: #bbb;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .activity-empty {
+      font-size: 0.82rem;
+      color: #bbb;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding: 8px 0;
+    }
+
     @media (max-width: 600px) {
       .card { padding: 25px; box-shadow: 10px 10px 0px var(--camp-orange); }
       #scannerContainer { padding: 20px; box-shadow: 10px 10px 0px var(--camp-orange); }
       .reg-name-row { flex-direction: column; gap: 0; }
+      .dash-grid { gap: 8px; }
+      .dash-tile { padding: 16px 14px 14px; }
     }
   </style>
 </head>
 <body>
 
 <h1>Advocacy for the <span>Unhoused</span></h1>
-<div class="subtitle">Donation Entry System</div>
+<div class="subtitle">Volunteer Portal</div>
 
 <!-- ═══════════════ Sign-in Card ═══════════════ -->
 <div id="authCard" class="card" style="max-width:500px;">
@@ -749,13 +1020,109 @@
 <div id="appContent" class="hidden">
 
   <!-- ────────────────────────────────────────────────
+       TAB 0 — HOME DASHBOARD
+  ──────────────────────────────────────────────── -->
+  <div id="tabHome" class="tab-view">
+
+    <!-- Profile header -->
+    <div class="dash-profile-card">
+      <img id="dashAvatar" class="dash-avatar"
+           src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='24' r='14' fill='%23ddd'/%3E%3Cellipse cx='32' cy='60' rx='22' ry='16' fill='%23ddd'/%3E%3C/svg%3E"
+           alt="Profile">
+      <div>
+        <p class="dash-greeting">Hey, <span id="dashName">Volunteer</span>.</p>
+        <p class="dash-meta" id="dashBranch">Loading…</p>
+      </div>
+    </div>
+
+    <!-- Quick stats -->
+    <div class="dash-stats">
+      <div class="dash-stat">
+        <div class="dash-stat-num" id="dashHours">—</div>
+        <div class="dash-stat-label">Hours Logged</div>
+      </div>
+      <div class="dash-stat">
+        <div class="dash-stat-num" id="dashDonations">—</div>
+        <div class="dash-stat-label">Donations</div>
+      </div>
+    </div>
+
+    <!-- Branch fundraising goal -->
+    <div class="dash-goal">
+      <div class="dash-goal-header">
+        <span class="dash-goal-title">Branch Fundraising Goal</span>
+        <span class="dash-goal-amount" id="dashGoalRaised">—</span>
+      </div>
+      <div class="dash-goal-sub" id="dashGoalOf">Loading…</div>
+      <div class="dash-progress-track">
+        <div class="dash-progress-fill" id="dashGoalBar" style="width:0%"></div>
+      </div>
+    </div>
+
+    <!-- Feature tiles -->
+    <p class="dash-section-label">Quick Actions</p>
+    <div class="dash-grid">
+
+      <button class="dash-tile" onclick="switchTab('donations')">
+        <span class="dash-tile-icon">🤝</span>
+        <div class="dash-tile-title">Log Donation</div>
+        <div class="dash-tile-desc">Enter UDI & amount for a donor</div>
+      </button>
+
+      <button class="dash-tile" onclick="switchTab('hours')">
+        <span class="dash-tile-icon">⏱</span>
+        <div class="dash-tile-title">My Hours</div>
+        <div class="dash-tile-desc">View history & submit for approval</div>
+      </button>
+
+      <button class="dash-tile coming-soon" disabled>
+        <span class="dash-tile-icon">📅</span>
+        <div class="dash-tile-title">Shift Planner</div>
+        <div class="dash-tile-desc">Sign up for upcoming shifts</div>
+        <div class="dash-chip">Coming Soon</div>
+      </button>
+
+      <button class="dash-tile coming-soon" disabled>
+        <span class="dash-tile-icon">✅</span>
+        <div class="dash-tile-title">Task Board</div>
+        <div class="dash-tile-desc">Branch to-dos & assignments</div>
+        <div class="dash-chip">Coming Soon</div>
+      </button>
+
+      <button class="dash-tile coming-soon" disabled>
+        <span class="dash-tile-icon">🚌</span>
+        <div class="dash-tile-title">Trip Sign-Up</div>
+        <div class="dash-tile-desc">Register for service trips</div>
+        <div class="dash-chip">Coming Soon</div>
+      </button>
+
+      <button class="dash-tile" onclick="switchTab('admin')">
+        <span class="dash-tile-icon">⚙️</span>
+        <div class="dash-tile-title">Admin Tools</div>
+        <div class="dash-tile-desc">Reports & coordinator view</div>
+      </button>
+
+    </div>
+
+    <!-- Recent activity feed -->
+    <div class="dash-activity">
+      <h4>Recent Activity</h4>
+      <div id="dashActivity">
+        <div class="activity-empty">No recent activity yet.</div>
+      </div>
+    </div>
+
+  </div>
+  <!-- ── End Home Tab ── -->
+
+
+  <!-- ────────────────────────────────────────────────
        TAB 1 — DONATIONS
   ──────────────────────────────────────────────── -->
-  <div id="tabDonations" class="tab-view">
+  <div id="tabDonations" class="tab-view hidden">
 
     <div id="welcomeMessage" class="welcome"></div>
 
-    <!-- Donation Logger -->
     <div id="step2" class="card">
       <h3>Log Donation</h3>
 
@@ -778,7 +1145,6 @@
       <button onclick="submitDonation()">Submit Donation</button>
     </div>
 
-    <!-- Submission Confirmation -->
     <div id="step3" class="card hidden">
       <h3>✓ Submission Successful!</h3>
       <p>Your UDI: <span id="finalUDI"></span></p>
@@ -831,7 +1197,6 @@
         </div>
       </div>
     </div>
-    <!-- ── End Print Slips ── -->
 
   </div>
   <!-- ── End Donations Tab ── -->
@@ -893,7 +1258,12 @@
 
   <!-- ── Bottom Nav ── -->
   <nav class="bottom-nav">
-    <button class="nav-item active" id="navDonations" onclick="switchTab('donations')" aria-label="Donations">
+    <button class="nav-item active" id="navHome" onclick="switchTab('home')" aria-label="Home">
+      <span class="nav-icon">🏠</span>
+      <span>Home</span>
+      <span class="nav-dot"></span>
+    </button>
+    <button class="nav-item" id="navDonations" onclick="switchTab('donations')" aria-label="Donations">
       <span class="nav-icon">🤝</span>
       <span>Donate</span>
       <span class="nav-dot"></span>
@@ -932,22 +1302,41 @@
     document.querySelectorAll('.tab-view').forEach(v => v.classList.add('hidden'));
     document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
 
-    if (tab === 'donations') {
+    if (tab === 'home') {
+      document.getElementById('tabHome').classList.remove('hidden');
+      document.getElementById('navHome').classList.add('active');
+      if (typeof window.loadDashboard === 'function') window.loadDashboard();
+
+    } else if (tab === 'donations') {
       document.getElementById('tabDonations').classList.remove('hidden');
       document.getElementById('navDonations').classList.add('active');
 
     } else if (tab === 'hours') {
       document.getElementById('tabHours').classList.remove('hidden');
       document.getElementById('navHours').classList.add('active');
-      if (typeof loadMyHours === 'function') {
-        loadMyHours();
-      }
+      if (typeof loadMyHours === 'function') loadMyHours();
 
     } else if (tab === 'admin') {
       document.getElementById('tabAdmin').classList.remove('hidden');
       document.getElementById('navAdmin').classList.add('active');
     }
   }
+
+  /* ─────────────────────────────────────────
+     Default loadDashboard stub.
+     app.js overrides window.loadDashboard after
+     the volunteer profile & stats are fetched.
+  ───────────────────────────────────────── */
+  window.loadDashboard = function() {
+    if (window.volunteerProfile) {
+      const p = window.volunteerProfile;
+      const firstName = (p.firstName || p.first_name || '').split(' ')[0];
+      if (firstName) document.getElementById('dashName').textContent = firstName;
+      const branch = p.branch || p.Branch || p.branchName || '';
+      if (branch) document.getElementById('dashBranch').textContent = branch + ' Branch';
+      if (p.photoUrl) document.getElementById('dashAvatar').src = p.photoUrl;
+    }
+  };
 
   /* ─────────────────────────────────────────
      Google Sign-In callback
@@ -975,7 +1364,7 @@
   }
 </script>
 
-<script src="app.js?v=7"></script>
+<script src="app.js?v=8"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </body>
 </html>
