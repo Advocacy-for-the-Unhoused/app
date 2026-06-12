@@ -1710,6 +1710,7 @@
   ──────────────────────────────────────────────── -->
   <div id="tabAdmin" class="tab-view hidden">
     <div class="card">
+      <button onclick="switchTab('home')" style="width:auto;padding:8px 16px;margin:0 0 20px 0;background:none;border:2px solid var(--camp-dark);color:var(--camp-dark);font-size:0.8rem;font-family:'Montserrat',sans-serif;font-weight:700;display:inline-flex;align-items:center;gap:6px;cursor:pointer;border-radius:0;">&#8592; Back to Home</button>
       <h3>Admin Tools</h3>
       <div class="admin-no-access">
         <span class="lock-icon">🔒</span>
@@ -2098,6 +2099,24 @@
   (function() {
     var bostonInitialized = false;
 
+    /* Replacement for google.script.run — uses the same SCRIPT_URL fetch pattern as the rest of the app */
+    function gasCall(method, params, onSuccess, onFailure) {
+      var body = 'action=' + encodeURIComponent(method);
+      if (params) {
+        Object.keys(params).forEach(function(k) {
+          body += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(String(params[k]));
+        });
+      }
+      fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body
+      })
+      .then(function(res) { return res.json(); })
+      .then(function(data) { if (onSuccess) onSuccess(data); })
+      .catch(function(err) { if (onFailure) onFailure(err); });
+    }
+
     window.initBostonTrip = function() {
       showView('lookup');
       document.getElementById('boston-loading-spinner').style.display = 'block';
@@ -2115,8 +2134,7 @@
         return;
       }
 
-      google.script.run
-        .withSuccessHandler(function(names) {
+      gasCall('getQualifiedNames', {}, function(names) {
           qualifiedNames = names || [];
           var person = null;
           for (var i = 0; i < qualifiedNames.length; i++) {
@@ -2130,14 +2148,12 @@
             return;
           }
           selectPerson(person);
-        })
-        .withFailureHandler(function() {
+        }, function() {
           document.getElementById('boston-loading-spinner').style.display = 'none';
           var el = document.getElementById('lookup-error');
           el.textContent = 'Could not load trip data. Please try again.';
           el.style.display = 'block';
-        })
-        .getQualifiedNames();
+        });
     };
 
     
@@ -2297,8 +2313,7 @@
       btn.disabled = true;
       btn.innerHTML = '<i class="bi bi-hourglass-split spinner"></i> Submitting&hellip;';
 
-      google.script.run
-        .withSuccessHandler(result => {
+      gasCall('bostonSubmitForm', data, result => {
           btn.disabled = false;
           btn.innerHTML = '<i class="bi bi-check-lg"></i> Submit Form';
           if (result.success) {
@@ -2307,13 +2322,11 @@
           } else {
             showRegStatus('error', 'Submission failed: ' + (result.error || 'Unknown error.'));
           }
-        })
-        .withFailureHandler(() => {
+        }, () => {
           btn.disabled = false;
           btn.innerHTML = '<i class="bi bi-check-lg"></i> Submit Form';
           showRegStatus('error', 'Something went wrong. Please check your connection and try again.');
-        })
-        .submitForm(data);
+        });
     }
 
     function showRegStatus(type, msg) {
@@ -2333,18 +2346,15 @@
       card.className = 'bill-card';
       card.innerHTML = '<div style="padding:40px;text-align:center;font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(26,19,17,0.3);"><i class="bi bi-hourglass-split spinner"></i> Loading your bill…</div>';
 
-      google.script.run
-        .withSuccessHandler(result => {
+      gasCall('getVolunteerBill', {email: p.email}, result => {
           if (!result.found) {
             card.innerHTML = '<div style="padding:20px;font-size:0.7rem;font-weight:700;color:#b83232;">No billing record found for this account. Please contact HAU leadership.</div>';
             return;
           }
           renderBill(result);
-        })
-        .withFailureHandler(() => {
+        }, () => {
           card.innerHTML = '<div style="padding:20px;font-size:0.7rem;font-weight:700;color:#b83232;">Could not load bill — please try again.</div>';
-        })
-        .getVolunteerBill(p.email);
+        });
     }
 
     function renderBill(data) {
@@ -2594,17 +2604,14 @@
       const btn    = document.getElementById('refresh-btn');
       roster.innerHTML = '<div style="padding:20px 0;text-align:center;font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(26,19,17,0.3);"><i class="bi bi-hourglass-split spinner"></i> Loading…</div>';
       btn.disabled = true;
-      google.script.run
-        .withSuccessHandler(vols => {
+      gasCall('getAllVolunteers', {}, vols => {
           btn.disabled = false;
           if (vols.error) { roster.innerHTML = '<div style="padding:16px;color:#b83232;font-size:0.7rem;font-weight:700;">Error: ' + esc(vols.error) + '</div>'; return; }
           renderRoster(vols);
-        })
-        .withFailureHandler(() => {
+        }, () => {
           btn.disabled = false;
           roster.innerHTML = '<div style="padding:16px;color:#b83232;font-size:0.7rem;font-weight:700;">Failed to load — try refreshing.</div>';
-        })
-        .getAllVolunteers();
+        });
     }
 
     function renderRoster(vols) {
@@ -2727,8 +2734,7 @@
     function togglePaid(btn, email, currentlyPaid) {
       const newPaid = !currentlyPaid;
       btn.innerHTML = '<i class="bi bi-hourglass-split spinner"></i>'; btn.disabled = true;
-      google.script.run
-        .withSuccessHandler(res => {
+      gasCall('updateVolunteerPaid', {email: email, paid: newPaid}, res => {
           btn.disabled = false;
           if (!res.success) {
             btn.innerHTML = currentlyPaid ? '<i class="bi bi-x-circle"></i> Mark Unpaid' : '<i class="bi bi-check-circle"></i> Mark Fully Paid';
@@ -2757,20 +2763,17 @@
           document.getElementById('admin-stat-paid').textContent = paidCards.length;
           document.getElementById('pill-paid').textContent       = paidCards.length;
           document.getElementById('pill-unpaid').textContent     = allCards.length - paidCards.length;
-        })
-        .withFailureHandler(() => {
+        }, () => {
           btn.disabled = false;
           btn.innerHTML = currentlyPaid ? '<i class="bi bi-x-circle"></i> Mark Unpaid' : '<i class="bi bi-check-circle"></i> Mark Fully Paid';
           alert('Network error — try again.');
-        })
-        .updateVolunteerPaid(email, newPaid);
+        });
     }
 
     function toggleTrainPaid(btn, email, currentlyPaid) {
       const newPaid = !currentlyPaid;
       btn.innerHTML = '<i class="bi bi-hourglass-split spinner"></i>'; btn.disabled = true;
-      google.script.run
-        .withSuccessHandler(res => {
+      gasCall('updateVolunteerTrainPaid', {email: email, paid: newPaid}, res => {
           btn.disabled = false;
           if (!res.success) {
             btn.innerHTML = currentlyPaid ? '<i class="bi bi-x-circle"></i> Unmark Train' : '<i class="bi bi-train-front"></i> Mark Train Paid';
@@ -2787,13 +2790,11 @@
           btn.innerHTML = newPaid ? '<i class="bi bi-x-circle"></i> Unmark Train' : '<i class="bi bi-train-front"></i> Mark Train Paid';
           btn.onclick   = () => toggleTrainPaid(btn, email, newPaid);
           btn.closest('.paid-toggle-strip').querySelector('.paid-status-text').textContent = newPaid ? '✓ Train ticket paid' : 'Train ticket unpaid';
-        })
-        .withFailureHandler(() => {
+        }, () => {
           btn.disabled = false;
           btn.innerHTML = currentlyPaid ? '<i class="bi bi-x-circle"></i> Unmark Train' : '<i class="bi bi-train-front"></i> Mark Train Paid';
           alert('Network error — try again.');
-        })
-        .updateVolunteerTrainPaid(email, newPaid);
+        });
     }
 
     function buildFixedCosts(vol) {
@@ -2852,16 +2853,13 @@
       const input = row.querySelector('.cost-editable');
       const val   = parseFloat(input.value) || 0;
       btn.innerHTML = '<i class="bi bi-hourglass-split spinner"></i>'; btn.disabled = true;
-      google.script.run
-        .withSuccessHandler(res => {
+      gasCall('updateVolunteerFixed', {email: email, key: key, val: val}, res => {
           btn.classList.remove('show'); btn.innerHTML = '<i class="bi bi-check"></i> Save'; btn.disabled = false;
           if (!res.success) { alert('Save failed: ' + (res.error || 'unknown')); return; }
           input.dataset.orig = val.toFixed(2);
           row.querySelector('.cost-row-icon').classList.toggle('active', val > 0);
           refreshCardTotal(btn.closest('.vol-card'), email);
-        })
-        .withFailureHandler(() => { btn.innerHTML = '<i class="bi bi-check"></i> Save'; btn.disabled = false; alert('Network error — try again.'); })
-        .updateVolunteerFixed(email, key, val);
+        }, () => { btn.innerHTML = '<i class="bi bi-check"></i> Save'; btn.disabled = false; alert('Network error — try again.'); });
     }
 
     function onFoodItemChange(input) {
@@ -2886,29 +2884,23 @@
       const cost   = parseFloat(costIn.value) || 0;
       if (!item) return;
       btn.innerHTML = '<i class="bi bi-hourglass-split spinner"></i>'; btn.disabled = true;
-      google.script.run
-        .withSuccessHandler(res => {
+      gasCall('updateFoodItem', {id: id, item: item, cost: cost}, res => {
           btn.classList.remove('show'); btn.innerHTML = '<i class="bi bi-check"></i> Save'; btn.disabled = false;
           if (!res.success) { alert('Save failed: ' + (res.error || 'unknown')); return; }
           nameIn.dataset.origName = item; costIn.dataset.origCost = cost.toFixed(2);
           const card = btn.closest('.vol-card');
           refreshFoodSubtotals(card); refreshCardTotal(card, card.dataset.email);
-        })
-        .withFailureHandler(() => { btn.innerHTML = '<i class="bi bi-check"></i> Save'; btn.disabled = false; alert('Network error — try again.'); })
-        .updateFoodItem(id, item, cost);
+        }, () => { btn.innerHTML = '<i class="bi bi-check"></i> Save'; btn.disabled = false; alert('Network error — try again.'); });
     }
     function deleteFoodItem(btn, id) {
       if (!confirm('Delete this food item?')) return;
       btn.disabled = true;
-      google.script.run
-        .withSuccessHandler(res => {
+      gasCall('deleteFoodItem', {id: id}, res => {
           if (!res.success) { btn.disabled = false; alert('Delete failed: ' + (res.error || 'unknown')); return; }
           const row  = btn.closest('.food-item-row');
           const card = row.closest('.vol-card');
           row.remove(); refreshFoodSubtotals(card); refreshCardTotal(card, card.dataset.email);
-        })
-        .withFailureHandler(() => { btn.disabled = false; alert('Network error — try again.'); })
-        .deleteFoodItem(id);
+        }, () => { btn.disabled = false; alert('Network error — try again.'); });
     }
     function showAddFoodRow(addBtn, email) {
       const list = addBtn.closest('.food-admin-head').nextElementSibling;
@@ -2929,8 +2921,7 @@
       const cost = parseFloat(row.querySelector('.new-food-cost').value) || 0;
       if (!item) { row.querySelector('.new-food-name').focus(); return; }
       btn.innerHTML = '<i class="bi bi-hourglass-split spinner"></i>'; btn.disabled = true;
-      google.script.run
-        .withSuccessHandler(res => {
+      gasCall('addFoodItem', {email: email, item: item, cost: cost}, res => {
           if (!res.success) { btn.innerHTML = '<i class="bi bi-check"></i> Add'; btn.disabled = false; alert('Add failed: ' + (res.error || 'unknown')); return; }
           const card = row.closest('.vol-card');
           const list = row.closest('.food-items-list');
@@ -2938,9 +2929,7 @@
           if (empty) empty.remove();
           list.insertBefore(document.createRange().createContextualFragment(buildFoodItemRow({ id: res.id, item, cost })), row);
           row.remove(); refreshFoodSubtotals(card); refreshCardTotal(card, email);
-        })
-        .withFailureHandler(() => { btn.innerHTML = '<i class="bi bi-check"></i> Add'; btn.disabled = false; alert('Network error — try again.'); })
-        .addFoodItem(email, item, cost);
+        }, () => { btn.innerHTML = '<i class="bi bi-check"></i> Add'; btn.disabled = false; alert('Network error — try again.'); });
     }
     function refreshFoodSubtotals(card) {
       const costInputs = card.querySelectorAll('.food-item-cost-input');
@@ -3039,10 +3028,7 @@
     function loadItinerary(p) {
       showView('itinerary');
       if (adminUnlocked) document.getElementById('itin-edit-btn').style.display = 'flex';
-      google.script.run
-        .withSuccessHandler(function(vals) { itinValues = vals || {}; renderItinerary(); })
-        .withFailureHandler(function() { itinValues = {}; renderItinerary(); })
-        .getItineraryData();
+      gasCall('getItineraryData', {}, function(vals) { itinValues = vals || {}; renderItinerary(); }, function() { itinValues = {}; renderItinerary(); });
     }
 
     function renderItinerary() {
@@ -3108,24 +3094,21 @@
       statusEl.style.color = 'rgba(26,19,17,0.4)';
       statusEl.textContent = 'Saving…';
       statusEl.style.display = 'block';
-      google.script.run
-        .withSuccessHandler(function(r) {
+      gasCall('saveItineraryData', {data: JSON.stringify(vals)}, function(r) {
           if (r && r.success) {
             itinValues = vals;
             renderItinerary();
             statusEl.style.color = '#1D9E75';
-            statusEl.textContent = '\u2713 Saved!';
+            statusEl.textContent = '✓ Saved!';
             setTimeout(closeItinEditor, 900);
           } else {
             statusEl.style.color = '#b83232';
             statusEl.textContent = 'Error: ' + ((r && r.error) || 'Unknown error');
           }
-        })
-        .withFailureHandler(function() {
+        }, function() {
           statusEl.style.color = '#b83232';
-          statusEl.textContent = 'Save failed — check connection.';
-        })
-        .saveItineraryData(JSON.stringify(vals));
+          statusEl.textContent = 'Save failed -- check connection.';
+        });
     }
 
   })();
