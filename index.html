@@ -593,9 +593,11 @@
       background: var(--camp-dark);
       border-top: 1px solid rgba(249,246,240,0.1);
       display: flex;
-      z-index: 200;
+      z-index: 1100;
       padding-bottom: env(safe-area-inset-bottom);
     }
+
+    .bottom-nav.hidden { display: none !important; }
 
     .nav-item {
       flex: 1;
@@ -1613,6 +1615,7 @@
       <h3>✓ Submission Successful!</h3>
       <p>Your UDI: <span id="finalUDI"></span></p>
       <button onclick="restart()">Submit Another</button>
+      <button onclick="switchTab('home')" style="background:transparent;border:2px solid var(--camp-dark);color:var(--camp-dark);margin-top:10px;">← Back to Dashboard</button>
     </div>
 
     <!-- ── Print Slips (collapsible) ── -->
@@ -1974,7 +1977,10 @@
   </div>
   <!-- ── End Boston Trip Tab ── -->
 
-<nav class="bottom-nav">
+
+</div><!-- /appContent -->
+
+<nav class="bottom-nav hidden" id="mainNav">
     <button class="nav-item active" id="navHome" onclick="switchTab('home')" aria-label="Home">
       <span class="nav-icon">🏠</span>
       <span>Home</span>
@@ -2001,8 +2007,6 @@
       <span class="nav-dot"></span>
     </button>
   </nav>
-
-</div><!-- /appContent -->
 
 
 <!-- ── Camera Scanner Modal ── -->
