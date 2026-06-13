@@ -572,6 +572,7 @@
     .hrs-row  { display: flex; flex-direction: column; padding: 9px 10px; background: white; border: 2px solid var(--border); box-shadow: 2px 2px 0 var(--border); margin-bottom: 8px; }
     .hrs-row-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
     .hrs-row-actions { display: flex; gap: 6px; margin-top: 8px; }
+    .hrs-row-actions .hrs-btn { flex: 1; text-align: center; }
     .hrs-row-info { flex: 1; min-width: 0; }
     .hrs-row-name  { font-size: 0.78rem; font-weight: 700; color: var(--dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .hrs-row-meta  { font-size: 0.58rem; font-weight: 600; color: rgba(26,19,17,0.45); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -596,6 +597,20 @@
     .hrs-dropdown-item:last-child { border-bottom: none; }
     .hrs-dropdown-item:hover, .hrs-dropdown-item.focused { background: var(--cream); }
     .hrs-dropdown-item small { display: block; font-size: 0.58rem; font-weight: 500; color: rgba(26,19,17,0.45); margin-top: 1px; }
+
+    /* ── Hours Viewer (All Hours tab) ── */
+    .hrs-person-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: white; border: 2px solid var(--border); box-shadow: 2px 2px 0 var(--border); margin-bottom: 8px; cursor: pointer; transition: background 0.12s; }
+    .hrs-person-row:hover { background: var(--cream); }
+    .hrs-person-name { font-size: 0.78rem; font-weight: 700; color: var(--dark); }
+    .hrs-person-total { font-size: 0.78rem; font-weight: 800; color: var(--orange); flex-shrink: 0; margin-left: 10px; }
+    .hrs-breakdown { display: none; background: var(--cream); border: 2px solid var(--border); border-top: none; margin-top: -8px; margin-bottom: 8px; padding: 8px 12px; }
+    .hrs-breakdown.open { display: block; }
+    .hrs-breakdown-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 0.68rem; }
+    .hrs-breakdown-row:last-child { border-bottom: none; }
+    .hrs-breakdown-event { font-weight: 600; color: var(--dark); flex: 1; margin-right: 8px; }
+    .hrs-breakdown-date { color: rgba(26,19,17,0.45); font-weight: 600; flex-shrink: 0; margin-right: 8px; }
+    .hrs-breakdown-hrs { font-weight: 800; color: var(--orange); flex-shrink: 0; }
+    .hrs-breakdown-pending { font-size: 0.5rem; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; color: #b83232; margin-left: 5px; vertical-align: middle; }
 
     /* ── Registration ── */
     .reg-name-row { display: flex; gap: 12px; }
@@ -2192,11 +2207,19 @@
         <div class="hrs-tabs">
           <button class="hrs-tab active" onclick="switchHrsTab('pending')">Pending Requests</button>
           <button class="hrs-tab"        onclick="switchHrsTab('assign')">Assign Hours</button>
+          <button class="hrs-tab"        onclick="switchHrsTab('all')">All Hours</button>
         </div>
 
         <!-- Pending panel -->
         <div class="hrs-panel active" id="hrs-panel-pending">
           <div id="hrs-pending-list">
+            <div class="hrs-empty"><i class="bi bi-hourglass-split spinner"></i> Loading…</div>
+          </div>
+        </div>
+
+        <!-- All Hours panel -->
+        <div class="hrs-panel" id="hrs-panel-all">
+          <div id="hrs-all-list">
             <div class="hrs-empty"><i class="bi bi-hourglass-split spinner"></i> Loading…</div>
           </div>
         </div>
@@ -3766,10 +3789,52 @@
 
     function switchHrsTab(tab) {
       document.querySelectorAll('.hrs-tab').forEach(function(t, i) {
-        t.classList.toggle('active', (i === 0 && tab === 'pending') || (i === 1 && tab === 'assign'));
+        t.classList.toggle('active', (i === 0 && tab === 'pending') || (i === 1 && tab === 'assign') || (i === 2 && tab === 'all'));
       });
       document.getElementById('hrs-panel-pending').classList.toggle('active', tab === 'pending');
       document.getElementById('hrs-panel-assign').classList.toggle('active',  tab === 'assign');
+      document.getElementById('hrs-panel-all').classList.toggle('active',     tab === 'all');
+      if (tab === 'all') renderAllHours();
+    }
+
+    function renderAllHours() {
+      var container = document.getElementById('hrs-all-list');
+      if (!hrsAllRecords.length) {
+        container.innerHTML = '<div class="hrs-empty">No hours recorded yet</div>';
+        return;
+      }
+      // Aggregate by email
+      var byEmail = {};
+      hrsAllRecords.forEach(function(r) {
+        var key = r.email || r.name;
+        if (!byEmail[key]) byEmail[key] = { name: r.name, email: r.email, total: 0, events: [] };
+        byEmail[key].total += Number(r.hours) || 0;
+        byEmail[key].events.push({ eventName: r.eventName, date: r.date, hours: Number(r.hours) || 0, approved: r.approved });
+      });
+      var people = Object.values(byEmail).sort(function(a, b) { return b.total - a.total; });
+
+      container.innerHTML = people.map(function(p) {
+        var safeKey = (p.email || p.name).replace(/[^a-zA-Z0-9]/g, '_');
+        var eventsHtml = p.events.sort(function(a,b){ return new Date(b.date) - new Date(a.date); }).map(function(e) {
+          var isPending = (e.approved || '').toLowerCase() !== 'yes' && (e.approved || '').toLowerCase() !== 'approved';
+          return '<div class="hrs-breakdown-row">' +
+            '<span class="hrs-breakdown-event">' + esc(e.eventName) + (isPending ? '<span class="hrs-breakdown-pending">pending</span>' : '') + '</span>' +
+            '<span class="hrs-breakdown-date">' + esc(e.date) + '</span>' +
+            '<span class="hrs-breakdown-hrs">' + e.hours + ' hr' + (e.hours !== 1 ? 's' : '') + '</span>' +
+          '</div>';
+        }).join('');
+
+        return '<div class="hrs-person-row" onclick="toggleHrsBreakdown(\'' + safeKey + '\')">' +
+            '<span class="hrs-person-name">' + esc(p.name) + '</span>' +
+            '<span class="hrs-person-total">' + p.total + ' hr' + (p.total !== 1 ? 's' : '') + '</span>' +
+          '</div>' +
+          '<div class="hrs-breakdown" id="hrs-bd-' + safeKey + '">' + eventsHtml + '</div>';
+      }).join('');
+    }
+
+    function toggleHrsBreakdown(key) {
+      var el = document.getElementById('hrs-bd-' + key);
+      if (el) el.classList.toggle('open');
     }
 
     function adminSubmitAssignHours() {
@@ -3840,6 +3905,8 @@
     window.saveFoodItem     = saveFoodItem;
     window.deleteFoodItem   = deleteFoodItem;
     window.switchHrsTab           = switchHrsTab;
+    window.renderAllHours         = renderAllHours;
+    window.toggleHrsBreakdown     = toggleHrsBreakdown;
     window.approveHour            = approveHour;
     window.denyHour               = denyHour;
     window.adminSubmitAssignHours = adminSubmitAssignHours;
