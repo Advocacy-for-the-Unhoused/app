@@ -541,6 +541,13 @@
       display: flex;
       flex-direction: column;
     }
+    .admin-section { border-bottom: 2.5px solid var(--dark); }
+    .admin-section-hdr { background: var(--dark); padding: 14px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; transition: opacity 0.15s; }
+    .admin-section-hdr:active { opacity: 0.8; }
+    .admin-section-chev { color: rgba(249,246,240,0.45); font-size: 14px; transition: transform 0.25s; flex-shrink: 0; }
+    .admin-section.open .admin-section-chev { transform: rotate(180deg); }
+    .admin-section-body { display: none; }
+    .admin-section.open .admin-section-body { display: block; }
     .reg-list-section { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
     .reg-list-header  { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
     .reg-list-title   { font-family: 'Abril Fatface', serif; font-size: 1.1rem; color: var(--dark); }
@@ -555,6 +562,38 @@
     .reg-row-badge.submitted-badge { background: var(--green); color: white; }
     .reg-row-badge.pending-badge   { background: rgba(26,19,17,0.08); color: rgba(26,19,17,0.4); }
     .reg-row-minor { font-size: 0.5rem; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; color: var(--orange); }
+
+    /* ── Hours Editor Section ── */
+    .hrs-tabs { display: flex; border-bottom: 2px solid var(--dark); }
+    .hrs-tab  { flex: 1; padding: 10px 0; font-size: 0.6rem; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; text-align: center; cursor: pointer; color: rgba(26,19,17,0.4); background: transparent; border: none; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: color 0.15s; }
+    .hrs-tab.active { color: var(--dark); border-bottom-color: var(--orange); }
+    .hrs-panel { display: none; padding: 14px 16px; }
+    .hrs-panel.active { display: block; }
+    .hrs-row  { display: flex; align-items: center; gap: 8px; padding: 9px 10px; background: white; border: 2px solid var(--border); box-shadow: 2px 2px 0 var(--border); margin-bottom: 8px; }
+    .hrs-row-info { flex: 1; min-width: 0; }
+    .hrs-row-name  { font-size: 0.78rem; font-weight: 700; color: var(--dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hrs-row-meta  { font-size: 0.58rem; font-weight: 600; color: rgba(26,19,17,0.45); margin-top: 1px; }
+    .hrs-row-qty   { font-size: 0.78rem; font-weight: 800; color: var(--orange); flex-shrink: 0; white-space: nowrap; }
+    .hrs-btn { font-size: 0.55rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; border: 2px solid var(--dark); background: transparent; color: var(--dark); padding: 4px 8px; cursor: pointer; flex-shrink: 0; transition: background 0.1s, color 0.1s; }
+    .hrs-btn:active { opacity: 0.75; }
+    .hrs-btn.approve { background: var(--green); border-color: var(--green); color: white; }
+    .hrs-btn.deny    { background: #b83232; border-color: #b83232; color: white; }
+    .hrs-empty { padding: 20px 0; text-align: center; font-size: 0.65rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: rgba(26,19,17,0.3); }
+    .hrs-assign-form { display: flex; flex-direction: column; gap: 10px; }
+    .hrs-assign-form label { font-size: 0.58rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: rgba(26,19,17,0.55); display: block; margin-bottom: 3px; }
+    .hrs-assign-form input { width: 100%; box-sizing: border-box; border: 2px solid var(--dark); background: white; padding: 8px 10px; font-size: 0.8rem; font-family: 'Montserrat', sans-serif; color: var(--dark); outline: none; }
+    .hrs-assign-form input:focus { border-color: var(--orange); }
+    .hrs-submit-btn { background: var(--dark); color: var(--cream); border: none; padding: 12px; font-size: 0.65rem; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; width: 100%; cursor: pointer; margin-top: 4px; transition: opacity 0.15s; }
+    .hrs-submit-btn:disabled { opacity: 0.4; cursor: default; }
+    .hrs-status { font-size: 0.65rem; font-weight: 700; padding: 8px 10px; text-align: center; display: none; }
+    .hrs-status.ok  { background: rgba(29,158,117,0.12); color: var(--green); display: block; }
+    .hrs-status.err { background: rgba(184,50,50,0.1);   color: #b83232;      display: block; }
+    .hrs-approved-badge { font-size: 0.5rem; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; padding: 2px 5px; background: rgba(29,158,117,0.12); color: var(--green); flex-shrink: 0; }
+    .hrs-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 2px solid var(--dark); border-top: none; z-index: 50; max-height: 180px; overflow-y: auto; box-shadow: 3px 3px 0 var(--border); }
+    .hrs-dropdown-item { padding: 9px 10px; font-size: 0.78rem; font-weight: 600; cursor: pointer; border-bottom: 1px solid var(--border); color: var(--dark); }
+    .hrs-dropdown-item:last-child { border-bottom: none; }
+    .hrs-dropdown-item:hover, .hrs-dropdown-item.focused { background: var(--cream); }
+    .hrs-dropdown-item small { display: block; font-size: 0.58rem; font-weight: 500; color: rgba(26,19,17,0.45); margin-top: 1px; }
 
     /* ── Registration ── */
     .reg-name-row { display: flex; gap: 12px; }
@@ -2064,63 +2103,132 @@
        TAB 3 — ADMIN TOOLS
   ──────────────────────────────────────────────── -->
   <div id="tabAdmin" class="tab-view hidden">
-    <div class="admin-header-bar">
-      <div class="admin-header-bar-left">
-        <div class="admin-eyebrow">Advocacy for the Unhoused</div>
-        <div class="admin-title">Finance <span>Panel</span></div>
+
+    <!-- Finance Panel (collapsible, collapsed by default) -->
+    <div class="admin-section" id="finance-section">
+      <div class="admin-section-hdr" onclick="toggleAdminSection('finance-section')">
+        <div>
+          <div class="admin-eyebrow">Advocacy for the Unhoused</div>
+          <div class="admin-title">Finance <span>Panel</span></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;">
+          <div class="admin-stats">
+            <div class="admin-stat">
+              <div class="admin-stat-val" id="admin-stat-paid">—</div>
+              <div class="admin-stat-lbl">Paid</div>
+            </div>
+            <div class="admin-stat">
+              <div class="admin-stat-val" id="admin-stat-vols">—</div>
+              <div class="admin-stat-lbl">Total</div>
+            </div>
+            <div class="admin-stat">
+              <div class="admin-stat-val" id="admin-stat-total">—</div>
+              <div class="admin-stat-lbl">Owed</div>
+            </div>
+          </div>
+          <i class="bi bi-chevron-down admin-section-chev"></i>
+        </div>
       </div>
-      <div class="admin-stats">
-        <div class="admin-stat">
-          <div class="admin-stat-val" id="admin-stat-paid">—</div>
-          <div class="admin-stat-lbl">Fully Paid</div>
+      <div class="admin-section-body">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:16px 16px 0;">
+          <div class="filter-bar" id="filter-bar">
+            <button class="filter-btn active-all" id="filter-all"    onclick="setFilter('all')">
+              <i class="bi bi-people"></i> All <span class="count-pill" id="pill-all">0</span>
+            </button>
+            <button class="filter-btn"             id="filter-unpaid" onclick="setFilter('unpaid')">
+              <i class="bi bi-exclamation-circle"></i> Unpaid <span class="count-pill" id="pill-unpaid">0</span>
+            </button>
+            <button class="filter-btn"             id="filter-paid"   onclick="setFilter('paid')">
+              <i class="bi bi-check-circle"></i> Paid <span class="count-pill" id="pill-paid">0</span>
+            </button>
+          </div>
+          <button class="btn-ghost" id="refresh-btn" onclick="loadAdmin()" style="height:36px;font-size:0.62rem;padding:0 10px;box-shadow:2px 2px 0 var(--dark);">
+            <i class="bi bi-arrow-clockwise"></i> Refresh
+          </button>
         </div>
-        <div class="admin-stat">
-          <div class="admin-stat-val" id="admin-stat-vols">—</div>
-          <div class="admin-stat-lbl">Total</div>
+        <div id="vol-roster" style="padding:0 16px 16px;"></div>
+      </div>
+    </div>
+
+    <!-- Trip Registrations (collapsible, collapsed by default) -->
+    <div class="admin-section" id="reg-section">
+      <div class="admin-section-hdr" onclick="toggleAdminSection('reg-section')">
+        <div>
+          <div class="admin-eyebrow">Boston Trip 2026</div>
+          <div class="admin-title">Trip <span>Registrations</span></div>
         </div>
-        <div class="admin-stat">
-          <div class="admin-stat-val" id="admin-stat-total">—</div>
-          <div class="admin-stat-lbl">Owed</div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="display:flex;gap:6px;align-items:center;">
+            <span class="reg-pill submitted" id="reg-pill-submitted">--</span>
+            <span class="reg-pill" id="reg-pill-total">--</span>
+          </div>
+          <i class="bi bi-chevron-down admin-section-chev"></i>
+        </div>
+      </div>
+      <div class="admin-section-body">
+        <div id="reg-list-body" style="padding:0 16px 16px;">
+          <div style="padding:20px 0;text-align:center;font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(26,19,17,0.3);">
+            <i class="bi bi-hourglass-split spinner"></i> Loading&hellip;
+          </div>
         </div>
       </div>
     </div>
 
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:16px 16px 0;">
-      <div class="filter-bar" id="filter-bar">
-        <button class="filter-btn active-all" id="filter-all"    onclick="setFilter('all')">
-          <i class="bi bi-people"></i> All <span class="count-pill" id="pill-all">0</span>
-        </button>
-        <button class="filter-btn"             id="filter-unpaid" onclick="setFilter('unpaid')">
-          <i class="bi bi-exclamation-circle"></i> Unpaid <span class="count-pill" id="pill-unpaid">0</span>
-        </button>
-        <button class="filter-btn"             id="filter-paid"   onclick="setFilter('paid')">
-          <i class="bi bi-check-circle"></i> Paid <span class="count-pill" id="pill-paid">0</span>
-        </button>
-      </div>
-      <button class="btn-ghost" id="refresh-btn" onclick="loadAdmin()" style="height:36px;font-size:0.62rem;padding:0 10px;box-shadow:2px 2px 0 var(--dark);">
-        <i class="bi bi-arrow-clockwise"></i> Refresh
-      </button>
-    </div>
-
-    <div id="vol-roster" style="padding:0 16px 16px;"></div>
-
-    <!-- Registrations -->
-    <div class="reg-list-section">
-      <div class="reg-list-header">
-        <div class="reg-list-title">Trip <span>Registrations</span></div>
-        <div style="display:flex;gap:6px;align-items:center;">
-          <span class="reg-pill submitted" id="reg-pill-submitted">--</span>
-          <span class="reg-pill" id="reg-pill-total">--</span>
+    <!-- Volunteer Hours Editor (collapsible, collapsed by default) -->
+    <div class="admin-section" id="hours-section">
+      <div class="admin-section-hdr" onclick="toggleAdminSection('hours-section')">
+        <div>
+          <div class="admin-eyebrow">Advocacy for the Unhoused</div>
+          <div class="admin-title">Volunteer <span>Hours</span></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span class="reg-pill" id="hrs-pending-pill" style="display:none;"></span>
+          <i class="bi bi-chevron-down admin-section-chev"></i>
         </div>
       </div>
-      <div id="reg-list-body">
-        <div style="padding:20px 0;text-align:center;font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(26,19,17,0.3);">
-          <i class="bi bi-hourglass-split spinner"></i> Loading&hellip;
+      <div class="admin-section-body">
+        <div class="hrs-tabs">
+          <button class="hrs-tab active" onclick="switchHrsTab('pending')">Pending Requests</button>
+          <button class="hrs-tab"        onclick="switchHrsTab('assign')">Assign Hours</button>
+        </div>
+
+        <!-- Pending panel -->
+        <div class="hrs-panel active" id="hrs-panel-pending">
+          <div id="hrs-pending-list">
+            <div class="hrs-empty"><i class="bi bi-hourglass-split spinner"></i> Loading…</div>
+          </div>
+        </div>
+
+        <!-- Assign panel -->
+        <div class="hrs-panel" id="hrs-panel-assign">
+          <div class="hrs-assign-form">
+            <div style="position:relative;">
+              <label for="hrs-assign-name">Volunteer Name</label>
+              <input type="text" id="hrs-assign-name" placeholder="Start typing a name…" autocomplete="off" oninput="hrsFilterNames(this.value)" onfocus="hrsFilterNames(this.value)" onblur="setTimeout(hrsHideDropdown,180)">
+              <div id="hrs-name-email" style="font-size:0.58rem;font-weight:600;color:rgba(26,19,17,0.45);margin-top:3px;min-height:14px;"></div>
+              <div id="hrs-name-dropdown" class="hrs-dropdown" style="display:none;"></div>
+            </div>
+            <div>
+              <label for="hrs-assign-event">Event Name</label>
+              <input type="text" id="hrs-assign-event" placeholder="e.g. Food Drive">
+            </div>
+            <div>
+              <label for="hrs-assign-date">Date</label>
+              <input type="date" id="hrs-assign-date">
+            </div>
+            <div>
+              <label for="hrs-assign-hrs">Hours</label>
+              <input type="number" id="hrs-assign-hrs" placeholder="e.g. 2.5" min="0.5" step="0.5">
+            </div>
+            <div id="hrs-assign-status" class="hrs-status"></div>
+            <button class="hrs-submit-btn" onclick="adminSubmitAssignHours()">Assign Hours</button>
+          </div>
         </div>
       </div>
     </div>
+
   </div>
-  <!-- ── End Admin Tab ── -->
+<!-- ── End Admin Tab ── -->
 
 
   <!-- ── Bottom Nav ── -->
@@ -2451,6 +2559,14 @@
      app.js overrides window.loadDashboard after
      the volunteer profile & stats are fetched.
   ───────────────────────────────────────── */
+  function toggleAdminSection(id) {
+    document.querySelectorAll('#tabAdmin .admin-section').forEach(function(s) {
+      if (s.id !== id) s.classList.remove('open');
+    });
+    document.getElementById(id).classList.toggle('open');
+  }
+  window.toggleAdminSection = toggleAdminSection;
+
   window.loadDashboard = function() {
     if (window.volunteerProfile) {
       const p = window.volunteerProfile;
@@ -2983,6 +3099,7 @@
           roster.innerHTML = '<div style="padding:16px;color:#b83232;font-size:0.7rem;font-weight:700;">Failed to load — try refreshing.</div>';
         });
       loadRegistrations();
+      loadHoursSection();
     }
 
     function loadRegistrations() {
@@ -3520,6 +3637,181 @@
         });
     }
 
+    /* ── Volunteer Hours Editor ── */
+    var hrsAllRecords  = [];
+    var hrsRoster      = [];   // [{name, email}]
+    var hrsAssignEmail = '';   // email resolved from selected name
+
+    function loadHoursSection() {
+      var list = document.getElementById('hrs-pending-list');
+      list.innerHTML = '<div class="hrs-empty"><i class="bi bi-hourglass-split spinner"></i> Loading…</div>';
+      gasCall('getAllHours', {}, function(data) {
+        if (data.error) {
+          list.innerHTML = '<div class="hrs-empty" style="color:#b83232;">Error: ' + esc(data.error) + '</div>';
+          return;
+        }
+        hrsAllRecords = data.records || [];
+        renderPendingHours();
+      }, function() {
+        list.innerHTML = '<div class="hrs-empty" style="color:#b83232;">Failed to load — try refreshing.</div>';
+      });
+      gasCall('getRosterMembers', {}, function(data) {
+        if (!data.error) hrsRoster = data.members || [];
+      }, function() {});
+    }
+
+    function hrsFilterNames(query) {
+      var dd = document.getElementById('hrs-name-dropdown');
+      query = (query || '').trim().toLowerCase();
+      if (!query) { dd.style.display = 'none'; return; }
+      var matches = hrsRoster.filter(function(m) {
+        return m.name.toLowerCase().indexOf(query) !== -1;
+      }).slice(0, 8);
+      if (!matches.length) { dd.style.display = 'none'; return; }
+      dd.innerHTML = matches.map(function(m) {
+        return '<div class="hrs-dropdown-item" onmousedown="hrsSelectMember(\'' +
+          m.name.replace(/'/g, "\\'") + '\',\'' + m.email.replace(/'/g, "\\'") + '\')">' +
+          esc(m.name) + '<small>' + esc(m.email) + '</small></div>';
+      }).join('');
+      dd.style.display = 'block';
+    }
+
+    function hrsSelectMember(name, email) {
+      document.getElementById('hrs-assign-name').value = name;
+      document.getElementById('hrs-name-email').textContent = email;
+      document.getElementById('hrs-name-dropdown').style.display = 'none';
+      hrsAssignEmail = email;
+    }
+
+    function hrsHideDropdown() {
+      var dd = document.getElementById('hrs-name-dropdown');
+      if (dd) dd.style.display = 'none';
+    }
+
+    function renderPendingHours() {
+      var pending = hrsAllRecords.filter(function(r) {
+        var a = (r.approved || '').toLowerCase();
+        return a !== 'yes' && a !== 'approved';
+      });
+      var pill = document.getElementById('hrs-pending-pill');
+      if (pending.length > 0) {
+        pill.textContent = pending.length + ' pending';
+        pill.style.display = '';
+        pill.className = 'reg-pill submitted';
+      } else {
+        pill.style.display = 'none';
+      }
+
+      var list = document.getElementById('hrs-pending-list');
+      if (pending.length === 0) {
+        list.innerHTML = '<div class="hrs-empty">No pending requests</div>';
+        return;
+      }
+      list.innerHTML = pending.map(function(r) {
+        return '<div class="hrs-row" id="hrs-row-' + r.rowIndex + '">' +
+          '<div class="hrs-row-info">' +
+            '<div class="hrs-row-name">' + esc(r.name) + '</div>' +
+            '<div class="hrs-row-meta">' + esc(r.eventName) + ' &middot; ' + esc(r.date) + '</div>' +
+          '</div>' +
+          '<div class="hrs-row-qty">' + r.hours + ' hr' + (r.hours !== 1 ? 's' : '') + '</div>' +
+          '<button class="hrs-btn approve" onclick="approveHour(' + r.rowIndex + ')">Approve</button>' +
+          '<button class="hrs-btn deny"    onclick="denyHour(' + r.rowIndex + ')">Deny</button>' +
+        '</div>';
+      }).join('');
+    }
+
+    function approveHour(rowIndex) {
+      var row = document.getElementById('hrs-row-' + rowIndex);
+      if (row) { row.style.opacity = '0.4'; row.querySelectorAll('button').forEach(function(b){ b.disabled=true; }); }
+      gasCall('approveHours', { rowIndex: rowIndex }, function(res) {
+        if (res.success) {
+          var rec = hrsAllRecords.find(function(r){ return r.rowIndex === rowIndex; });
+          if (rec) rec.approved = 'Yes';
+          renderPendingHours();
+        } else {
+          if (row) { row.style.opacity = ''; row.querySelectorAll('button').forEach(function(b){ b.disabled=false; }); }
+          alert('Error: ' + (res.error || 'Unknown error'));
+        }
+      }, function() {
+        if (row) { row.style.opacity = ''; row.querySelectorAll('button').forEach(function(b){ b.disabled=false; }); }
+        alert('Network error — try again.');
+      });
+    }
+
+    function denyHour(rowIndex) {
+      if (!confirm('Delete this hour request? This cannot be undone.')) return;
+      var row = document.getElementById('hrs-row-' + rowIndex);
+      if (row) { row.style.opacity = '0.4'; row.querySelectorAll('button').forEach(function(b){ b.disabled=true; }); }
+      gasCall('denyHours', { rowIndex: rowIndex }, function(res) {
+        if (res.success) {
+          hrsAllRecords = hrsAllRecords.filter(function(r){ return r.rowIndex !== rowIndex; });
+          // Re-index rows below the deleted one
+          hrsAllRecords.forEach(function(r){ if (r.rowIndex > rowIndex) r.rowIndex--; });
+          renderPendingHours();
+        } else {
+          if (row) { row.style.opacity = ''; row.querySelectorAll('button').forEach(function(b){ b.disabled=false; }); }
+          alert('Error: ' + (res.error || 'Unknown error'));
+        }
+      }, function() {
+        if (row) { row.style.opacity = ''; row.querySelectorAll('button').forEach(function(b){ b.disabled=false; }); }
+        alert('Network error — try again.');
+      });
+    }
+
+    function switchHrsTab(tab) {
+      document.querySelectorAll('.hrs-tab').forEach(function(t, i) {
+        t.classList.toggle('active', (i === 0 && tab === 'pending') || (i === 1 && tab === 'assign'));
+      });
+      document.getElementById('hrs-panel-pending').classList.toggle('active', tab === 'pending');
+      document.getElementById('hrs-panel-assign').classList.toggle('active',  tab === 'assign');
+    }
+
+    function adminSubmitAssignHours() {
+      var email  = hrsAssignEmail;
+      var name   = (document.getElementById('hrs-assign-name').value || '').trim();
+      var event  = (document.getElementById('hrs-assign-event').value || '').trim();
+      var date   = (document.getElementById('hrs-assign-date').value  || '').trim();
+      var hours  = parseFloat(document.getElementById('hrs-assign-hrs').value);
+      var status = document.getElementById('hrs-assign-status');
+
+      status.className = 'hrs-status';
+      status.textContent = '';
+
+      if (!email || !name) {
+        status.className = 'hrs-status err';
+        status.textContent = 'Please select a volunteer from the list.';
+        return;
+      }
+      if (!event || !date || isNaN(hours) || hours <= 0) {
+        status.className = 'hrs-status err';
+        status.textContent = 'Please fill in all fields.';
+        return;
+      }
+
+      var btn = document.querySelector('.hrs-submit-btn');
+      btn.disabled = true;
+      gasCall('adminAssignHours', { email: email, eventName: event, eventDate: date, hours: hours }, function(res) {
+        btn.disabled = false;
+        if (res.success) {
+          status.className = 'hrs-status ok';
+          status.textContent = 'Hours assigned to ' + name + '!';
+          document.getElementById('hrs-assign-name').value  = '';
+          document.getElementById('hrs-name-email').textContent = '';
+          document.getElementById('hrs-assign-event').value = '';
+          document.getElementById('hrs-assign-date').value  = '';
+          document.getElementById('hrs-assign-hrs').value   = '';
+          hrsAssignEmail = '';
+        } else {
+          status.className = 'hrs-status err';
+          status.textContent = 'Error: ' + (res.error || 'Unknown error');
+        }
+      }, function() {
+        btn.disabled = false;
+        status.className = 'hrs-status err';
+        status.textContent = 'Network error — try again.';
+      });
+    }
+
     /* Expose Boston functions to global scope for onclick handlers */
     window.openAdminModal   = openAdminModal;
     window.closeAdminModal  = closeAdminModal;
@@ -3541,6 +3833,13 @@
     window.commitAddFood    = commitAddFood;
     window.saveFoodItem     = saveFoodItem;
     window.deleteFoodItem   = deleteFoodItem;
+    window.switchHrsTab           = switchHrsTab;
+    window.approveHour            = approveHour;
+    window.denyHour               = denyHour;
+    window.adminSubmitAssignHours = adminSubmitAssignHours;
+    window.hrsFilterNames         = hrsFilterNames;
+    window.hrsSelectMember        = hrsSelectMember;
+    window.hrsHideDropdown        = hrsHideDropdown;
 
 
   })();
