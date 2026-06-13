@@ -2976,6 +2976,44 @@
       console.error("Service worker registration failed:", err);
     });
   }
+
+  /* ─────────────────────────────────────────
+     Capacitor native plugins
+  ───────────────────────────────────────── */
+  document.addEventListener('DOMContentLoaded', async function () {
+    if (!window.Capacitor || !window.Capacitor.isNativePlatform()) return;
+
+    const { StatusBar, Style } = window.Capacitor.Plugins;
+    const { Network }          = window.Capacitor.Plugins;
+
+    // Dark status bar to match the app's dark header
+    if (StatusBar) {
+      StatusBar.setStyle({ style: 'DARK' });
+      StatusBar.setBackgroundColor({ color: '#1A1311' });
+    }
+
+    // Offline banner
+    if (Network) {
+      const offlineBanner = document.createElement('div');
+      offlineBanner.id = 'offlineBanner';
+      offlineBanner.textContent = 'No internet connection';
+      offlineBanner.style.cssText = [
+        'display:none', 'position:fixed', 'top:0', 'left:0', 'right:0',
+        'background:#b91c1c', 'color:#fff', 'text-align:center',
+        'padding:8px', 'font-size:13px', 'font-weight:600',
+        'z-index:9999', 'letter-spacing:0.5px'
+      ].join(';');
+      document.body.prepend(offlineBanner);
+
+      const updateBanner = (connected) => {
+        offlineBanner.style.display = connected ? 'none' : 'block';
+      };
+
+      const status = await Network.getStatus();
+      updateBanner(status.connected);
+      Network.addListener('networkStatusChange', s => updateBanner(s.connected));
+    }
+  });
 </script>
 
 <script src="app.js?v=8"></script>

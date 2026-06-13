@@ -8,6 +8,18 @@ let volunteerName  = null;
 let branchLetter   = null;
 let branchName     = null;
 
+// ===== HAPTICS =====
+function haptic(type = 'medium') {
+  if (!window.Capacitor?.isNativePlatform()) return;
+  const { Haptics, ImpactStyle, NotificationType } = window.Capacitor.Plugins;
+  if (!Haptics) return;
+  if (type === 'success' || type === 'error' || type === 'warning') {
+    Haptics.notification({ type: type.toUpperCase() });
+  } else {
+    Haptics.impact({ style: type.toUpperCase() });
+  }
+}
+
 // ===== JWT PARSE =====
 function parseJwt(token) {
   try {
@@ -251,6 +263,7 @@ function submitDonation() {
   saveDonationOffline(record)
     .then(() => syncDonations())
     .then(() => {
+      haptic('success');
       document.getElementById("finalUDI").innerText = udi;
       document.getElementById("step2").classList.add("hidden");
       document.getElementById("step3").classList.remove("hidden");
@@ -259,6 +272,7 @@ function submitDonation() {
       }
     })
     .catch(err => {
+      haptic('error');
       console.error("Error saving donation:", err);
       alert("Error saving donation: " + err.message);
     });
@@ -314,6 +328,7 @@ async function startScan() {
         const lastThree = digits.slice(-3);
         console.log("Extracted digits:", lastThree);
         if (lastThree && lastThree.length === 3) {
+          haptic('light');
           document.getElementById("udiDigits").value = parseInt(lastThree, 10);
           setTimeout(() => { stopScan(); }, 500);
         } else {
@@ -610,6 +625,7 @@ async function submitHoursRequest() {
     btn.textContent = "Submit for Approval";
 
     if (data.success) {
+      haptic('success');
       msgEl.className   = "hours-msg hours-msg-success";
       msgEl.textContent = "✓ Submitted! Your coordinator will review it shortly.";
       msgEl.style.display = "block";
@@ -621,6 +637,7 @@ async function submitHoursRequest() {
       throw new Error(data.error || "Unknown error");
     }
   } catch (err) {
+    haptic('error');
     btn.disabled    = false;
     btn.textContent = "Submit for Approval";
     msgEl.className = "hours-msg hours-msg-error";
