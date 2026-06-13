@@ -1,0 +1,12 @@
+{
+  "appId": "com.afu.volunteerportal",
+  "appName": "AFU Volunteer Portal",
+  "webDir": "www",
+  "plugins": {
+    "GoogleAuth": {
+      "scopes": ["profile", "email"],
+      "serverClientId": "1016131808942-6m77i0gq14t71g01q8o8qkaon29ilsv6.apps.googleusercontent.com",
+      "forceCodeForRefreshToken": true
+    }
+  }
+}

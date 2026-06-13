@@ -1,0 +1,1012 @@
+// code.gs — Standalone web app script
+// Handles all HTTP requests from the volunteer portal.
+// The menu/approval UI lives in SheetMenu.gs (bound to the spreadsheet).
+
+// ── Spreadsheet IDs ───────────────────────────────────────────────────────────
+const DONATIONS_SS_ID   = "1t6CbQ_QkK5ptPPZ9MtlNit2zpz5wY7siu5hc8oCdeZg";
+const ROSTER_SS_ID      = "1hcKgLSqLw1Fn4S7kOtBXXwt2ZL307WK1JTH-1jsMHaM";
+const UDI_TRACKER_SS_ID = "11QQE2yxYs-wI0r1jyjenXNI19KM5P49ervmcGDlWoyw";
+const HOURS_SS_ID       = "1hcKgLSqLw1Fn4S7kOtBXXwt2ZL307WK1JTH-1jsMHaM";
+const SHEET_ID          = "1hcKgLSqLw1Fn4S7kOtBXXwt2ZL307WK1JTH-1jsMHaM";
+
+const PENDING_SHEET = "Pending Volunteers";
+const NOTIFY_ALL    = "maanya.shettigar@gmail.com";
+
+const BRANCH_CONFIG = {
+  "Hopkinton":  { presidentEmail: "dilpreet.whjr@gmail.com",        folderId: "1VT5CX3h0GfCWiNrksW7kXEqMe5KPCbDc" },
+  "Westford":   { presidentEmail: "aradhyaak11@gmail.com",           folderId: "1muPAyc8bxzLzuxiBPOcPNP0CZwf5bmWk" },
+  "Holliston":  { presidentEmail: "diyasimhadri11@gmail.com",        folderId: "1s_sE1bsaAQWEfIYS5rhg9_Pic1IdsEcc" },
+  "Medway":     { presidentEmail: "advaith.shivkumar1021@gmail.com", folderId: "1xGaoA4nhTHYkf6yQtRIEjpBMLWKwrPuc" },
+};
+
+const BRANCH_NAMES = { "A": "Hopkinton", "H": "Holliston", "W": "Westford", "S": "Shrewsbury", "M": "Medway" };
+const BRANCH_CODES = { "Hopkinton": "A", "Holliston": "H", "Westford": "W", "Shrewsbury": "S", "Medway": "M" };
+
+// ── doGet ─────────────────────────────────────────────────────────────────────
+function doGet(e) {
+  if (e.parameter.lookupEmail) {
+    return handleLookup(e.parameter.lookupEmail);
+  }
+  return ContentService.createTextOutput(
+    JSON.stringify({ error: "Invalid GET request" })
+  ).setMimeType(ContentService.MimeType.JSON);
+}
+
+// ── doPost ────────────────────────────────────────────────────────────────────
+function doPost(e) {
+  const p = e.parameter;
+  let result = {};
+
+  try {
+
+    // ── Routing ───────────────────────────────────────────────────────────────
+    if (p.lookupEmail) {
+      return handleLookup(p.lookupEmail);
+
+    } else if (p.action === "registerVolunteer") {
+      result = handleVolunteerRegistration({
+        fname: p.fname, lname: p.lname, email: p.email,
+        phone: p.phone, branch: p.branch,
+        photoBase64: p.photoBase64, photoMime: p.photoMime
+      });
+
+    } else if (p.action === "generateSlips") {
+      return handleGenerateSlips(p.dateString, p.branchCode);
+
+    } else if (p.action === "getEventTypes") {
+      const sheet    = SpreadsheetApp.openById(HOURS_SS_ID).getSheetByName("volunteer hours");
+      if (!sheet) { result = { error: "Sheet 'volunteer hours' not found" }; }
+      else {
+        const lastRow   = sheet.getLastRow();
+        const eventList = lastRow >= 2
+          ? sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat().filter(v => v !== "")
+          : [];
+        result = { eventTypes: eventList };
+      }
+
+    } else if (p.action === "getMyHours") {
+      const sheet   = SpreadsheetApp.openById(HOURS_SS_ID).getSheetByName("volunteer hours");
+      if (!sheet) { result = { error: "Sheet 'volunteer hours' not found" }; }
+      else {
+      const lastRow = sheet.getLastRow();
+      const records = [];
+      if (lastRow >= 4) {
+        const data = sheet.getRange(4, 2, lastRow - 3, 5).getValues();
+        data.forEach(row => {
+          if (String(row[0]).trim().toLowerCase() === p.email.trim().toLowerCase()) {
+            const rawDate = row[2];
+            const formattedDate = rawDate instanceof Date
+              ? Utilities.formatDate(rawDate, Session.getScriptTimeZone(), "yyyy-MM-dd")
+              : String(rawDate);
+            records.push({ eventName: String(row[1]).trim(), eventDate: formattedDate, hours: row[3], approved: String(row[4]).trim() });
+          }
+        });
+      }
+      result = { records };
+      } // end else (sheet found)
+
+    } else if (p.action === "submitHours") {
+      const hours = parseFloat(p.hours);
+      if (!p.email || !p.eventName || !p.eventDate || isNaN(hours) || hours <= 0) {
+        result = { error: "Missing or invalid fields" };
+      } else {
+        const sheet   = SpreadsheetApp.openById(HOURS_SS_ID).getSheetByName("volunteer hours");
+        const nextRow = Math.max(sheet.getLastRow() + 1, 4);
+        sheet.getRange(nextRow, 2).setValue(p.email);
+        sheet.getRange(nextRow, 3).setValue(p.eventName);
+        sheet.getRange(nextRow, 4).setValue(new Date(p.eventDate + "T00:00:00"));
+        sheet.getRange(nextRow, 5).setValue(hours);
+        sheet.getRange(nextRow, 6).setValue("No");
+        result = { success: true };
+      }
+
+    } else if (p.action === "getRosterMembers") {
+      result = getRosterMembers();
+
+    } else if (p.action === "getAllHours") {
+      result = getAllHours();
+
+    } else if (p.action === "approveHours") {
+      const rowIdx = parseInt(p.rowIndex, 10);
+      if (!rowIdx) { result = { error: "Missing rowIndex" }; }
+      else {
+        const sheet = SpreadsheetApp.openById(HOURS_SS_ID).getSheetByName("volunteer hours");
+        sheet.getRange(rowIdx, 6).setValue("Yes");
+        result = { success: true };
+      }
+
+    } else if (p.action === "denyHours") {
+      const rowIdx = parseInt(p.rowIndex, 10);
+      if (!rowIdx) { result = { error: "Missing rowIndex" }; }
+      else {
+        const sheet = SpreadsheetApp.openById(HOURS_SS_ID).getSheetByName("volunteer hours");
+        sheet.deleteRow(rowIdx);
+        result = { success: true };
+      }
+
+    } else if (p.action === "adminAssignHours") {
+      const hours = parseFloat(p.hours);
+      if (!p.email || !p.eventName || !p.eventDate || isNaN(hours) || hours <= 0) {
+        result = { error: "Missing or invalid fields" };
+      } else {
+        const sheet   = SpreadsheetApp.openById(HOURS_SS_ID).getSheetByName("volunteer hours");
+        const nextRow = Math.max(sheet.getLastRow() + 1, 4);
+        sheet.getRange(nextRow, 2).setValue(p.email.trim().toLowerCase());
+        sheet.getRange(nextRow, 3).setValue(p.eventName);
+        sheet.getRange(nextRow, 4).setValue(new Date(p.eventDate + "T00:00:00"));
+        sheet.getRange(nextRow, 5).setValue(hours);
+        sheet.getRange(nextRow, 6).setValue("Yes");
+        result = { success: true };
+      }
+
+    } else if (p.getDashboard) {
+      result = handleGetDashboard(p.getDashboard, p.branch);
+
+    } else if (p.udi) {
+      return handleDonation(p);
+
+    // ── Boston Trip actions ────────────────────────────────────────────────────
+    } else if (p.action === "getQualifiedNames") {
+      result = getQualifiedNames();
+
+    } else if (p.action === "addQualifiedPerson") {
+      result = addQualifiedPerson(p.name || '', p.email || '', p.phone || '', p.isMinor === 'true');
+
+    } else if (p.action === "removeQualifiedPerson") {
+      result = removeQualifiedPerson(p.email || '');
+
+    } else if (p.action === "bostonSubmitForm") {
+      result = submitForm({
+        rowIndex:      parseInt(p.rowIndex, 10),
+        isMinor:       p.isMinor === 'true',
+        fullName:      p.fullName      || '',
+        phone:         p.phone         || '',
+        shirtSize:     p.shirtSize     || '',
+        infoConfirmed: p.infoConfirmed === 'true',
+        parentName:    p.parentName    || '',
+        parentEmail:   p.parentEmail   || '',
+        parentPhone:   p.parentPhone   || '',
+        feeAck:        p.feeAck        === 'true',
+        permission:    p.permission    === 'true',
+        signature:     p.signature     || '',
+      });
+
+    } else if (p.action === "getVolunteerBill") {
+      result = getVolunteerBill(p.email || '');
+
+    } else if (p.action === "getAllVolunteers") {
+      result = getAllVolunteers();
+
+    } else if (p.action === "updateVolunteerPaid") {
+      result = updateVolunteerPaid(p.email || '', p.paid === 'true');
+
+    } else if (p.action === "updateVolunteerTrainPaid") {
+      result = updateVolunteerTrainPaid(p.email || '', p.paid === 'true');
+
+    } else if (p.action === "updateVolunteerFixed") {
+      result = updateVolunteerFixed(p.email || '', p.key || '', p.val || '0');
+
+    } else if (p.action === "updateFoodItem") {
+      result = updateFoodItem(p.id || '', p.item || '', p.cost || '0');
+
+    } else if (p.action === "deleteFoodItem") {
+      result = deleteFoodItem(p.id || '');
+
+    } else if (p.action === "addFoodItem") {
+      result = addFoodItem(p.email || '', p.item || '', p.cost || '0');
+
+    } else if (p.action === "getItineraryData") {
+      result = getItineraryData();
+
+    } else if (p.action === "saveItineraryData") {
+      result = saveItineraryData(p.data || '{}');
+
+    // ── Task Board ────────────────────────────────────────────────────────────
+    } else if (p.action === "tbGetAllChanges") {
+      result = tbGetAllChanges();
+
+    } else if (p.action === "tbSaveChange") {
+      result = tbSaveChange(p.type || '', p.key || '', p.value || '', p.extra || '');
+
+    } else {
+      result = { error: "Invalid request" };
+    }
+
+  } catch (err) {
+    result = { error: err.message };
+    console.error("doPost error:", err.message, err.stack);
+  }
+
+  return ContentService.createTextOutput(JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ── Roster lookup ─────────────────────────────────────────────────────────────
+function handleLookup(email) {
+  return ContentService.createTextOutput(JSON.stringify(getMemberInfo(email)))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function getMemberInfo(email) {
+  const ss    = SpreadsheetApp.openById(ROSTER_SS_ID);
+  const sheet = ss.getSheetByName("Roster");
+  if (!sheet) return { firstName: "User", branchCode: "X", branchName: "Sheet Not Found" };
+
+  const data        = sheet.getDataRange().getValues();
+  const searchEmail = (email || "").trim().toLowerCase();
+  Logger.log("Searching for email: '" + searchEmail + "'");
+
+  for (let i = 1; i < data.length; i++) {
+    const rowEmail = (data[i][3] || "").toString().trim().toLowerCase(); // col D
+    if (rowEmail === searchEmail) {
+      const fullName   = (data[i][1] || "").toString().trim();           // col B
+      const firstName  = fullName.split(" ")[0] || "User";
+      let branchCode = (data[i][5] || "").toString().trim().toUpperCase(); // col F
+      if (!branchCode) branchCode = (data[i][4] || "").toString().trim().toUpperCase(); // col E fallback (BOD)
+      Logger.log("Match at row " + (i + 1) + " | " + fullName + " | " + branchCode);
+      return { firstName, branchCode, branchName: BRANCH_NAMES[branchCode] || branchCode || "Unknown" };
+    }
+  }
+
+  Logger.log("No match for: '" + searchEmail + "'");
+  return { firstName: "User", branchCode: "X", branchName: "Unknown Branch" };
+}
+
+// ── Donation handler ──────────────────────────────────────────────────────────
+function handleDonation(data) {
+  const ss    = SpreadsheetApp.openById(DONATIONS_SS_ID);
+  const sheet = ss.getSheetByName("Sheet1");
+  const lastRow = sheet.getLastRow();
+  const existing = lastRow > 1 ? sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat() : [];
+
+  if (existing.includes(data.udi)) {
+    return ContentService.createTextOutput(
+      JSON.stringify({ success: false, error: "UDI exists" })
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  sheet.appendRow([data.udi, data.amount, "", data.volunteerName, data.fundraiser, data.branchLetter, new Date()]);
+  return ContentService.createTextOutput(JSON.stringify({ success: true }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ── Volunteer Registration Handler ────────────────────────────────────────────
+// Pending Volunteers layout: A=Name | B=Phone | C=Email | D=Photo URL | E=Branch Code | F=Status
+function handleVolunteerRegistration(formData) {
+  const ss     = SpreadsheetApp.openById(SHEET_ID);
+  const sheet  = ss.getSheetByName(PENDING_SHEET) || ss.insertSheet(PENDING_SHEET);
+  const config = BRANCH_CONFIG[formData.branch];
+
+  if (!config) return { error: "Invalid branch: " + formData.branch };
+
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(["Name", "Phone", "Email", "Photo URL", "Branch Code", "Status"]);
+    sheet.getRange(1, 1, 1, 6).setFontWeight("bold");
+    sheet.setFrozenRows(1);
+  }
+
+  let photoUrl = "";
+  if (formData.photoBase64 && formData.photoMime) {
+    try {
+      const filename = formData.fname + "_" + formData.lname + "_profile";
+      const blob     = Utilities.newBlob(Utilities.base64Decode(formData.photoBase64), formData.photoMime, filename);
+      const file     = DriveApp.getFolderById(config.folderId).createFile(blob);
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      photoUrl = "https://drive.google.com/uc?export=view&id=" + file.getId();
+    } catch (photoErr) {
+      console.error("Photo upload failed:", photoErr.message);
+    }
+  }
+
+  const branchCode = BRANCH_CODES[formData.branch] || formData.branch;
+
+  sheet.appendRow([
+    formData.fname + " " + formData.lname,
+    formData.phone,
+    formData.email,
+    photoUrl,
+    branchCode,
+    "Pending"
+  ]);
+
+  const sheetLink = "https://docs.google.com/spreadsheets/d/" + SHEET_ID;
+  const emailHtml = `
+    <p style="font-family:sans-serif;font-size:14px;">A new volunteer has registered for the <strong>${formData.branch}</strong> branch and is awaiting your approval.</p>
+    <table cellpadding="8" style="border-collapse:collapse;font-family:sans-serif;font-size:14px;border:1px solid #eee;">
+      <tr style="background:#f9f9f9;"><td><b>Name</b></td><td>${formData.fname} ${formData.lname}</td></tr>
+      <tr><td><b>Email</b></td><td>${formData.email}</td></tr>
+      <tr style="background:#f9f9f9;"><td><b>Phone</b></td><td>${formData.phone}</td></tr>
+      <tr><td><b>Branch</b></td><td>${formData.branch}</td></tr>
+      <tr style="background:#f9f9f9;"><td><b>Photo</b></td><td>${photoUrl ? `<a href="${photoUrl}">View photo</a>` : "No photo uploaded"}</td></tr>
+    </table>
+    <br>
+    <p style="font-family:sans-serif;font-size:14px;">To approve: open the <a href="${sheetLink}">volunteer roster</a>, go to the <b>Pending Volunteers</b> tab, select their row, and click <b>HAU → Approve Volunteer</b>.</p>
+  `;
+
+  GmailApp.sendEmail(config.presidentEmail, `New volunteer registration — ${formData.branch}`, "", { htmlBody: emailHtml });
+  GmailApp.sendEmail(NOTIFY_ALL, `[All branches] New volunteer — ${formData.fname} ${formData.lname} (${formData.branch})`, "", { htmlBody: emailHtml });
+
+  return { success: true };
+}
+
+// ── UDI Slip Generation ───────────────────────────────────────────────────────
+function handleGenerateSlips(dateString, branchCode) {
+  try {
+    return ContentService.createTextOutput(JSON.stringify(generateSlips(dateString, branchCode)))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ error: err.message }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function generateSlips(dateString, branchCode) {
+  const ss    = SpreadsheetApp.openById(UDI_TRACKER_SS_ID);
+  const sheet = ss.getSheetByName("Sheet1");
+  if (!sheet) throw new Error("Sheet 'Sheet1' not found.");
+
+  const data = sheet.getDataRange().getValues();
+  let rowIndex = -1;
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === branchCode) { rowIndex = i + 1; break; }
+  }
+  if (rowIndex === -1) throw new Error("Branch code not found.");
+
+  let lastNum = sheet.getRange(rowIndex, 2).getValue();
+  if (!lastNum || isNaN(lastNum)) lastNum = 0;
+
+  const UDIs = [];
+  for (let i = 1; i <= 16; i++) {
+    UDIs.push(branchCode + String(lastNum + i).padStart(3, "0"));
+  }
+  sheet.getRange(rowIndex, 2).setValue(lastNum + 16);
+
+  const firstUDI = UDIs[0];
+  const lastUDI  = UDIs[UDIs.length - 1];
+  const doc  = DocumentApp.create(`Branch ${branchCode}: ${firstUDI} to ${lastUDI}`);
+  const body = doc.getBody();
+
+  body.setPageWidth(792).setPageHeight(612)
+    .setMarginTop(0).setMarginBottom(0).setMarginLeft(36).setMarginRight(0);
+
+  const qrBlob = DriveApp.getFileById("1UHDUUjF1EWID0t-C138LKyQKBh3oO-lh").getBlob();
+
+  UDIs.forEach((udi) => {
+    const p1 = body.appendParagraph("Your unique donation identifier is " + udi);
+    p1.setFontFamily("Times New Roman").setFontSize(50).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+    const start = p1.getText().indexOf(udi);
+    p1.editAsText().setBold(start, start + udi.length - 1, true);
+
+    body.appendParagraph("").setFontFamily("Times New Roman").setFontSize(50).setAlignment(DocumentApp.HorizontalAlignment.LEFT);
+
+    const p2 = body.appendParagraph("Please visit www.hauhelps.org/transparency to view how your donation is used to help homeless people.");
+    p2.setFontFamily("Times New Roman").setFontSize(50).setAlignment(DocumentApp.HorizontalAlignment.LEFT);
+    const linkStart = p2.getText().indexOf("www.hauhelps.org/transparency");
+    p2.editAsText().setUnderline(linkStart, linkStart + "www.hauhelps.org/transparency".length - 1, true);
+
+    const barcodeBlob = UrlFetchApp.fetch("https://barcodeapi.org/api/128/" + encodeURIComponent(udi.slice(-3))).getBlob();
+    const barcodeLine = body.appendParagraph("(QR code on back side)                  ");
+    barcodeLine.setFontFamily("Times New Roman").setFontSize(40).setItalic(true).setAlignment(DocumentApp.HorizontalAlignment.LEFT);
+    barcodeLine.appendInlineImage(barcodeBlob).setWidth(260).setHeight(80);
+
+    body.appendParagraph("").setFontSize(6);
+    body.appendPageBreak();
+  });
+
+  UDIs.forEach((udi, index) => {
+    body.appendParagraph("Track Your Donation")
+      .setFontFamily("Times New Roman").setFontSize(58).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+    const img = body.appendImage(qrBlob);
+    img.setWidth(650).setHeight(650);
+    img.getParent().asParagraph().setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+    if (index < UDIs.length - 1) img.getParent().asParagraph().appendPageBreak();
+  });
+
+  doc.saveAndClose();
+
+  const folder  = DriveApp.getFolderById("17glZEMCfE7L65RVuSglffhaUEGxzTqTe");
+  const docFile = DriveApp.getFileById(doc.getId());
+  folder.addFile(docFile);
+  DriveApp.getRootFolder().removeFile(docFile);
+
+  const pdfFile = folder.createFile(docFile.getAs("application/pdf"))
+    .setName(`Branch ${branchCode}: ${firstUDI} to ${lastUDI}.pdf`);
+
+  return { docUrl: doc.getUrl(), pdfUrl: pdfFile.getUrl(), UDIs };
+}
+
+// ── Roster members list (for admin name autocomplete) ─────────────────────────
+function getRosterMembers() {
+  try {
+    const sheet = SpreadsheetApp.openById(ROSTER_SS_ID).getSheetByName("Roster");
+    if (!sheet) return { error: "Roster sheet not found" };
+    const data = sheet.getDataRange().getValues();
+    const members = [];
+    for (let i = 1; i < data.length; i++) {
+      const name  = (data[i][1] || "").toString().trim();
+      const phone = (data[i][2] || "").toString().trim();
+      const email = (data[i][3] || "").toString().trim().toLowerCase();
+      if (name && email) members.push({ name, phone, email });
+    }
+    members.sort((a, b) => a.name.localeCompare(b.name));
+    return { members };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+// ── Hours admin ───────────────────────────────────────────────────────────────
+function getAllHours() {
+  try {
+    const hoursSheet = SpreadsheetApp.openById(HOURS_SS_ID).getSheetByName("volunteer hours");
+    if (!hoursSheet) return { error: "Sheet 'volunteer hours' not found" };
+
+    const rosterSheet = SpreadsheetApp.openById(ROSTER_SS_ID).getSheetByName("Roster");
+    const emailToName = {};
+    if (rosterSheet) {
+      const rData = rosterSheet.getDataRange().getValues();
+      for (let i = 1; i < rData.length; i++) {
+        const em = (rData[i][3] || "").toString().trim().toLowerCase();
+        const nm = (rData[i][1] || "").toString().trim();
+        if (em) emailToName[em] = nm;
+      }
+    }
+
+    const lastRow = hoursSheet.getLastRow();
+    const records = [];
+    if (lastRow >= 4) {
+      const data = hoursSheet.getRange(4, 2, lastRow - 3, 5).getValues();
+      data.forEach((row, i) => {
+        const email = String(row[0]).trim();
+        if (!email) return;
+        const rawDate = row[2];
+        const dateStr = rawDate instanceof Date
+          ? Utilities.formatDate(rawDate, Session.getScriptTimeZone(), "yyyy-MM-dd")
+          : String(rawDate);
+        records.push({
+          rowIndex:  i + 4,
+          email,
+          name:      emailToName[email.toLowerCase()] || email,
+          eventName: String(row[1]).trim(),
+          date:      dateStr,
+          hours:     (row[3] instanceof Date) ? 0 : (Number(row[3]) || 0),
+          approved:  String(row[4]).trim()
+        });
+      });
+    }
+    return { records };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+// ── Dashboard stats ───────────────────────────────────────────────────────────
+const BRANCH_GOAL_TARGET = 5000; // fundraising goal per branch
+
+function handleGetDashboard(email, branchCode) {
+  try {
+    // ── Approved hours for this volunteer ──────────────────────────────────────
+    const hoursSheet = SpreadsheetApp.openById(HOURS_SS_ID).getSheetByName("volunteer hours");
+    let hoursApproved = 0;
+    const recentActivity = [];
+
+    if (hoursSheet) {
+      const lastRow = hoursSheet.getLastRow();
+      if (lastRow >= 4) {
+        const data = hoursSheet.getRange(4, 2, lastRow - 3, 5).getValues();
+        data.forEach(row => {
+          if (String(row[0]).trim().toLowerCase() === email.trim().toLowerCase()) {
+            const hrs      = Number(row[3] || 0);
+            const approved = String(row[4]).trim().toLowerCase() === "yes";
+            if (approved) hoursApproved += hrs;
+            const rawDate = row[2];
+            const dateStr = rawDate instanceof Date
+              ? Utilities.formatDate(rawDate, Session.getScriptTimeZone(), "MMM d")
+              : String(rawDate);
+            recentActivity.push({
+              text: (approved ? "✓ " : "⏳ ") + String(row[1]).trim() + " — " + hrs + " hr" + (hrs !== 1 ? "s" : ""),
+              time: dateStr
+            });
+          }
+        });
+      }
+    }
+
+    // Most recent 5 activity items
+    recentActivity.reverse();
+    const activity = recentActivity.slice(0, 5);
+
+    // ── Donations for this volunteer + branch totals ───────────────────────────
+    const donSheet = SpreadsheetApp.openById(DONATIONS_SS_ID).getSheetByName("Sheet1");
+    let donationCount = 0;
+    let goalRaised    = 0;
+
+    if (donSheet) {
+      const dlastRow = donSheet.getLastRow();
+      if (dlastRow > 1) {
+        const ddata = donSheet.getRange(2, 1, dlastRow - 1, 7).getValues();
+        ddata.forEach(row => {
+          const rowBranch = String(row[5] || "").trim().toUpperCase();
+          const amount    = Number(row[1] || 0);
+          if (rowBranch === (branchCode || "").trim().toUpperCase()) {
+            goalRaised += amount;
+          }
+          // Count donations logged by this volunteer (col D = volunteerName, but
+          // col 3 may be volunteerEmail in some rows; match either)
+          const rowVolEmail = String(row[3] || "").trim().toLowerCase();
+          if (rowVolEmail === email.trim().toLowerCase()) {
+            donationCount++;
+          }
+        });
+      }
+    }
+
+    return {
+      hoursApproved,
+      donationCount,
+      goalRaised: Math.round(goalRaised * 100) / 100,
+      goalTarget: BRANCH_GOAL_TARGET,
+      recentActivity: activity
+    };
+
+  } catch (err) {
+    console.error("handleGetDashboard error:", err.message);
+    return { error: err.message };
+  }
+}
+
+// ── Auth helper — run once to authorize all scopes, then delete ───────────────
+function authorizeScopes() {
+  DocumentApp.create("auth-test-delete-me");
+  UrlFetchApp.fetch("https://www.google.com");
+  DriveApp.getFolderById("17glZEMCfE7L65RVuSglffhaUEGxzTqTe").getFiles();
+  SpreadsheetApp.openById(DONATIONS_SS_ID);
+  SpreadsheetApp.openById(HOURS_SS_ID);
+  GmailApp.getInboxThreads(0, 1);
+}
+
+function testGmailAuth() {
+  GmailApp.sendEmail("madhavsaxenaninja@gmail.com", "Auth test", "If you see this, Gmail is authorized.");
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+//  BOSTON TRIP — Registration & Payment functions
+//  These are called via google.script.run from the Boston Trip tab in the app.
+// ═════════════════════════════════════════════════════════════════════════════
+
+const BOSTON_SHEET_ID   = '1_BGGoyYgYK__XGkE3VqlxN7oqDuPbyq7YAZshFil8v8';
+const BOSTON_REG_SHEET  = 'Qualified Persons Form';
+
+const BOSTON_BRANCH_COLORS = {
+  'A': '#378ADD', 'W': '#1D9E75', 'H': '#D4537E', 'M': '#BA7517',
+};
+const BOSTON_BRANCH_NAMES = {
+  'A': 'Hopkinton', 'W': 'Westford', 'H': 'Holliston', 'M': 'Medway',
+};
+const BOSTON_FALLBACK_COLOR = '#888780';
+
+// Registration sheet columns (1-indexed):
+//   A(1) Name  B(2) Email  C(3) Minor?  D(4) Phone
+//   E(5) Timestamp  F(6) Shirt Size  G(7) Info Confirmed
+//   H(8) Parent Name  I(9) Parent Email  J(10) Parent Phone
+//   K(11) Fee Acknowledged  L(12) Permission Granted  M(13) Signature
+const BOSTON_COL_PHONE     = 4;
+const BOSTON_COL_TIMESTAMP = 5;
+
+// ── REGISTRATION: qualified names + registration status ───────────────────────
+function getQualifiedNames() {
+  const ss    = SpreadsheetApp.openById(BOSTON_SHEET_ID);
+  const sheet = ss.getSheetByName(BOSTON_REG_SHEET);
+  if (!sheet) return [];
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return [];
+  const data = sheet.getRange(2, 1, lastRow - 1, 13).getValues();
+  return data
+    .filter(row => (row[0] || '').toString().trim())
+    .map((row, i) => ({
+      name:         row[0].toString().trim(),
+      email:        row[1].toString().trim(),
+      isMinor:      row[2].toString().trim().toLowerCase() === 'yes',
+      phone:        row[3].toString().trim(),
+      rowIndex:     i + 2,
+      isRegistered: !!(row[12] || '').toString().trim(),
+    }));
+}
+
+function addQualifiedPerson(name, email, phone, isMinor) {
+  try {
+    const sheet = SpreadsheetApp.openById(BOSTON_SHEET_ID).getSheetByName(BOSTON_REG_SHEET);
+    if (!sheet) return { error: 'Sheet not found' };
+    // Prevent duplicates
+    const existing = sheet.getDataRange().getValues();
+    for (let i = 1; i < existing.length; i++) {
+      if ((existing[i][1] || '').toString().trim().toLowerCase() === email.toLowerCase()) {
+        return { success: true, skipped: true };
+      }
+    }
+    const today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'M/d/yyyy');
+    sheet.appendRow([name, email, isMinor ? 'Yes' : 'No', phone, today, '', '', '', '', '', '', '', '']);
+    return { success: true };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+function removeQualifiedPerson(email) {
+  try {
+    const sheet = SpreadsheetApp.openById(BOSTON_SHEET_ID).getSheetByName(BOSTON_REG_SHEET);
+    if (!sheet) return { error: 'Sheet not found' };
+    const data = sheet.getDataRange().getValues();
+    for (let i = data.length - 1; i >= 1; i--) {
+      if ((data[i][1] || '').toString().trim().toLowerCase() === email.toLowerCase()) {
+        sheet.deleteRow(i + 1);
+        return { success: true };
+      }
+    }
+    return { success: true, skipped: true };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+// ── REGISTRATION: submit permission form ──────────────────────────────────────
+function submitForm(data) {
+  try {
+    const ss    = SpreadsheetApp.openById(BOSTON_SHEET_ID);
+    const sheet = ss.getSheetByName(BOSTON_REG_SHEET);
+    if (!sheet) throw new Error('Sheet "' + BOSTON_REG_SHEET + '" not found.');
+
+    const headerCheck = sheet.getRange(1, BOSTON_COL_TIMESTAMP).getValue();
+    if (!headerCheck) {
+      const headers = [
+        'Name', 'Email', 'Minor?', 'Phone', 'Timestamp', 'Shirt Size',
+        'Info Confirmed', 'Parent Name', 'Parent Email', 'Parent Phone',
+        'Fee Acknowledged', 'Permission Granted', 'Signature'
+      ];
+      const hRange = sheet.getRange(1, 1, 1, headers.length);
+      hRange.setValues([headers]);
+      hRange.setFontWeight('bold').setBackground('#1A1311').setFontColor('#F9F6F0');
+      sheet.setFrozenRows(1);
+      sheet.autoResizeColumns(1, headers.length);
+    }
+
+    const row = data.rowIndex;
+    const nameInSheet = sheet.getRange(row, 1).getValue().toString().trim();
+    if (nameInSheet.toLowerCase() !== data.fullName.toLowerCase()) {
+      return { success: false, error: 'Name mismatch. Please refresh and try again.' };
+    }
+
+    sheet.getRange(row, BOSTON_COL_PHONE).setValue(data.phone || '');
+    sheet.getRange(row, BOSTON_COL_TIMESTAMP, 1, 9).setValues([[
+      new Date(),
+      data.shirtSize,
+      data.infoConfirmed ? 'Yes' : 'No',
+      data.parentName  || '',
+      data.parentEmail || '',
+      data.parentPhone || '',
+      data.feeAck      ? 'Yes' : 'No',
+      data.permission  ? 'Yes' : 'No',
+      data.signature
+    ]]);
+    sheet.getRange(row, 1, 1, 13).setBackground('#d9ead3');
+    return { success: true };
+  } catch (e) {
+    console.error('submitForm error:', e);
+    return { success: false, error: e.message };
+  }
+}
+
+// ── PAYMENT: internal helpers ─────────────────────────────────────────────────
+function bostonGetFoodSheet_() {
+  const ss    = SpreadsheetApp.openById(BOSTON_SHEET_ID);
+  let   sheet = ss.getSheetByName('Food');
+  if (!sheet) {
+    sheet = ss.insertSheet('Food');
+    sheet.getRange(1, 1, 1, 4).setValues([['ID', 'Email', 'Item', 'Cost']]);
+  }
+  return sheet;
+}
+
+function bostonParseVolunteerRow_(row) {
+  const branch       = String(row[1] || '').trim().toUpperCase();
+  const paidRaw      = String(row[6] || '').toLowerCase().trim();
+  const trainPaidRaw = String(row[7] || '').toLowerCase().trim();
+  return {
+    name:        String(row[0] || ''),
+    branch:      branch,
+    branchName:  BOSTON_BRANCH_NAMES[branch] || branch,
+    color:       BOSTON_BRANCH_COLORS[branch] || BOSTON_FALLBACK_COLOR,
+    email:       String(row[2] || '').toLowerCase().trim(),
+    trainTicket: parseFloat(row[3]) || 0,
+    shirtCost:   parseFloat(row[4]) || 0,
+    busCost:     parseFloat(row[5]) || 0,
+    paid:        paidRaw === 'yes',
+    trainPaid:   trainPaidRaw === 'yes',
+  };
+}
+
+function bostonParseFoodRows_(foodData, email) {
+  return foodData
+    .filter(r => String(r[1]).toLowerCase().trim() === email)
+    .map(r  => ({ id: String(r[0]), item: String(r[2]), cost: parseFloat(r[3]) || 0 }));
+}
+
+// ── PAYMENT: volunteer bill lookup ────────────────────────────────────────────
+function getVolunteerBill(email) {
+  try {
+    const ss    = SpreadsheetApp.openById(BOSTON_SHEET_ID);
+    const data  = ss.getSheetByName('Costs').getDataRange().getValues();
+    const query = email.toLowerCase().trim();
+
+    for (let i = 1; i < data.length; i++) {
+      const rowEmail = String(data[i][2] || '').toLowerCase().trim();
+      if (rowEmail !== query) continue;
+
+      const foodData  = bostonGetFoodSheet_().getDataRange().getValues().slice(1);
+      const foodItems = bostonParseFoodRows_(foodData, query);
+      const vol       = bostonParseVolunteerRow_(data[i]);
+
+      vol.found     = true;
+      vol.foodItems = foodItems;
+      vol.foodTotal = foodItems.reduce((s, f) => s + f.cost, 0);
+      return vol;
+    }
+    return { found: false };
+  } catch (e) {
+    return { found: false, error: e.message };
+  }
+}
+
+// ── ADMIN: all volunteers ─────────────────────────────────────────────────────
+function getAllVolunteers() {
+  try {
+    const ss       = SpreadsheetApp.openById(BOSTON_SHEET_ID);
+    const rows     = ss.getSheetByName('Costs').getDataRange().getValues().slice(1)
+                       .filter(r => r[0] || r[2]);
+    const foodData = bostonGetFoodSheet_().getDataRange().getValues().slice(1);
+
+    return rows.map(row => {
+      const vol     = bostonParseVolunteerRow_(row);
+      vol.foodItems = bostonParseFoodRows_(foodData, vol.email);
+      vol.foodTotal = vol.foodItems.reduce((s, f) => s + f.cost, 0);
+      vol.total     = vol.trainTicket + vol.shirtCost + vol.busCost + vol.foodTotal;
+      return vol;
+    });
+  } catch (e) {
+    return { error: e.message };
+  }
+}
+
+// ── ADMIN: update fixed cost ──────────────────────────────────────────────────
+function updateVolunteerFixed(email, key, value) {
+  try {
+    const ss    = SpreadsheetApp.openById(BOSTON_SHEET_ID);
+    const sheet = ss.getSheetByName('Costs');
+    const data  = sheet.getDataRange().getValues();
+    const query = email.toLowerCase().trim();
+    const val   = parseFloat(value) || 0;
+    const colMap = { trainTicket: 4, shirtCost: 5, busCost: 6 };
+    if (!(key in colMap)) return { success: false, error: 'Unknown field: ' + key };
+
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][2] || '').toLowerCase().trim() === query) {
+        sheet.getRange(i + 1, colMap[key]).setValue(val);
+        return { success: true };
+      }
+    }
+    return { success: false, error: 'Volunteer not found' };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+// ── ADMIN: mark full payment ──────────────────────────────────────────────────
+function updateVolunteerPaid(email, paid) {
+  try {
+    const ss    = SpreadsheetApp.openById(BOSTON_SHEET_ID);
+    const sheet = ss.getSheetByName('Costs');
+    const data  = sheet.getDataRange().getValues();
+    const query = email.toLowerCase().trim();
+
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][2] || '').toLowerCase().trim() === query) {
+        sheet.getRange(i + 1, 7).setValue(paid ? 'Yes' : 'No');
+        return { success: true };
+      }
+    }
+    return { success: false, error: 'Volunteer not found' };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+// ── ADMIN: mark train-only payment ────────────────────────────────────────────
+function updateVolunteerTrainPaid(email, paid) {
+  try {
+    const ss    = SpreadsheetApp.openById(BOSTON_SHEET_ID);
+    const sheet = ss.getSheetByName('Costs');
+    const data  = sheet.getDataRange().getValues();
+    const query = email.toLowerCase().trim();
+
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][2] || '').toLowerCase().trim() === query) {
+        sheet.getRange(i + 1, 8).setValue(paid ? 'Yes' : 'No');
+        return { success: true };
+      }
+    }
+    return { success: false, error: 'Volunteer not found' };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+// ── FOOD ITEMS ────────────────────────────────────────────────────────────────
+function addFoodItem(email, item, cost) {
+  try {
+    const id = 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+    bostonGetFoodSheet_().appendRow([id, email.toLowerCase().trim(), item, parseFloat(cost) || 0]);
+    return { success: true, id };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+function updateFoodItem(id, item, cost) {
+  try {
+    const sheet = bostonGetFoodSheet_();
+    const data  = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === String(id)) {
+        sheet.getRange(i + 1, 3, 1, 2).setValues([[item, parseFloat(cost) || 0]]);
+        return { success: true };
+      }
+    }
+    return { success: false, error: 'Item not found' };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+function deleteFoodItem(id) {
+  try {
+    const sheet = bostonGetFoodSheet_();
+    const data  = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === String(id)) {
+        sheet.deleteRow(i + 1);
+        return { success: true };
+      }
+    }
+    return { success: false, error: 'Item not found' };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+// ── ITINERARY: get TBD values ─────────────────────────────────────────────────
+function getItineraryData() {
+  try {
+    const ss    = SpreadsheetApp.openById(BOSTON_SHEET_ID);
+    let sheet   = ss.getSheetByName('Itinerary');
+    if (!sheet) return {};
+    const data  = sheet.getDataRange().getValues();
+    const result = {};
+    for (let i = 0; i < data.length; i++) {
+      if (data[i][0]) result[String(data[i][0])] = String(data[i][1] || '');
+    }
+    return result;
+  } catch (e) {
+    return {};
+  }
+}
+
+// ── ITINERARY: save TBD values (admin only — password enforced client-side) ──
+function saveItineraryData(jsonStr) {
+  try {
+    const vals  = JSON.parse(jsonStr);
+    const ss    = SpreadsheetApp.openById(BOSTON_SHEET_ID);
+    let sheet   = ss.getSheetByName('Itinerary');
+    if (!sheet) {
+      sheet = ss.insertSheet('Itinerary');
+      sheet.getRange(1, 1, 1, 2).setValues([['key', 'value']]);
+      sheet.getRange(1, 1, 1, 2).setFontWeight('bold');
+      sheet.setFrozenRows(1);
+    }
+
+    // Build key→row index map from existing data
+    const existing = sheet.getDataRange().getValues();
+    const rowMap   = {};
+    for (let i = 1; i < existing.length; i++) {
+      if (existing[i][0]) rowMap[String(existing[i][0])] = i + 1;
+    }
+
+    // Write each key-value pair
+    Object.keys(vals).forEach(key => {
+      if (rowMap[key]) {
+        sheet.getRange(rowMap[key], 2).setValue(vals[key]);
+      } else {
+        sheet.appendRow([key, vals[key]]);
+      }
+    });
+
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+// ── TASK BOARD ────────────────────────────────────────────────────────────
+// Uses the same ROSTER_SS_ID spreadsheet, separate "Task Changes" sheet.
+// Columns: Type | Key | Value | Extra | Timestamp
+
+const TB_SHEET_NAME = 'Task Changes';
+
+function tbGetSheet() {
+  const ss = SpreadsheetApp.openById(ROSTER_SS_ID);
+  let sheet = ss.getSheetByName(TB_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(TB_SHEET_NAME);
+    sheet.appendRow(['Type', 'Key', 'Value', 'Extra', 'Timestamp']);
+    sheet.setFrozenRows(1);
+    sheet.setColumnWidth(1, 140);
+    sheet.setColumnWidth(2, 160);
+    sheet.setColumnWidth(3, 300);
+    sheet.setColumnWidth(4, 200);
+    sheet.setColumnWidth(5, 180);
+  }
+  return sheet;
+}
+
+function tbGetAllChanges() {
+  const sheet = tbGetSheet();
+  const last  = sheet.getLastRow();
+  if (last <= 1) return [];
+
+  return sheet.getRange(2, 1, last - 1, 5).getValues()
+    .filter(row => row[0])
+    .map(row => {
+      const type = String(row[0]);
+      let value  = row[2];
+
+      if (value instanceof Date) {
+        if (type === 'teamMeetingTime') {
+          value = String(value.getUTCHours()).padStart(2, '0') + ':'
+                + String(value.getUTCMinutes()).padStart(2, '0');
+        } else {
+          value = Utilities.formatDate(value, 'UTC', 'yyyy-MM-dd');
+        }
+      } else {
+        value = String(value);
+      }
+
+      return {
+        type,
+        key:   String(row[1]),
+        value,
+        extra: String(row[3])
+      };
+    });
+}
+
+function tbSaveChange(type, key, value, extra) {
+  if (!type) return { success: false, error: 'Missing type' };
+
+  const sheet  = tbGetSheet();
+  const newRow = sheet.getLastRow() + 1;
+  const range  = sheet.getRange(newRow, 1, 1, 5);
+
+  range.setNumberFormats([['@', '@', '@', '@', '@']]);
+  range.setValues([[
+    String(type),
+    key   ? String(key)   : '',
+    value ? String(value) : '',
+    extra ? String(extra) : '',
+    Utilities.formatDate(
+      new Date(),
+      Session.getScriptTimeZone(),
+      'MM/dd/yyyy HH:mm:ss'
+    )
+  ]]);
+
+  return { success: true };
+}
