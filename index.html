@@ -569,10 +569,12 @@
     .hrs-tab.active { color: var(--dark); border-bottom-color: var(--orange); }
     .hrs-panel { display: none; padding: 14px 16px; }
     .hrs-panel.active { display: block; }
-    .hrs-row  { display: flex; align-items: center; gap: 8px; padding: 9px 10px; background: white; border: 2px solid var(--border); box-shadow: 2px 2px 0 var(--border); margin-bottom: 8px; }
+    .hrs-row  { display: flex; flex-direction: column; padding: 9px 10px; background: white; border: 2px solid var(--border); box-shadow: 2px 2px 0 var(--border); margin-bottom: 8px; }
+    .hrs-row-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .hrs-row-actions { display: flex; gap: 6px; margin-top: 8px; }
     .hrs-row-info { flex: 1; min-width: 0; }
     .hrs-row-name  { font-size: 0.78rem; font-weight: 700; color: var(--dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .hrs-row-meta  { font-size: 0.58rem; font-weight: 600; color: rgba(26,19,17,0.45); margin-top: 1px; }
+    .hrs-row-meta  { font-size: 0.58rem; font-weight: 600; color: rgba(26,19,17,0.45); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .hrs-row-qty   { font-size: 0.78rem; font-weight: 800; color: var(--orange); flex-shrink: 0; white-space: nowrap; }
     .hrs-btn { font-size: 0.55rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; border: 2px solid var(--dark); background: transparent; color: var(--dark); padding: 4px 8px; cursor: pointer; flex-shrink: 0; transition: background 0.1s, color 0.1s; }
     .hrs-btn:active { opacity: 0.75; }
@@ -2204,7 +2206,7 @@
           <div class="hrs-assign-form">
             <div style="position:relative;">
               <label for="hrs-assign-name">Volunteer Name</label>
-              <input type="text" id="hrs-assign-name" placeholder="Start typing a name…" autocomplete="off" oninput="hrsFilterNames(this.value)" onfocus="hrsFilterNames(this.value)" onblur="setTimeout(hrsHideDropdown,180)">
+              <input type="text" id="hrs-assign-name" placeholder="Start typing a name…" autocomplete="off" oninput="hrsAssignEmail='';document.getElementById('hrs-name-email').textContent='';hrsFilterNames(this.value)" onfocus="hrsFilterNames(this.value)" onblur="setTimeout(hrsHideDropdown,180)">
               <div id="hrs-name-email" style="font-size:0.58rem;font-weight:600;color:rgba(26,19,17,0.45);margin-top:3px;min-height:14px;"></div>
               <div id="hrs-name-dropdown" class="hrs-dropdown" style="display:none;"></div>
             </div>
@@ -2221,7 +2223,7 @@
               <input type="number" id="hrs-assign-hrs" placeholder="e.g. 2.5" min="0.5" step="0.5">
             </div>
             <div id="hrs-assign-status" class="hrs-status"></div>
-            <button class="hrs-submit-btn" onclick="adminSubmitAssignHours()">Assign Hours</button>
+            <button class="hrs-submit-btn" id="hrs-submit-btn" onclick="adminSubmitAssignHours()">Assign Hours</button>
           </div>
         </div>
       </div>
@@ -3709,13 +3711,17 @@
       }
       list.innerHTML = pending.map(function(r) {
         return '<div class="hrs-row" id="hrs-row-' + r.rowIndex + '">' +
-          '<div class="hrs-row-info">' +
-            '<div class="hrs-row-name">' + esc(r.name) + '</div>' +
-            '<div class="hrs-row-meta">' + esc(r.eventName) + ' &middot; ' + esc(r.date) + '</div>' +
+          '<div class="hrs-row-top">' +
+            '<div class="hrs-row-info">' +
+              '<div class="hrs-row-name">' + esc(r.name) + '</div>' +
+              '<div class="hrs-row-meta">' + esc(r.eventName) + ' &middot; ' + esc(r.date) + '</div>' +
+            '</div>' +
+            '<div class="hrs-row-qty">' + r.hours + ' hr' + (r.hours !== 1 ? 's' : '') + '</div>' +
           '</div>' +
-          '<div class="hrs-row-qty">' + r.hours + ' hr' + (r.hours !== 1 ? 's' : '') + '</div>' +
-          '<button class="hrs-btn approve" onclick="approveHour(' + r.rowIndex + ')">Approve</button>' +
-          '<button class="hrs-btn deny"    onclick="denyHour(' + r.rowIndex + ')">Deny</button>' +
+          '<div class="hrs-row-actions">' +
+            '<button class="hrs-btn approve" onclick="approveHour(' + r.rowIndex + ')">Approve</button>' +
+            '<button class="hrs-btn deny"    onclick="denyHour(' + r.rowIndex + ')">Deny</button>' +
+          '</div>' +
         '</div>';
       }).join('');
     }
@@ -3788,7 +3794,7 @@
         return;
       }
 
-      var btn = document.querySelector('.hrs-submit-btn');
+      var btn = document.getElementById('hrs-submit-btn');
       btn.disabled = true;
       gasCall('adminAssignHours', { email: email, eventName: event, eventDate: date, hours: hours }, function(res) {
         btn.disabled = false;
