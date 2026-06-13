@@ -134,7 +134,7 @@ window.onSignedIn = async function (preloadedPayload = null) {
 
   } catch (err) {
     console.error("Error during lookup:", err);
-    alert("Could not connect to server. Please check your internet connection and try again.\n\nError: " + err.message);
+    alert("Could not connect to server. Please check your internet connection and try again.\n\nError: " + (err.message || String(err)));
   }
 };
 
@@ -209,7 +209,8 @@ async function syncDonations() {
       if (json.success || json.error === "UDI exists") {
         await deleteDonation(rec.id);
       }
-    } catch {
+    } catch (err) {
+      console.error('Donation sync failed, will retry on next connection:', err);
       break;
     }
   }
@@ -450,7 +451,8 @@ async function runGenerateSlips() {
     loadingEl.style.display = "none";
     btn.disabled = false;
     errorEl.style.display = "block";
-    errorEl.innerHTML = `<strong>Error:</strong> ${err.message}`;
+    errorEl.innerHTML = '<strong>Error:</strong> ';
+    errorEl.appendChild(document.createTextNode(err.message || String(err)));
   }
 }
 
@@ -502,7 +504,11 @@ async function loadMyHours() {
     const data    = await res.json();
 
     if (data.error) {
-      listEl.innerHTML = `<p class="hours-error">Server error: ${data.error}</p>`;
+      const errP = document.createElement('p');
+      errP.className = 'hours-error';
+      errP.textContent = 'Server error: ' + data.error;
+      listEl.innerHTML = '';
+      listEl.appendChild(errP);
       return;
     }
 
