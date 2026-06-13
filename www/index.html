@@ -2983,14 +2983,10 @@
   document.addEventListener('DOMContentLoaded', async function () {
     if (!window.Capacitor || !window.Capacitor.isNativePlatform()) return;
 
-    const { StatusBar, Style } = window.Capacitor.Plugins;
-    const { Network }          = window.Capacitor.Plugins;
+    const { StatusBar } = window.Capacitor.Plugins;
+    const { Network }   = window.Capacitor.Plugins;
 
-    // Dark status bar to match the app's dark header
-    if (StatusBar) {
-      StatusBar.setStyle({ style: 'DARK' });
-      StatusBar.setBackgroundColor({ color: '#1A1311' });
-    }
+    if (StatusBar) StatusBar.hide();
 
     // Offline banner
     if (Network) {
