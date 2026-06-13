@@ -1271,8 +1271,8 @@
     .paid-badge.unpaid      { color: var(--orange); border-color: var(--orange); background: rgba(200,82,45,0.08); }
     .paid-badge.train-only  { color: var(--blue);   border-color: var(--blue);   background: rgba(55,138,221,0.08); }
 
-    .vol-card-
-    .vol-card.expanded .vol-card-
+    .vol-card-body { display: none; }
+    .vol-card.expanded .vol-card-body { display: block; }
 
     /* PAID TOGGLE STRIPS */
     .paid-toggle-strip { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid var(--border); }
@@ -1891,7 +1891,7 @@
       </div>
       <div class="itin-timeline" id="itin-timeline"><!-- rendered by JS --></div>
       <div style="padding:16px;display:flex;flex-direction:column;gap:10px;background:var(--camp-cream,#F9F6F0);">
-        <button class="btn-primary" style="width:100%;justify-content:center;" onclick="showPaymentView(selectedPerson)">
+        <button class="btn-primary" style="width:100%;justify-content:center;" onclick="viewMyBill()">
           <i class="bi bi-receipt"></i>&nbsp; View Your Bill
         </button>
         <button id="itin-edit-btn" class="btn-ghost" style="width:100%;justify-content:center;display:none;" onclick="openItinEditor()">
@@ -3114,6 +3114,7 @@
     window.checkAdminPassword = checkAdminPassword;
     window.handleRegSubmit  = handleRegSubmit;
     window.showPaymentView  = showPaymentView;
+    window.viewMyBill       = function() { showPaymentView(selectedPerson); };
     window.showView         = showView;
     window.openItinEditor   = openItinEditor;
     window.closeItinEditor  = closeItinEditor;
