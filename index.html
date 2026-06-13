@@ -730,6 +730,61 @@
 
     .nav-item.active .nav-dot { opacity: 1; }
 
+    /* Home button — centered hero button */
+    #navHome {
+      position: relative;
+      flex: 1.4;
+    }
+    #navHome .nav-icon {
+      font-size: 1.7rem;
+    }
+    #navHome span:not(.nav-icon):not(.nav-dot) {
+      font-size: 0.72rem;
+      letter-spacing: 1.2px;
+    }
+
+    /* ── Boston Trip Banner ── */
+    .boston-banner {
+      margin: 0 0 16px;
+      background: var(--camp-dark);
+      border: 3px solid var(--camp-dark);
+      box-shadow: 6px 6px 0 var(--camp-orange);
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      cursor: pointer;
+      transition: box-shadow 0.15s, transform 0.15s;
+    }
+    .boston-banner:active { transform: translate(3px,3px); box-shadow: 3px 3px 0 var(--camp-orange); }
+    .boston-banner-icon { font-size: 2rem; line-height: 1; flex-shrink: 0; }
+    .boston-banner-body { flex: 1; min-width: 0; }
+    .boston-banner-title { font-family: 'Abril Fatface', serif; font-size: 1.05rem; color: var(--camp-cream); line-height: 1.1; }
+    .boston-banner-title span { color: var(--camp-orange); font-style: italic; }
+    .boston-banner-sub { font-size: 0.6rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(249,246,240,0.5); margin-top: 3px; }
+    .boston-banner-arrow { color: var(--camp-orange); font-size: 1.1rem; flex-shrink: 0; }
+    .boston-banner.hidden { display: none !important; }
+
+    /* ── Admin toggle switch ── */
+    .admin-toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid rgba(26,19,17,0.08); }
+    .admin-toggle-label { font-size: 0.72rem; font-weight: 700; color: var(--dark); }
+    .admin-toggle-label small { display: block; font-size: 0.58rem; font-weight: 600; color: rgba(26,19,17,0.38); letter-spacing: 0.5px; margin-top: 2px; }
+    .toggle-switch { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-track { position: absolute; inset: 0; background: rgba(26,19,17,0.15); border-radius: 22px; cursor: pointer; transition: background 0.2s; }
+    .toggle-track::before { content: ''; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px; background: white; border-radius: 50%; transition: transform 0.2s; }
+    .toggle-switch input:checked + .toggle-track { background: var(--orange); }
+    .toggle-switch input:checked + .toggle-track::before { transform: translateX(18px); }
+
+    /* ── Qualified Persons ── */
+    .qual-list { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; }
+    .qual-row { display: flex; align-items: center; gap: 10px; padding: 9px 12px; background: white; border: 2px solid var(--border); }
+    .qual-row input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--orange); flex-shrink: 0; cursor: pointer; }
+    .qual-row-name { flex: 1; font-size: 0.78rem; font-weight: 700; color: var(--dark); }
+    .qual-row-email { font-size: 0.58rem; color: rgba(26,19,17,0.38); font-weight: 600; }
+    .qual-row.qualified { border-color: var(--green); }
+    .qual-count { font-size: 0.6rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: rgba(26,19,17,0.4); padding: 6px 16px 0; }
+
     /* ══════════════════════════════════════
        DASHBOARD HOME
     ══════════════════════════════════════ */
@@ -1256,7 +1311,7 @@
     .pay-method-label { display: flex; align-items: center; gap: 5px; font-size: 0.52rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: rgba(26,19,17,0.35); margin-bottom: 9px; }
     .pay-method-label .zelle-icon  { color: var(--zelle);  font-size: 11px; }
     .pay-method-label .paypal-icon { color: var(--paypal); font-size: 11px; }
-    .pay-method-
+    .pay-method-body { display: flex; flex-direction: column; align-items: center; gap: 7px; flex: 1; }
     .pay-method-qr   { width: 80px; height: 80px; object-fit: contain; border: 2px solid var(--dark); display: block; }
     .pay-method-name { font-family: 'Abril Fatface', serif; font-size: 0.8rem; color: var(--dark); text-align: center; line-height: 1.2; }
     .pay-btn-zelle  { display: inline-flex; align-items: center; justify-content: center; gap: 5px; background: var(--zelle);  color: white; border: 2px solid var(--dark); box-shadow: 3px 3px 0 var(--dark); font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 0.6rem; letter-spacing: 0.5px; text-transform: uppercase; padding: 7px 10px; text-decoration: none; width: 100%; }
@@ -1940,6 +1995,16 @@
       </div>
     </div>
 
+    <!-- Boston Trip Banner (date-aware, admin-toggleable) -->
+    <div class="boston-banner" id="bostonBanner" onclick="switchTab('boston')">
+      <span class="boston-banner-icon">🚌</span>
+      <div class="boston-banner-body">
+        <div class="boston-banner-title">Boston Trip <span>2026</span></div>
+        <div class="boston-banner-sub" id="bostonBannerSub">Jun 30 · Register &amp; pay your balance</div>
+      </div>
+      <span class="boston-banner-arrow"><i class="bi bi-chevron-right"></i></span>
+    </div>
+
     <!-- Feature tiles -->
     <p class="dash-section-label">Quick Actions</p>
     <div class="dash-grid">
@@ -1956,18 +2021,10 @@
         <div class="dash-tile-desc">View history & submit for approval</div>
       </button>
 
-
-
       <button class="dash-tile" onclick="switchTab('tasks')">
         <span class="dash-tile-icon">✅</span>
         <div class="dash-tile-title">Task Board</div>
         <div class="dash-tile-desc">Branch to-dos & assignments</div>
-      </button>
-
-      <button class="dash-tile" onclick="switchTab('boston')">
-        <span class="dash-tile-icon">🚌</span>
-        <div class="dash-tile-title">Boston Trip</div>
-        <div class="dash-tile-desc">Register &amp; pay for Boston 2026</div>
       </button>
 
       <button class="dash-tile" onclick="switchTab('admin')">
@@ -2252,6 +2309,50 @@
       </div>
     </div>
 
+    <!-- App Settings (collapsible) -->
+    <div class="admin-section" id="settings-section">
+      <div class="admin-section-hdr" onclick="toggleAdminSection('settings-section')">
+        <div>
+          <div class="admin-eyebrow">Dashboard</div>
+          <div class="admin-title">App <span>Settings</span></div>
+        </div>
+        <i class="bi bi-chevron-down admin-section-chev"></i>
+      </div>
+      <div class="admin-section-body">
+        <div class="admin-toggle-row">
+          <div class="admin-toggle-label">
+            Boston Trip Banner
+            <small>Show banner on Home dashboard</small>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="bostonBannerToggle" checked onchange="adminSetBostonBanner(this.checked)">
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Qualified Persons (collapsible) -->
+    <div class="admin-section" id="qual-section">
+      <div class="admin-section-hdr" onclick="toggleAdminSection('qual-section'); if(this.parentElement.classList.contains('open')) loadQualifiedPersons()">
+        <div>
+          <div class="admin-eyebrow">Boston Trip 2026</div>
+          <div class="admin-title">Qualified <span>Persons</span></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="reg-pill" id="qual-count-pill">--</span>
+          <i class="bi bi-chevron-down admin-section-chev"></i>
+        </div>
+      </div>
+      <div class="admin-section-body">
+        <div id="qual-list-body">
+          <div style="padding:20px;text-align:center;font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(26,19,17,0.3);">
+            Open section to load
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 <!-- ── End Admin Tab ── -->
 
@@ -2495,9 +2596,9 @@
 </div><!-- /appContent -->
 
 <nav class="bottom-nav hidden" id="mainNav">
-    <button class="nav-item active" id="navHome" onclick="switchTab('home')" aria-label="Home">
-      <span class="nav-icon">🏠</span>
-      <span>Home</span>
+    <button class="nav-item" id="navTasks" onclick="switchTab('tasks')" aria-label="Task Board">
+      <span class="nav-icon">📋</span>
+      <span>Tasks</span>
       <span class="nav-dot"></span>
     </button>
     <button class="nav-item" id="navDonations" onclick="switchTab('donations')" aria-label="Donations">
@@ -2505,24 +2606,19 @@
       <span>Donate</span>
       <span class="nav-dot"></span>
     </button>
+    <button class="nav-item active" id="navHome" onclick="switchTab('home')" aria-label="Home">
+      <span class="nav-icon">🏠</span>
+      <span>Home</span>
+      <span class="nav-dot"></span>
+    </button>
     <button class="nav-item" id="navHours" onclick="switchTab('hours')" aria-label="Hours">
       <span class="nav-icon">⏱</span>
       <span>Hours</span>
       <span class="nav-dot"></span>
     </button>
-    <button class="nav-item" id="navBoston" onclick="switchTab('boston')" aria-label="Boston Trip">
-      <span class="nav-icon">🚌</span>
-      <span class="nav-label">Boston</span>
-      <span class="nav-dot"></span>
-    </button>
     <button class="nav-item" id="navAdmin" onclick="switchTab('admin')" aria-label="Admin Tools">
       <span class="nav-icon">⚙️</span>
       <span>Admin</span>
-      <span class="nav-dot"></span>
-    </button>
-    <button class="nav-item" id="navTasks" onclick="switchTab('tasks')" aria-label="Task Board">
-      <span class="nav-icon">📋</span>
-      <span>Tasks</span>
       <span class="nav-dot"></span>
     </button>
   </nav>
@@ -2552,6 +2648,7 @@
       document.getElementById('tabHome').classList.remove('hidden');
       document.getElementById('navHome').classList.add('active');
       if (typeof window.loadDashboard === 'function') window.loadDashboard();
+      initBostonBanner();
 
     } else if (tab === 'donations') {
       document.getElementById('tabDonations').classList.remove('hidden');
@@ -2564,7 +2661,6 @@
 
     } else if (tab === 'boston') {
       document.getElementById('tabBoston').classList.remove('hidden');
-      document.getElementById('navBoston').classList.add('active');
       if (typeof window.initBostonTrip === 'function') window.initBostonTrip();
 
     } else if (tab === 'admin') {
@@ -2591,6 +2687,206 @@
     document.getElementById(id).classList.toggle('open');
   }
   window.toggleAdminSection = toggleAdminSection;
+
+  /* ─────────────────────────────────────────
+     Boston Banner
+  ───────────────────────────────────────── */
+  function initBostonBanner() {
+    var banner = document.getElementById('bostonBanner');
+    var toggle = document.getElementById('bostonBannerToggle');
+    if (!banner) return;
+
+    var HIDE_AFTER = new Date('2026-07-08T00:00:00'); // auto-hide after Jul 7
+    var manuallyHidden = localStorage.getItem('bostonBannerHidden') === '1';
+    var expired = new Date() >= HIDE_AFTER;
+
+    var show = !manuallyHidden && !expired;
+    banner.classList.toggle('hidden', !show);
+    if (toggle) toggle.checked = show;
+
+    // Update subtext based on date
+    var sub = document.getElementById('bostonBannerSub');
+    if (sub) {
+      var now = new Date();
+      var tripDate = new Date('2026-06-30');
+      if (now > tripDate) {
+        sub.textContent = 'Pay your balance · Trip was Jun 30';
+      }
+    }
+  }
+
+  function adminSetBostonBanner(visible) {
+    localStorage.setItem('bostonBannerHidden', visible ? '0' : '1');
+    var banner = document.getElementById('bostonBanner');
+    if (banner) banner.classList.toggle('hidden', !visible);
+  }
+  window.adminSetBostonBanner = adminSetBostonBanner;
+
+  /* ─────────────────────────────────────────
+     Qualified Persons
+  ───────────────────────────────────────── */
+  /* ─────────────────────────────────────────
+     Qualified Persons — GAS-backed
+  ───────────────────────────────────────── */
+  var qualLoaded = false;
+  var qualRosterCache = []; // full roster
+  var qualSheetEmails = {}; // email → {isMinor, phone} for people already on the sheet
+
+  function loadQualifiedPersons() {
+    qualLoaded = false; // allow refresh
+    var body = document.getElementById('qual-list-body');
+    if (!body) return;
+    body.innerHTML = '<div style="padding:20px;text-align:center;font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(26,19,17,0.3);"><i class="bi bi-hourglass-split spinner"></i> Loading&hellip;</div>';
+
+    var su = window.SCRIPT_URL || '';
+    Promise.all([
+      fetch(su, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'action=getRosterMembers' }).then(function(r){return r.json();}),
+      fetch(su, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'action=getQualifiedNames' }).then(function(r){return r.json();})
+    ]).then(function(results) {
+      var members  = (results[0] && results[0].members) || [];
+      var qualified = Array.isArray(results[1]) ? results[1] : [];
+
+      qualRosterCache = members;
+      qualSheetEmails = {};
+      qualified.forEach(function(q) { qualSheetEmails[q.email.toLowerCase()] = q; });
+
+      renderQualList(body, members);
+    }).catch(function() {
+      body.innerHTML = '<div style="padding:20px;text-align:center;font-size:0.65rem;color:rgba(26,19,17,0.3);">Failed to load. Check connection.</div>';
+    });
+  }
+  window.loadQualifiedPersons = loadQualifiedPersons;
+
+  function renderQualList(body, members) {
+    if (!members.length) { body.innerHTML = '<div style="padding:20px;text-align:center;font-size:0.65rem;color:rgba(26,19,17,0.3);">No roster members found.</div>'; return; }
+
+    var qualCount = members.filter(function(m) { return qualSheetEmails[m.email.toLowerCase()]; }).length;
+    document.getElementById('qual-count-pill').textContent = qualCount + '/' + members.length;
+
+    var html = '<div class="qual-count">' + qualCount + ' of ' + members.length + ' marked qualified</div><div class="qual-list">';
+    members.forEach(function(m) {
+      var key = m.email.toLowerCase();
+      var isQual = !!qualSheetEmails[key];
+      var qdata = qualSheetEmails[key] || {};
+      var minorLabel = isQual ? (qdata.isMinor ? ' · Minor' : ' · Adult') : '';
+      html += '<div class="qual-row' + (isQual ? ' qualified' : '') + '" id="qual-row-' + encodeURIComponent(m.email) + '">' +
+        '<input type="checkbox"' + (isQual ? ' checked' : '') + ' onchange="qualCheckboxChanged(' + JSON.stringify(m.email) + ',' + JSON.stringify(m.name) + ',this)">' +
+        '<div style="flex:1;min-width:0;">' +
+          '<div class="qual-row-name">' + m.name + '<span style="font-size:0.55rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(26,19,17,0.35);margin-left:6px;">' + minorLabel + '</span></div>' +
+          '<div class="qual-row-email">' + m.email + '</div>' +
+        '</div>' +
+        (isQual ? '<span style="font-size:0.55rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:2px 6px;background:var(--green);color:white;">✓</span>' : '') +
+        '</div>';
+      // Inline confirm form (hidden by default, shown when unchecked person is checked)
+      html += '<div class="qual-confirm-form" id="qual-form-' + encodeURIComponent(m.email) + '" style="display:none;padding:10px 12px 12px 38px;background:#f5f5f0;border-left:3px solid var(--orange);margin-bottom:4px;">' +
+        '<div style="font-size:0.62rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(26,19,17,0.5);margin-bottom:8px;">Qualifying ' + m.name + '</div>' +
+        '<div style="display:flex;gap:8px;margin-bottom:8px;">' +
+          '<button onclick="qualSetMinor(' + JSON.stringify(m.email) + ',false)" id="qual-adult-' + encodeURIComponent(m.email) + '" style="flex:1;padding:6px;font-size:0.62rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;border:2px solid var(--dark);background:var(--dark);color:white;cursor:pointer;">Adult</button>' +
+          '<button onclick="qualSetMinor(' + JSON.stringify(m.email) + ',true)"  id="qual-minor-' + encodeURIComponent(m.email) + '" style="flex:1;padding:6px;font-size:0.62rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;border:2px solid var(--dark);background:white;color:var(--dark);cursor:pointer;">Minor</button>' +
+        '</div>' +
+        (m.phone ? '<div style="font-size:0.62rem;font-weight:600;color:rgba(26,19,17,0.45);margin-bottom:8px;">📞 ' + m.phone + '</div>' : '') +
+        '<div style="display:flex;gap:8px;">' +
+          '<button onclick="qualCancelForm(' + JSON.stringify(m.email) + ')" style="flex:1;padding:7px;font-size:0.62rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;border:2px solid var(--dark);background:white;color:var(--dark);cursor:pointer;">Cancel</button>' +
+          '<button onclick="qualConfirmAdd(' + JSON.stringify(m.email) + ',' + JSON.stringify(m.name) + ')" style="flex:1;padding:7px;font-size:0.62rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;border:2px solid var(--orange);background:var(--orange);color:white;cursor:pointer;">Confirm</button>' +
+        '</div>' +
+        '</div>';
+    });
+    html += '</div>';
+    body.innerHTML = html;
+  }
+
+  var qualMinorState = {}; // email → bool
+
+  function qualCheckboxChanged(email, name, cb) {
+    if (cb.checked) {
+      // Show inline form
+      cb.checked = false; // revert until confirmed
+      var form = document.getElementById('qual-form-' + encodeURIComponent(email));
+      if (form) form.style.display = 'block';
+      qualMinorState[email] = false;
+    } else {
+      // Remove from sheet
+      qualRemovePerson(email);
+    }
+  }
+  window.qualCheckboxChanged = qualCheckboxChanged;
+
+  function qualSetMinor(email, isMinor) {
+    qualMinorState[email] = isMinor;
+    var adultBtn = document.getElementById('qual-adult-' + encodeURIComponent(email));
+    var minorBtn = document.getElementById('qual-minor-' + encodeURIComponent(email));
+    if (adultBtn) { adultBtn.style.background = isMinor ? 'white' : 'var(--dark)'; adultBtn.style.color = isMinor ? 'var(--dark)' : 'white'; }
+    if (minorBtn) { minorBtn.style.background = isMinor ? 'var(--dark)' : 'white'; minorBtn.style.color = isMinor ? 'white' : 'var(--dark)'; }
+  }
+  window.qualSetMinor = qualSetMinor;
+
+  function qualCancelForm(email) {
+    var form = document.getElementById('qual-form-' + encodeURIComponent(email));
+    if (form) form.style.display = 'none';
+    var cb = document.querySelector('#qual-row-' + encodeURIComponent(email) + ' input[type=checkbox]');
+    if (cb) cb.checked = false;
+  }
+  window.qualCancelForm = qualCancelForm;
+
+  function qualConfirmAdd(email, name) {
+    var isMinor = !!qualMinorState[email];
+    var rosterMember = qualRosterCache.filter(function(m) { return m.email.toLowerCase() === email.toLowerCase(); })[0];
+    var phone = (rosterMember && rosterMember.phone) || '';
+
+    var row = document.getElementById('qual-row-' + encodeURIComponent(email));
+    var form = document.getElementById('qual-form-' + encodeURIComponent(email));
+    if (form) form.style.display = 'none';
+
+    fetch(window.SCRIPT_URL || '', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'action=addQualifiedPerson&name=' + encodeURIComponent(name) + '&email=' + encodeURIComponent(email) + '&phone=' + encodeURIComponent(phone) + '&isMinor=' + isMinor
+    }).then(function(r) { return r.json(); }).then(function(res) {
+      if (res.error) { alert('Error: ' + res.error); return; }
+      qualSheetEmails[email.toLowerCase()] = { isMinor: isMinor, phone: phone };
+      if (row) {
+        row.classList.add('qualified');
+        var cb = row.querySelector('input[type=checkbox]');
+        if (cb) cb.checked = true;
+        var nameEl = row.querySelector('.qual-row-name');
+        if (nameEl) {
+          var span = nameEl.querySelector('span') || nameEl.appendChild(document.createElement('span'));
+          span.style.cssText = 'font-size:0.55rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(26,19,17,0.35);margin-left:6px;';
+          span.textContent = isMinor ? ' · Minor' : ' · Adult';
+        }
+      }
+      qualUpdateCount();
+    }).catch(function() { alert('Network error — try again.'); });
+  }
+  window.qualConfirmAdd = qualConfirmAdd;
+
+  function qualRemovePerson(email) {
+    fetch(window.SCRIPT_URL || '', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'action=removeQualifiedPerson&email=' + encodeURIComponent(email)
+    }).then(function(r) { return r.json(); }).then(function(res) {
+      if (res.error) { alert('Error: ' + res.error); return; }
+      delete qualSheetEmails[email.toLowerCase()];
+      var row = document.getElementById('qual-row-' + encodeURIComponent(email));
+      if (row) {
+        row.classList.remove('qualified');
+        var span = row.querySelector('.qual-row-name span');
+        if (span) span.textContent = '';
+        var badge = row.querySelector('span[style*="background:var(--green)"]');
+        if (badge) badge.remove();
+      }
+      qualUpdateCount();
+    }).catch(function() { alert('Network error — try again.'); });
+  }
+
+  function qualUpdateCount() {
+    var all = document.querySelectorAll('#qual-list-body .qual-row');
+    var qualCount = document.querySelectorAll('#qual-list-body .qual-row.qualified').length;
+    document.getElementById('qual-count-pill').textContent = qualCount + '/' + all.length;
+    var countEl = document.querySelector('#qual-list-body .qual-count');
+    if (countEl) countEl.textContent = qualCount + ' of ' + all.length + ' marked qualified';
+  }
 
   window.loadDashboard = function() {
     if (window.volunteerProfile) {
