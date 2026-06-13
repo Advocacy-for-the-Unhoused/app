@@ -2983,10 +2983,7 @@
   document.addEventListener('DOMContentLoaded', async function () {
     if (!window.Capacitor || !window.Capacitor.isNativePlatform()) return;
 
-    const { StatusBar } = window.Capacitor.Plugins;
-    const { Network }   = window.Capacitor.Plugins;
-
-    if (StatusBar) StatusBar.hide();
+    const { Network } = window.Capacitor.Plugins;
 
     // Offline banner
     if (Network) {
