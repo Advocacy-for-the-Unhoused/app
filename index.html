@@ -1410,6 +1410,323 @@
       padding: 8px 0 2px; border-bottom: 1px solid rgba(200,82,45,0.2);
     }
   </style>
+
+  <style>
+  /* ── Task Board styles (scoped to #tabTasks) ── */
+  #tabTasks *, #tabTasks *::before, #tabTasks *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  #tabTasks {
+    --orange: #C8522D;
+    --cream:  #F9F6F0;
+    --dark:   #1A1311;
+    --border: rgba(26,19,17,0.12);
+    background: var(--cream);
+    font-family: 'Montserrat', sans-serif;
+    color: var(--dark);
+    font-size: 16px;
+    -webkit-tap-highlight-color: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  /* HEADER */
+  #tabTasks .site-header {
+    background: var(--cream);
+    border-bottom: 3px solid var(--dark);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    width: 100%;
+  }
+  #tabTasks .wordmark {
+    font-family: 'Abril Fatface', serif;
+    font-size: 1.1rem;
+    color: var(--dark);
+    line-height: 1;
+  }
+  #tabTasks .wordmark span { color: var(--orange); font-style: italic; }
+  #tabTasks .tb-subtitle {
+    font-size: 0.55rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(26,19,17,0.4);
+    margin-top: 2px;
+  }
+  #tabTasks .header-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  #tabTasks .btn-primary {
+    background: var(--orange);
+    color: white;
+    border: 2px solid var(--dark);
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
+    font-size: 0.7rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    padding: 0 12px;
+    height: 40px;
+    cursor: pointer;
+    box-shadow: 3px 3px 0 var(--dark);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    border-radius: 0;
+    -webkit-appearance: none;
+    touch-action: manipulation;
+  }
+  #tabTasks .btn-primary:active { transform: translate(1px,1px); box-shadow: 2px 2px 0 var(--dark); }
+  #tabTasks .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #888; flex-shrink: 0; }
+  #tabTasks .status-dot.synced  { background: #4caf50; }
+  #tabTasks .status-dot.syncing { background: var(--orange); animation: tb-pulse 1s infinite; }
+  #tabTasks .status-dot.error   { background: #e53935; }
+  @keyframes tb-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  #tabTasks .sync-label {
+    font-size: 0.55rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: rgba(26,19,17,0.45);
+  }
+  /* CANVAS */
+  #tabTasks .canvas {
+    width: 100%;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding-bottom: 30px;
+  }
+  #tabTasks .empty-state {
+    color: rgba(26,19,17,0.4);
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    text-align: center;
+    margin-top: 60px;
+  }
+  /* TEAM CARD */
+  #tabTasks .team-card {
+    background: var(--cream);
+    border: 2.5px solid var(--dark);
+    box-shadow: 6px 6px 0 var(--orange);
+    overflow: hidden;
+    width: 100%;
+  }
+  #tabTasks .team-header {
+    background: var(--dark);
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: auto;
+  }
+  #tabTasks .team-header-top { display: flex; align-items: center; gap: 8px; }
+  #tabTasks .team-color-swatch {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.2);
+    flex-shrink: 0;
+  }
+  #tabTasks .team-name-btn {
+    font-family: 'Abril Fatface', serif;
+    font-size: 1rem;
+    color: var(--cream);
+    background: none; border: none;
+    padding: 0; text-align: left; cursor: pointer;
+    flex: 1; min-width: 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    display: flex; align-items: center;
+    touch-action: manipulation;
+  }
+  #tabTasks .team-name-input {
+    font-family: 'Abril Fatface', serif;
+    font-size: 1rem; color: var(--dark);
+    flex: 1; min-width: 0;
+    border: 2px solid var(--orange); padding: 6px 8px;
+    background: var(--cream); outline: none; border-radius: 0; -webkit-appearance: none;
+  }
+  #tabTasks .team-officer {
+    font-size: 0.65rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+    color: rgba(249,246,240,0.65);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2;
+  }
+  #tabTasks .team-header-bottom {
+    display: flex; align-items: center; gap: 6px; justify-content: space-between;
+  }
+  #tabTasks .meeting-pill {
+    font-size: 0.58rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+    background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.15);
+    color: rgba(249,246,240,0.55); padding: 0 7px; height: 28px;
+    cursor: pointer; white-space: nowrap;
+    display: flex; align-items: center; gap: 3px;
+    touch-action: manipulation; flex-shrink: 0;
+  }
+  #tabTasks .meeting-pill.set { color: var(--cream); border-color: var(--orange); background: rgba(200,82,45,0.2); }
+  #tabTasks .meeting-datetime-inputs { display: flex; gap: 6px; flex-shrink: 0; }
+  #tabTasks .meeting-date-input,
+  #tabTasks .meeting-time-input {
+    font-size: 0.75rem; font-weight: 700;
+    background: var(--cream); border: 2px solid var(--orange);
+    color: var(--dark); padding: 4px 8px; outline: none;
+    -webkit-appearance: none; border-radius: 0; height: 28px;
+  }
+  #tabTasks .meeting-date-input { width: 110px; }
+  #tabTasks .meeting-time-input { width: 85px; }
+  #tabTasks .delete-team-btn {
+    background: none; border: none; color: rgba(249,246,240,0.2);
+    cursor: pointer; font-size: 16px; width: 32px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; touch-action: manipulation;
+  }
+  #tabTasks .delete-team-btn:active { color: #ef9a9a; }
+  #tabTasks .progress-track { height: 3px; background: rgba(26,19,17,0.08); }
+  #tabTasks .progress-fill  { height: 3px; transition: width 0.4s ease; }
+  #tabTasks .stats-strip {
+    padding: 5px 12px; display: flex; gap: 6px; align-items: center;
+    border-bottom: 1px solid var(--border); background: white; flex-wrap: wrap;
+  }
+  #tabTasks .stat-chip {
+    font-size: 0.58rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+    padding: 2px 6px; border: 1px solid var(--border); color: rgba(26,19,17,0.5);
+  }
+  #tabTasks .stat-chip.warn { border-color: var(--orange); color: var(--orange); }
+  /* TASK ROW */
+  #tabTasks .tasks-list { background: white; }
+  #tabTasks .task-row {
+    display: flex; align-items: stretch;
+    border-bottom: 1px solid var(--border); min-height: 52px;
+  }
+  #tabTasks .task-row:last-child { border-bottom: none; }
+  #tabTasks .task-row:active { background: var(--cream); }
+  #tabTasks .check-btn {
+    width: 48px; flex-shrink: 0; border: none; background: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; touch-action: manipulation;
+  }
+  #tabTasks .check-inner {
+    width: 22px; height: 22px; border-radius: 50%; border: 2px solid;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; color: transparent; flex-shrink: 0;
+  }
+  #tabTasks .check-btn.done .check-inner { color: white; }
+  #tabTasks .task-body {
+    flex: 1; min-width: 0; display: flex; flex-direction: column;
+    justify-content: center; padding: 10px 0; gap: 3px;
+  }
+  #tabTasks .task-text-btn {
+    font-family: 'Montserrat', sans-serif; font-size: 0.9rem; font-weight: 600;
+    color: var(--dark); background: none; border: none; text-align: left;
+    cursor: pointer; padding: 0; line-height: 1.35; width: 100%; touch-action: manipulation;
+  }
+  #tabTasks .task-text-btn.done { text-decoration: line-through; color: rgba(26,19,17,0.35); font-weight: 400; }
+  #tabTasks .task-text-input {
+    font-family: 'Montserrat', sans-serif; font-size: 16px; color: var(--dark);
+    background: var(--cream); border: 1px solid var(--orange);
+    padding: 6px 8px; outline: none; border-radius: 0; -webkit-appearance: none; width: 100%;
+  }
+  #tabTasks .task-assignee-col {
+    display: flex; align-items: center; padding: 0 8px; flex-shrink: 0;
+    border-left: 1px solid var(--border);
+  }
+  #tabTasks .assignee-tag {
+    font-size: 0.58rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+    padding: 2px 6px; border: 1px solid; cursor: pointer;
+    display: inline-flex; align-items: center; touch-action: manipulation;
+  }
+  #tabTasks .assignee-tag.unset { border-color: rgba(26,19,17,0.15); color: rgba(26,19,17,0.3); }
+  #tabTasks .assignee-input {
+    font-size: 14px; font-weight: 700; text-transform: uppercase;
+    padding: 3px 6px; border: 1px solid var(--orange); outline: none;
+    width: 100px; background: var(--cream); color: var(--dark);
+    border-radius: 0; -webkit-appearance: none;
+  }
+  #tabTasks .del-task-btn {
+    background: none; border: none; cursor: pointer;
+    color: rgba(26,19,19,0.18); font-size: 14px; width: 44px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; touch-action: manipulation;
+  }
+  #tabTasks .del-task-btn:active { color: var(--orange); }
+  #tabTasks .add-task-row {
+    background: rgba(249,246,240,0.8); padding: 0 0 0 48px;
+    border-top: 1px dashed rgba(26,19,17,0.12); min-height: 48px;
+    display: flex; align-items: center;
+  }
+  #tabTasks .add-task-input {
+    font-family: 'Montserrat', sans-serif; font-size: 16px; color: var(--dark);
+    background: none; border: none; outline: none; width: 100%;
+    padding: 12px 12px 12px 0; -webkit-appearance: none;
+  }
+  #tabTasks .add-task-input::placeholder { color: rgba(26,19,17,0.3); }
+  /* MODAL */
+  #tabTasks .modal-bg {
+    position: fixed; inset: 0; background: rgba(26,19,17,0.65);
+    z-index: 1200; display: none; align-items: flex-end; justify-content: center;
+  }
+  #tabTasks .modal-bg.open { display: flex; }
+  #tabTasks .modal-box {
+    background: var(--cream); border: 2.5px solid var(--dark);
+    border-bottom: none; box-shadow: 0 -5px 0 var(--orange);
+    padding: 22px 20px 36px; width: 100%; max-width: 500px;
+  }
+  #tabTasks .modal-box h3 {
+    font-family: 'Abril Fatface', serif; font-size: 1.5rem;
+    margin-bottom: 16px; color: var(--dark);
+  }
+  #tabTasks .modal-box input[type="text"] {
+    width: 100%; font-family: 'Montserrat', sans-serif; font-size: 16px;
+    border: 2px solid var(--dark); padding: 12px; background: white; color: var(--dark);
+    outline: none; margin-bottom: 14px; border-radius: 0; -webkit-appearance: none; height: 48px;
+  }
+  #tabTasks .modal-box input[type="text"]:focus { border-color: var(--orange); }
+  #tabTasks .color-swatches { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+  #tabTasks .cswatch {
+    width: 34px; height: 34px; border-radius: 50%; cursor: pointer;
+    border: 3px solid transparent; touch-action: manipulation;
+  }
+  #tabTasks .cswatch.active { border-color: var(--dark); }
+  #tabTasks .modal-btns { display: flex; gap: 10px; }
+  #tabTasks .btn-ghost {
+    flex: 1; background: none; border: 2px solid rgba(26,19,17,0.25);
+    font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 0.72rem;
+    letter-spacing: 1px; text-transform: uppercase; height: 48px; cursor: pointer;
+    color: rgba(26,19,17,0.5); touch-action: manipulation; border-radius: 0; -webkit-appearance: none;
+  }
+  #tabTasks .btn-ghost:active { border-color: var(--dark); color: var(--dark); }
+  #tabTasks .btn-primary.full { flex: 2; justify-content: center; }
+  /* TOAST */
+  #tabTasks .toast {
+    position: fixed; bottom: calc(72px + 16px + env(safe-area-inset-bottom)); left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--dark); color: var(--cream);
+    font-family: 'Montserrat', sans-serif; font-size: 0.7rem; font-weight: 700;
+    letter-spacing: 1px; text-transform: uppercase;
+    padding: 10px 16px; border-left: 4px solid var(--orange);
+    opacity: 0; transition: transform 0.3s, opacity 0.3s;
+    z-index: 1300; pointer-events: none;
+    max-width: calc(100vw - 32px); text-align: center;
+  }
+  #tabTasks .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  /* DESKTOP */
+  @media (min-width: 768px) {
+    #tabTasks .canvas { max-width: 500px; }
+    #tabTasks .team-header {
+      flex-direction: row; padding: 0 4px 0 12px;
+      align-items: center; gap: 8px; min-height: 52px;
+    }
+    #tabTasks .team-header-top { flex: 1; min-width: 0; }
+    #tabTasks .team-header-bottom {
+      justify-content: flex-end;
+      border-left: 2px solid rgba(249,246,240,0.12); padding-left: 8px;
+    }
+    #tabTasks .team-officer { max-width: 110px; border-left: none; padding-left: 0; }
+  }
+  </style>
 </head>
 <body>
 
@@ -1986,6 +2303,43 @@
   <!-- ── End Boston Trip Tab ── -->
 
 
+  <!-- ─────────────────────────────────────────────────
+       TAB — TASK BOARD
+  ──────────────────────────────────────────────────── -->
+  <div id="tabTasks" class="tab-view hidden">
+    <header class="site-header">
+      <div>
+        <div class="wordmark">Advocacy for the <span>Unhoused</span></div>
+        <div class="tb-subtitle">Task Board</div>
+      </div>
+      <div class="header-right">
+        <span class="status-dot" id="tb-status-dot"></span>
+        <span class="sync-label" id="tb-sync-label">Loading…</span>
+        <button class="btn-primary" onclick="tbOpenModal()">
+          <i class="bi bi-plus-lg"></i> Team
+        </button>
+      </div>
+    </header>
+
+    <main class="canvas" id="tb-canvas"></main>
+
+    <div class="modal-bg" id="tb-modal-bg">
+      <div class="modal-box">
+        <h3>New Team</h3>
+        <input type="text" id="tb-modal-name" placeholder="Team name…" />
+        <div class="color-swatches" id="tb-color-swatches"></div>
+        <div class="modal-btns">
+          <button class="btn-ghost" onclick="tbCloseModal()">Cancel</button>
+          <button class="btn-primary full" onclick="tbConfirmAddTeam()">Add Team</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="tb-toast"></div>
+  </div>
+  <!-- ── End Task Board Tab ── -->
+
+
 </div><!-- /appContent -->
 
 <nav class="bottom-nav hidden" id="mainNav">
@@ -2012,6 +2366,11 @@
     <button class="nav-item" id="navAdmin" onclick="switchTab('admin')" aria-label="Admin Tools">
       <span class="nav-icon">⚙️</span>
       <span>Admin</span>
+      <span class="nav-dot"></span>
+    </button>
+    <button class="nav-item" id="navTasks" onclick="switchTab('tasks')" aria-label="Task Board">
+      <span class="nav-icon">📋</span>
+      <span>Tasks</span>
       <span class="nav-dot"></span>
     </button>
   </nav>
@@ -2059,6 +2418,11 @@
     } else if (tab === 'admin') {
       document.getElementById('tabAdmin').classList.remove('hidden');
       document.getElementById('navAdmin').classList.add('active');
+
+    } else if (tab === 'tasks') {
+      document.getElementById('tabTasks').classList.remove('hidden');
+      document.getElementById('navTasks').classList.add('active');
+      if (typeof window.initTaskBoard === 'function') window.initTaskBoard();
     }
   }
 
@@ -3130,6 +3494,537 @@
     window.deleteFoodItem   = deleteFoodItem;
 
 
+  })();
+</script>
+
+<script>
+  /* ── Task Board JS ── */
+  (function() {
+    var tbInitialized = false;
+
+    const TB_COLORS = [
+      '#C8522D','#7F77DD','#1D9E75','#378ADD',
+      '#D4537E','#BA7517','#639922','#888780','#1A1311'
+    ];
+
+    const HARDCODED_TEAMS = [
+      {
+        name: 'Web Dev', officer: 'Sanya Bhagat', color: '#378ADD', meetingDate: '2026-06-09', meetingTime: '15:30', tasks: [
+          { id:'wd-1', text:'Web Dev team meeting 3:30pm tues (remember the tutorial idea)', assignee:'Sanya',    done:true  },
+          { id:'wd-2', text:'fix camp blog on site',                                          assignee:'Pranav',   done:false },
+          { id:'wd-3', text:'get footer on every page',                                       assignee:'Pranav',   done:false },
+          { id:'wd-5', text:'Get NP verified on Apple dev program',                           assignee:'Sanya',    done:false },
+          { id:'wd-6', text:'Launch app on Apple and Android store',                          assignee:'Sanya',    done:false },
+          { id:'wd-7', text:'New team page: no nested menus',                                 assignee:'Dharshna', done:true  },
+          { id:'umq66569vjtr', text:'Send Permission & Shirt Form',                           assignee:'Dharshna', done:true  },
+          { id:'umq71q3sgcgo', text:'Shift domain from Namecheap to Porkbun',                 assignee:'Sanya',    done:true  },
+          { id:'umq72xp8szk9', text:'shift google workspace from zoho',                       assignee:'Sanya',    done:false },
+        ]
+      },
+      {
+        name: 'Social Media', officer: 'Sreenidhi Rajesh', color: '#7F77DD', meetingDate: '2026-06-09', meetingTime: '17:00', tasks: [
+          { id:'sm-1', text:'Make media packet for BT: insta, linkedin, tiktok',           assignee:'PEAK PRIYANKA', done:true  },
+          { id:'sm-2', text:'Send media packet to local newspapers to get published again', assignee:'Eva',           done:true  },
+          { id:'sm-3', text:'Launch Camp details — need flyer for repeaters w/discount',   assignee:'Eva',           done:false },
+          { id:'sm-4', text:'Finish poster for club fair',                                 assignee:'Maanya',        done:true  },
+          { id:'sm-5', text:'Make Facebook account',                                       assignee:'Priyanka',      done:true  },
+          { id:'sm-6', text:'Talk to Nisha about the Award + help w/club form',            assignee:'Nisha',         done:true  },
+          { id:'umq5u7xitgpn', text:'Email blast for Boston trip',                         assignee:'Akshaya',       done:true  },
+        ]
+      },
+      {
+        name: 'Finance', officer: 'Yaashwanth Narendran', color: '#1D9E75', meetingDate: '', meetingTime: '', tasks: [
+          { id:'fi-1', text:'Finance team meeting for IPS asap',                   assignee:'Yaash',         done:false },
+          { id:'fi-2', text:'Send impact report day of Boston trip — all donors',  assignee:'Madhav Warrier', done:false },
+        ]
+      },
+      {
+        name: 'Branch Coord', officer: 'Maanya Shettigar', color: '#C8522D', meetingDate: '2026-06-09', meetingTime: '16:30', tasks: [
+          { id:'bc-2', text:'Go D2D @ all branches this week',                assignee:'Maanya',  done:true  },
+          { id:'bc-3', text:'Incorporate branch members into departments',    assignee:'Lakshya', done:false },
+          { id:'bc-4', text:'Find new branch prez on LinkedIn',               assignee:'Maanya',  done:false },
+        ]
+      },
+      {
+        name: 'Admin Tasks', officer: 'Madhav Saxena', color: '#888780', meetingDate: '', meetingTime: '', tasks: [
+          { id:'at-1',        text:'Send leadership transfer email',                            assignee:'Madhav',      done:false },
+          { id:'at-2',        text:"Schedule OM @ Yaash's",                                    assignee:'Yaashwanth',  done:false },
+          { id:'at-3',        text:'Email Theis for 5k tentative',                             assignee:'Sreenidhi',   done:false },
+          { id:'bt-1',        text:'Get Wagamama group menu',                                  assignee:'Maanya',      done:false },
+          { id:'bt-2',        text:'Send Boston Trip itinerary',                               assignee:'Yaashwanth',  done:false },
+          { id:'bt-4',        text:'Finalize shirt design and place order',                    assignee:'Maanya',      done:false },
+          { id:'umq61c3rfj1l',text:"submit tax records for FY'26",                            assignee:'Dilpreet',    done:false },
+          { id:'umq665j068zt',text:'Rosies confirmed — waiting on Brookline and St. Francis',  assignee:'Yaashwanth',  done:false },
+          { id:'umq665wlx7ju',text:'Introduce Finn to new team, register for Club fair',       assignee:'Dilpreet',    done:false },
+        ]
+      },
+    ];
+
+    let tbTeams = tbDeepCopy(HARDCODED_TEAMS);
+    let tbSelectedColor = TB_COLORS[0];
+
+    function tbDeepCopy(o) { return JSON.parse(JSON.stringify(o)); }
+    function tbMkid() { return 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
+
+    function tbRun(fn, ...args) {
+      return new Promise((res, rej) =>
+        google.script.run.withSuccessHandler(res).withFailureHandler(rej)[fn](...args)
+      );
+    }
+
+    function tbSetStatus(state, msg) {
+      document.getElementById('tb-status-dot').className = 'status-dot ' + state;
+      document.getElementById('tb-sync-label').textContent = msg;
+    }
+    function tbToast(msg) {
+      const el = document.getElementById('tb-toast');
+      el.textContent = msg; el.style.borderLeftColor = '';
+      el.classList.add('show');
+      setTimeout(() => el.classList.remove('show'), 2200);
+    }
+    let _tbErrTimer = null;
+    function tbToastError(msg) {
+      const el = document.getElementById('tb-toast');
+      el.textContent = msg; el.style.borderLeftColor = '#e53935';
+      el.classList.add('show');
+      clearTimeout(_tbErrTimer);
+      _tbErrTimer = setTimeout(() => el.classList.remove('show'), 10000);
+    }
+
+    function tbLoadData() {
+      tbRender(); tbSetStatus('syncing', 'Syncing…');
+      google.script.run
+        .withSuccessHandler(changes => { tbApplyChanges(changes); tbRender(); tbSetStatus('synced', 'Synced'); })
+        .withFailureHandler(err => { console.error(err); tbSetStatus('error', 'Offline'); tbToastError('⚠ Could not load saved state.'); })
+        .tbGetAllChanges();
+    }
+
+    const TB_DEDUP_TYPES = new Set([
+      'taskDone', 'taskAssignee', 'taskText',
+      'teamRename', 'teamColor', 'teamMeetingDate', 'teamMeetingTime'
+    ]);
+
+    function tbDeduplicateChanges(changes) {
+      const lastIndex = new Map();
+      changes.forEach((c, i) => {
+        if (TB_DEDUP_TYPES.has(c.type)) lastIndex.set(c.type + '|' + c.key, i);
+      });
+      return changes.filter((c, i) => {
+        if (!TB_DEDUP_TYPES.has(c.type)) return true;
+        return lastIndex.get(c.type + '|' + c.key) === i;
+      });
+    }
+
+    function tbApplyChanges(rawChanges) {
+      tbTeams = tbDeepCopy(HARDCODED_TEAMS);
+      const changes = tbDeduplicateChanges(rawChanges || []);
+      changes.forEach(c => {
+        switch (c.type) {
+          case 'newTeam':
+            if (!tbTeams.find(tm => tm.name === c.key))
+              tbTeams.push({ name: c.key, officer: '', color: c.value || '#888780', meetingDate: '', meetingTime: '', tasks: [] });
+            break;
+          case 'deleteTeam':
+            tbTeams = tbTeams.filter(tm => tm.name !== c.key);
+            break;
+          case 'teamRename': {
+            const tm = tbTeams.find(tm => tm.name === c.key);
+            if (tm) tm.name = c.value;
+            break;
+          }
+          case 'teamColor': {
+            const tm = tbTeams.find(tm => tm.name === c.key);
+            if (tm) tm.color = c.value;
+            break;
+          }
+          case 'teamMeetingDate': {
+            const tm = tbTeams.find(tm => tm.name === c.key);
+            if (tm) tm.meetingDate = c.value || '';
+            break;
+          }
+          case 'teamMeetingTime': {
+            const tm = tbTeams.find(tm => tm.name === c.key);
+            if (tm) tm.meetingTime = c.value || '';
+            break;
+          }
+          case 'newTask': {
+            let ex = {}; try { ex = JSON.parse(c.extra || '{}'); } catch {}
+            const tm = tbTeams.find(tm => tm.name === ex.team);
+            if (tm && !tm.tasks.find(tk => tk.id === c.key))
+              tm.tasks.push({ id: c.key, text: c.value, assignee: ex.assignee || '', done: false });
+            break;
+          }
+          case 'deleteTask':
+            tbTeams.forEach(tm => { tm.tasks = tm.tasks.filter(tk => tk.id !== c.key); });
+            break;
+          case 'taskDone': {
+            const tk = tbFindTask(c.key);
+            if (tk) tk.done = (c.value === 'true' || c.value === true);
+            break;
+          }
+          case 'taskAssignee': {
+            const tk = tbFindTask(c.key);
+            if (tk) tk.assignee = c.value || '';
+            break;
+          }
+          case 'taskText': {
+            const tk = tbFindTask(c.key);
+            if (tk) tk.text = c.value;
+            break;
+          }
+        }
+      });
+    }
+
+    function tbFindTask(id) {
+      for (const tm of tbTeams) { const tk = tm.tasks.find(tk => tk.id === id); if (tk) return tk; }
+      return null;
+    }
+    function tbFindTeamForTask(id) {
+      for (const tm of tbTeams) { if (tm.tasks.find(tk => tk.id === id)) return tm; }
+      return null;
+    }
+
+    function tbRender() {
+      const canvas = document.getElementById('tb-canvas');
+      canvas.innerHTML = '';
+      if (!tbTeams.length) {
+        canvas.innerHTML = '<p class="empty-state">No teams yet — add one to get started</p>';
+        return;
+      }
+      tbTeams.forEach(team => tbRenderTeam(team, canvas));
+    }
+
+    function tbRenderTeam(team, container) {
+      const done  = team.tasks.filter(t => t.done).length;
+      const total = team.tasks.length;
+      const pct   = total ? Math.round(done / total * 100) : 0;
+      const unassigned = team.tasks.filter(t => !t.assignee).length;
+
+      const meetingDisplay = team.meetingDate
+        ? (() => {
+            try {
+              const d = new Date(team.meetingDate + 'T12:00:00');
+              const dateStr = d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+              if (!team.meetingTime) return dateStr;
+              const [h, m] = team.meetingTime.split(':').map(Number);
+              const ampm = h >= 12 ? 'PM' : 'AM';
+              const hour = h % 12 || 12;
+              return `${dateStr} ${hour}:${String(m).padStart(2,'0')} ${ampm}`;
+            } catch { return team.meetingDate; }
+          })()
+        : null;
+
+      const card = document.createElement('div');
+      card.className = 'team-card';
+      card.dataset.team = team.name;
+
+      card.innerHTML = `
+        <div class="team-header">
+          <div class="team-header-top">
+            <div class="team-color-swatch" style="background:${team.color}"></div>
+            <button class="team-name-btn" onclick="tbEditTeamName('${tbEsc(team.name)}')">${tbEsc(team.name)}</button>
+            <button class="delete-team-btn" onclick="tbConfirmDeleteTeam('${tbEsc(team.name)}')">
+              <i class="bi bi-trash3"></i>
+            </button>
+          </div>
+          ${team.officer ? `<div class="team-officer">${tbEsc(team.officer)}</div>` : ''}
+          <div class="team-header-bottom">
+            <button class="meeting-pill${meetingDisplay ? ' set' : ''}" onclick="tbEditMeeting('${tbEsc(team.name)}')">
+              <i class="bi bi-calendar3"></i>${meetingDisplay || 'Meet'}
+            </button>
+          </div>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" style="width:${pct}%;background:${team.color}"></div>
+        </div>
+        <div class="stats-strip">
+          <span class="stat-chip">${done}/${total} done</span>
+          ${unassigned ? `<span class="stat-chip warn">${unassigned} unassigned</span>` : ''}
+          ${total ? `<span class="stat-chip">${pct}%</span>` : ''}
+        </div>
+        <div class="tasks-list" id="tb-tl-${tbCssId(team.name)}">
+          ${team.tasks.map(t => tbTaskHTML(team, t)).join('')}
+        </div>
+        <div class="add-task-row">
+          <input class="add-task-input" placeholder="Add a task…"
+            onkeydown="tbAddTaskKey(event, '${tbEsc(team.name)}', this)" />
+        </div>
+      `;
+      container.appendChild(card);
+    }
+
+    function tbTaskHTML(team, task) {
+      const tagClass = task.assignee ? '' : ' unset';
+      const tagText  = task.assignee || '+ assign';
+      const tagColor = task.assignee ? `border-color:${team.color};color:${team.color}` : '';
+      return `<div class="task-row" id="tb-tr-${tbEsc(task.id)}">
+        <button class="check-btn${task.done ? ' done' : ''}" onclick="tbToggleDone('${tbEsc(task.id)}',${task.done})">
+          <div class="check-inner"
+            style="border-color:${team.color};background:${task.done ? team.color : 'transparent'}">
+            ${task.done ? '<i class="bi bi-check-lg"></i>' : ''}
+          </div>
+        </button>
+        <div class="task-body">
+          <button class="task-text-btn${task.done ? ' done' : ''}"
+            onclick="tbEditTaskText('${tbEsc(task.id)}')">${tbEsc(task.text)}</button>
+        </div>
+        <div class="task-assignee-col">
+          <span class="assignee-tag${tagClass}" style="${tagColor}"
+            onclick="tbEditAssignee('${tbEsc(task.id)}')">${tagText}</span>
+        </div>
+        <button class="del-task-btn" onclick="tbDeleteTask('${tbEsc(task.id)}')">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>`;
+    }
+
+    function tbEsc(s) {
+      return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+    function tbCssId(s) { return s.replace(/[^a-zA-Z0-9]/g,'_'); }
+
+    async function tbToggleDone(id, currentDone) {
+      const task = tbFindTask(id);
+      if (!task) return;
+      task.done = !currentDone; tbRender();
+      await tbSaveChange('taskDone', id, String(!currentDone));
+    }
+
+    function tbEditTaskText(id) {
+      const row = document.getElementById('tb-tr-' + id);
+      if (!row) return;
+      const task = tbFindTask(id);
+      if (!task) return;
+      const btn = row.querySelector('.task-text-btn');
+      const inp = document.createElement('input');
+      inp.className = 'task-text-input'; inp.value = task.text;
+      btn.replaceWith(inp); inp.focus(); inp.select();
+      let committed = false;
+      const save = async () => {
+        if (committed) return; committed = true;
+        const val = inp.value.trim() || task.text;
+        task.text = val; tbRender();
+        await tbSaveChange('taskText', id, val);
+      };
+      inp.onblur = save;
+      inp.onkeydown = e => { if (e.key==='Enter') inp.blur(); if (e.key==='Escape') { committed=true; tbRender(); } };
+    }
+
+    function tbEditAssignee(id) {
+      const row = document.getElementById('tb-tr-' + id);
+      if (!row) return;
+      const task = tbFindTask(id);
+      if (!task) return;
+      const tag = row.querySelector('.assignee-tag');
+      const inp = document.createElement('input');
+      inp.className = 'assignee-input'; inp.value = task.assignee || ''; inp.placeholder = 'Name…';
+      tag.replaceWith(inp); inp.focus(); inp.select();
+      let committed = false;
+      const save = async () => {
+        if (committed) return; committed = true;
+        const val = inp.value.trim();
+        task.assignee = val; tbRender();
+        await tbSaveChange('taskAssignee', id, val);
+      };
+      inp.onblur = save;
+      inp.onkeydown = e => { if (e.key==='Enter') inp.blur(); if (e.key==='Escape') { committed=true; tbRender(); } };
+    }
+
+    async function tbAddTaskKey(e, teamName, input) {
+      if (e.key !== 'Enter' || !input.value.trim()) return;
+      const text = input.value.trim(); input.value = '';
+      const team = tbTeams.find(tm => tm.name === teamName);
+      if (!team) return;
+      const id = tbMkid();
+      team.tasks.push({ id, text, assignee: '', done: false });
+      tbRender(); tbToast('Task added');
+      await tbSaveChange('newTask', id, text, JSON.stringify({ team: teamName, assignee: '' }));
+    }
+
+    async function tbDeleteTask(id) {
+      const team = tbFindTeamForTask(id);
+      if (!team) return;
+      team.tasks = team.tasks.filter(t => t.id !== id);
+      tbRender(); tbToast('Task deleted');
+      await tbSaveChange('deleteTask', id, '');
+    }
+
+    function tbEditTeamName(oldName) {
+      const card = document.querySelector(`#tabTasks [data-team="${oldName}"]`);
+      if (!card) return;
+      const btn = card.querySelector('.team-name-btn');
+      const inp = document.createElement('input');
+      inp.className = 'team-name-input'; inp.value = oldName;
+      btn.replaceWith(inp); inp.focus(); inp.select();
+      let committed = false;
+      const save = async () => {
+        if (committed) return; committed = true;
+        const val = inp.value.trim() || oldName;
+        if (val === oldName) { tbRender(); return; }
+        const tm = tbTeams.find(tm => tm.name === oldName);
+        if (tm) tm.name = val;
+        tbRender();
+        await tbSaveChange('teamRename', oldName, val);
+      };
+      inp.onblur = save;
+      inp.onkeydown = e => { if (e.key==='Enter') inp.blur(); if (e.key==='Escape') { committed=true; tbRender(); } };
+    }
+
+    function tbParseTimeTo24(str) {
+      if (!str) return '';
+      const s = str.trim().toUpperCase().replace(/\./g, '');
+      const m = s.match(/^(\d{1,2})(?::?(\d{2}))?\s*(AM|PM)?$/);
+      if (!m) return '';
+      let h = parseInt(m[1], 10);
+      const min = parseInt(m[2] || '0', 10);
+      const ampm = m[3];
+      if (ampm === 'PM' && h < 12) h += 12;
+      if (ampm === 'AM' && h === 12) h = 0;
+      if (h > 23 || min > 59) return '';
+      return String(h).padStart(2, '0') + ':' + String(min).padStart(2, '0');
+    }
+
+    function tbFmt24to12(t) {
+      if (!t) return '';
+      const [h, m] = t.split(':').map(Number);
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      const hour  = h % 12 || 12;
+      return `${hour}:${String(m).padStart(2, '0')} ${ampm}`;
+    }
+
+    function tbEditMeeting(teamName) {
+      const card = document.querySelector(`#tabTasks [data-team="${teamName}"]`);
+      if (!card) return;
+      const team = tbTeams.find(tm => tm.name === teamName);
+      const pill = card.querySelector('.meeting-pill');
+
+      const dateInp = document.createElement('input');
+      dateInp.type = 'date'; dateInp.className = 'meeting-date-input';
+      dateInp.value = team.meetingDate || '';
+
+      const timeInp = document.createElement('input');
+      timeInp.type = 'text'; timeInp.className = 'meeting-time-input';
+      timeInp.placeholder = '3:30 PM'; timeInp.value = tbFmt24to12(team.meetingTime);
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'meeting-datetime-inputs';
+      wrapper.appendChild(dateInp); wrapper.appendChild(timeInp);
+      pill.replaceWith(wrapper); dateInp.focus();
+
+      let saveTimer = null, saved = false;
+      const saveBoth = async () => {
+        if (saved) return; saved = true;
+        team.meetingDate = dateInp.value;
+        team.meetingTime = tbParseTimeTo24(timeInp.value);
+        tbRender();
+        await tbSaveChange('teamMeetingDate', teamName, dateInp.value);
+        await tbSaveChange('teamMeetingTime', teamName, tbParseTimeTo24(timeInp.value));
+      };
+      const scheduleSave = () => {
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(() => {
+          const active = document.activeElement;
+          if (active === dateInp || active === timeInp) return;
+          saveBoth();
+        }, 150);
+      };
+      dateInp.onblur = scheduleSave; timeInp.onblur = scheduleSave;
+      const handleKey = e => {
+        if (e.key === 'Enter') { clearTimeout(saveTimer); saveBoth(); }
+        if (e.key === 'Escape') { clearTimeout(saveTimer); saved = true; tbRender(); }
+      };
+      dateInp.onkeydown = handleKey; timeInp.onkeydown = handleKey;
+    }
+
+    async function tbConfirmDeleteTeam(teamName) {
+      if (!confirm(`Delete "${teamName}" and all its tasks?`)) return;
+      tbTeams = tbTeams.filter(tm => tm.name !== teamName);
+      tbRender(); tbToast('Team deleted');
+      await tbSaveChange('deleteTeam', teamName, '');
+    }
+
+    const tbSaveQueue = [];
+    let tbDraining = false;
+    let tbRetryTimer = null;
+
+    function tbSaveChange(type, key, value, extra) {
+      tbSaveQueue.push({ type, key, value: value||'', extra: extra||'' });
+      tbDrainQueue();
+    }
+
+    async function tbDrainQueue() {
+      if (tbDraining || !tbSaveQueue.length) return;
+      tbDraining = true; clearTimeout(tbRetryTimer);
+      while (tbSaveQueue.length) {
+        const change = tbSaveQueue[0];
+        tbSetStatus('syncing', tbSaveQueue.length > 1 ? `Saving… (${tbSaveQueue.length})` : 'Saving…');
+        try {
+          const result = await tbRun('tbSaveChange', change.type, change.key, change.value, change.extra);
+          if (result && result.success === false) throw new Error(result.error || 'GAS failure');
+          tbSaveQueue.shift();
+        } catch (err) {
+          console.error('[HAU] tbSaveChange failed:', err);
+          tbDraining = false;
+          const n = tbSaveQueue.length;
+          tbSetStatus('error', `${n} unsaved`);
+          tbToastError(`⚠ Save failed — retrying in 8s…`);
+          tbRetryTimer = setTimeout(tbDrainQueue, 8000);
+          return;
+        }
+      }
+      tbDraining = false; tbSetStatus('synced', 'Synced');
+    }
+
+    function tbOpenModal() {
+      tbSelectedColor = TB_COLORS[0];
+      const sw = document.getElementById('tb-color-swatches');
+      sw.innerHTML = TB_COLORS.map(c =>
+        `<div class="cswatch${c===tbSelectedColor?' active':''}" style="background:${c}" onclick="tbPickColor('${c}')"></div>`
+      ).join('');
+      document.getElementById('tb-modal-name').value = '';
+      document.getElementById('tb-modal-bg').classList.add('open');
+      setTimeout(() => document.getElementById('tb-modal-name').focus(), 100);
+    }
+    function tbCloseModal() { document.getElementById('tb-modal-bg').classList.remove('open'); }
+    function tbPickColor(c) {
+      tbSelectedColor = c;
+      document.querySelectorAll('#tb-color-swatches .cswatch').forEach(s =>
+        s.classList.toggle('active', s.style.background===c || s.style.backgroundColor===c)
+      );
+    }
+    async function tbConfirmAddTeam() {
+      const name = document.getElementById('tb-modal-name').value.trim();
+      if (!name) { document.getElementById('tb-modal-name').focus(); return; }
+      tbCloseModal();
+      tbTeams.push({ name, officer: '', color: tbSelectedColor, meetingDate: '', meetingTime: '', tasks: [] });
+      tbRender(); tbToast('Team added');
+      await tbSaveChange('newTeam', name, tbSelectedColor);
+    }
+
+    document.getElementById('tb-modal-name').addEventListener('keydown', e => {
+      if (e.key==='Enter')  tbConfirmAddTeam();
+      if (e.key==='Escape') tbCloseModal();
+    });
+    document.getElementById('tb-modal-bg').addEventListener('click', e => {
+      if (e.target===document.getElementById('tb-modal-bg')) tbCloseModal();
+    });
+
+    /* Expose to window for onclick handlers and switchTab */
+    window.initTaskBoard   = function() { if (!tbInitialized) { tbInitialized = true; tbLoadData(); } };
+    window.tbOpenModal     = tbOpenModal;
+    window.tbCloseModal    = tbCloseModal;
+    window.tbPickColor     = tbPickColor;
+    window.tbConfirmAddTeam  = tbConfirmAddTeam;
+    window.tbEditTeamName    = tbEditTeamName;
+    window.tbConfirmDeleteTeam = tbConfirmDeleteTeam;
+    window.tbEditMeeting     = tbEditMeeting;
+    window.tbToggleDone      = tbToggleDone;
+    window.tbEditTaskText    = tbEditTaskText;
+    window.tbEditAssignee    = tbEditAssignee;
+    window.tbAddTaskKey      = tbAddTaskKey;
+    window.tbDeleteTask      = tbDeleteTask;
   })();
 </script>
 
