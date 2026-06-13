@@ -3920,10 +3920,20 @@
     function tbDeepCopy(o) { return JSON.parse(JSON.stringify(o)); }
     function tbMkid() { return 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
 
-    function tbRun(fn, ...args) {
-      return new Promise((res, rej) =>
-        google.script.run.withSuccessHandler(res).withFailureHandler(rej)[fn](...args)
-      );
+    function tbRun(action, ...args) {
+      // Build POST body: action= plus positional args as p0, p1, p2, p3
+      const paramNames = ['type', 'key', 'value', 'extra'];
+      let body = 'action=' + encodeURIComponent(action);
+      if (action === 'tbSaveChange') {
+        paramNames.forEach((name, i) => {
+          if (args[i] !== undefined) body += '&' + name + '=' + encodeURIComponent(String(args[i]));
+        });
+      }
+      return fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body
+      }).then(r => r.json());
     }
 
     function tbSetStatus(state, msg) {
@@ -3947,10 +3957,9 @@
 
     function tbLoadData() {
       tbRender(); tbSetStatus('syncing', 'Syncing…');
-      google.script.run
-        .withSuccessHandler(changes => { tbApplyChanges(changes); tbRender(); tbSetStatus('synced', 'Synced'); })
-        .withFailureHandler(err => { console.error(err); tbSetStatus('error', 'Offline'); tbToastError('⚠ Could not load saved state.'); })
-        .tbGetAllChanges();
+      tbRun('tbGetAllChanges')
+        .then(changes => { tbApplyChanges(changes); tbRender(); tbSetStatus('synced', 'Synced'); })
+        .catch(err => { console.error(err); tbSetStatus('error', 'Offline'); tbToastError('⚠ Could not load saved state.'); });
     }
 
     const TB_DEDUP_TYPES = new Set([
