@@ -310,7 +310,7 @@ function getMemberInfo(email) {
     if (rowEmail === searchEmail) {
       const fullName  = (data[i][1] || "").toString().trim();            // col B
       const firstName = fullName.split(" ")[0] || "User";
-      const position  = (data[i][4] || "").toString().trim();            // col E
+      const position  = (data[i][0] || "").toString().trim();            // col A (role code)
       let branchCode  = (data[i][5] || "").toString().trim().toUpperCase(); // col F
       Logger.log("Match at row " + (i + 1) + " | " + fullName + " | " + branchCode);
       return { firstName, branchCode, branchName: BRANCH_NAMES[branchCode] || branchCode || "Unknown", position };
@@ -1256,7 +1256,7 @@ function getFcmTokensByPositionCode_(code) {
   const rData  = roster.getDataRange().getValues();
   const tokens = [];
   for (let i = 1; i < rData.length; i++) {
-    const pos    = (rData[i][4] || '').toString().trim();               // col E
+    const pos    = (rData[i][0] || '').toString().trim();               // col A (role code)
     const active = (rData[i][7] || '').toString().trim().toLowerCase(); // col H
     if (pos.includes(code) && active === 'yes') {
       const em = (rData[i][3] || '').toString().trim().toLowerCase();   // col D
@@ -1276,7 +1276,7 @@ function getFcmTokensByBranchAndCode_(branchCode, posCode) {
   const tokens = [];
   for (let i = 1; i < rData.length; i++) {
     const bc     = (rData[i][5] || '').toString().trim().toUpperCase(); // col F
-    const pos    = (rData[i][4] || '').toString().trim();               // col E
+    const pos    = (rData[i][0] || '').toString().trim();               // col A (role code)
     const active = (rData[i][7] || '').toString().trim().toLowerCase(); // col H
     if (bc === branchCode.toUpperCase() && pos.includes(posCode) && active === 'yes') {
       const em = (rData[i][3] || '').toString().trim().toLowerCase();   // col D
