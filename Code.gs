@@ -98,6 +98,16 @@ function doPost(e) {
         sheet.getRange(nextRow, 5).setValue(hours);
         sheet.getRange(nextRow, 6).setValue("No");
         result = { success: true };
+        // Push branch president
+        try {
+          const memberInfo = getMemberInfo(p.email);
+          const cfg = BRANCH_CONFIG[memberInfo.branchName];
+          if (cfg) {
+            const token = getFcmToken_(cfg.presidentEmail);
+            if (token) sendPush_(token, 'Hours Submission',
+              `${memberInfo.firstName} submitted ${hours} hr${hours !== 1 ? 's' : ''} for "${p.eventName}".`);
+          }
+        } catch(pushErr) { console.warn('Push failed (submitHours):', pushErr.message); }
       }
 
     } else if (p.action === "getRosterMembers") {
@@ -111,8 +121,17 @@ function doPost(e) {
       if (!rowIdx) { result = { error: "Missing rowIndex" }; }
       else {
         const sheet = SpreadsheetApp.openById(HOURS_SS_ID).getSheetByName("volunteer hours");
+        const rowVals = sheet.getRange(rowIdx, 2, 1, 4).getValues()[0];
+        const volEmail = String(rowVals[0] || '').trim();
+        const eventName = String(rowVals[1] || '').trim();
+        const hrs = rowVals[3];
         sheet.getRange(rowIdx, 6).setValue("Yes");
         result = { success: true };
+        try {
+          const token = getFcmToken_(volEmail);
+          if (token) sendPush_(token, 'Hours Approved ✓',
+            `Your ${hrs} hr${hrs !== 1 ? 's' : ''} for "${eventName}" have been approved!`);
+        } catch(pushErr) { console.warn('Push failed (approveHours):', pushErr.message); }
       }
 
     } else if (p.action === "denyHours") {
@@ -120,8 +139,16 @@ function doPost(e) {
       if (!rowIdx) { result = { error: "Missing rowIndex" }; }
       else {
         const sheet = SpreadsheetApp.openById(HOURS_SS_ID).getSheetByName("volunteer hours");
+        const rowVals = sheet.getRange(rowIdx, 2, 1, 2).getValues()[0];
+        const volEmail = String(rowVals[0] || '').trim();
+        const eventName = String(rowVals[1] || '').trim();
         sheet.deleteRow(rowIdx);
         result = { success: true };
+        try {
+          const token = getFcmToken_(volEmail);
+          if (token) sendPush_(token, 'Hours Not Approved',
+            `Your hours request for "${eventName}" was not approved. Contact your branch officer for details.`);
+        } catch(pushErr) { console.warn('Push failed (denyHours):', pushErr.message); }
       }
 
     } else if (p.action === "adminAssignHours") {
@@ -208,6 +235,38 @@ function doPost(e) {
     } else if (p.action === "tbSaveChange") {
       result = tbSaveChange(p.type || '', p.key || '', p.value || '', p.extra || '');
 
+    // ── FCM Token Storage ──────────────────────────────────────────────────────
+    } else if (p.action === "storeFcmToken") {
+      storeFcmToken_(p.email || '', p.token || '');
+      result = { success: true };
+
+    // ── Meeting Config ─────────────────────────────────────────────────────────
+    } else if (p.action === "getMeetingConfig") {
+      result = getMeetingConfig_();
+
+    } else if (p.action === "saveMeetingConfig") {
+      if (p.day  !== undefined) setMeetingConfigKey_('meetingDay',  p.day);
+      if (p.time !== undefined) setMeetingConfigKey_('meetingTime', p.time);
+      result = { success: true };
+
+    } else if (p.action === "cancelMeeting") {
+      setMeetingConfigKey_('cancel_' + (p.branchCode || '').toUpperCase(), p.cancelled || 'No');
+      result = { success: true };
+
+    // ── Boston Push Actions ────────────────────────────────────────────────────
+    } else if (p.action === "sendBostonPaymentReminder") {
+      const pToken = getFcmToken_(p.email || '');
+      if (pToken) sendPush_(pToken, 'Boston Trip Payment',
+        'Your Boston trip payment is still outstanding. Please settle up soon!');
+      result = { success: true };
+
+    } else if (p.action === "sendBostonDeadlineReminder") {
+      const qNames = getQualifiedNames();
+      const dTokens = qNames.map(q => getFcmToken_(q.email)).filter(Boolean);
+      sendPushToMany_(dTokens, 'Boston Trip Deadline',
+        'Reminder: the permission form deadline is approaching. Open the app to complete your form!');
+      result = { success: true, sent: dTokens.length };
+
     } else {
       result = { error: "Invalid request" };
     }
@@ -230,7 +289,7 @@ function handleLookup(email) {
 function getMemberInfo(email) {
   const ss    = SpreadsheetApp.openById(ROSTER_SS_ID);
   const sheet = ss.getSheetByName("Roster");
-  if (!sheet) return { firstName: "User", branchCode: "X", branchName: "Sheet Not Found" };
+  if (!sheet) return { firstName: "User", branchCode: "X", branchName: "Sheet Not Found", position: "" };
 
   const data        = sheet.getDataRange().getValues();
   const searchEmail = (email || "").trim().toLowerCase();
@@ -239,17 +298,17 @@ function getMemberInfo(email) {
   for (let i = 1; i < data.length; i++) {
     const rowEmail = (data[i][3] || "").toString().trim().toLowerCase(); // col D
     if (rowEmail === searchEmail) {
-      const fullName   = (data[i][1] || "").toString().trim();           // col B
-      const firstName  = fullName.split(" ")[0] || "User";
-      let branchCode = (data[i][5] || "").toString().trim().toUpperCase(); // col F
-      if (!branchCode) branchCode = (data[i][4] || "").toString().trim().toUpperCase(); // col E fallback (BOD)
+      const fullName  = (data[i][1] || "").toString().trim();            // col B
+      const firstName = fullName.split(" ")[0] || "User";
+      const position  = (data[i][4] || "").toString().trim();            // col E
+      let branchCode  = (data[i][5] || "").toString().trim().toUpperCase(); // col F
       Logger.log("Match at row " + (i + 1) + " | " + fullName + " | " + branchCode);
-      return { firstName, branchCode, branchName: BRANCH_NAMES[branchCode] || branchCode || "Unknown" };
+      return { firstName, branchCode, branchName: BRANCH_NAMES[branchCode] || branchCode || "Unknown", position };
     }
   }
 
   Logger.log("No match for: '" + searchEmail + "'");
-  return { firstName: "User", branchCode: "X", branchName: "Unknown Branch" };
+  return { firstName: "User", branchCode: "X", branchName: "Unknown Branch", position: "" };
 }
 
 // ── Donation handler ──────────────────────────────────────────────────────────
@@ -325,6 +384,24 @@ function handleVolunteerRegistration(formData) {
 
   GmailApp.sendEmail(config.presidentEmail, `New volunteer registration — ${formData.branch}`, "", { htmlBody: emailHtml });
   GmailApp.sendEmail(NOTIFY_ALL, `[All branches] New volunteer — ${formData.fname} ${formData.lname} (${formData.branch})`, "", { htmlBody: emailHtml });
+
+  // Push to branch P (role code) + fallback to hardcoded president email + all Z
+  try {
+    const bc = BRANCH_CODES[formData.branch] || formData.branch;
+    const pTokens = getFcmTokensByBranchAndCode_(bc, 'P');
+    if (pTokens.length) {
+      sendPushToMany_(pTokens, 'New Volunteer Registration',
+        `${formData.fname} ${formData.lname} from ${formData.branch} is awaiting your approval.`);
+    } else {
+      // Fallback: president by hardcoded email
+      const presToken = getFcmToken_(config.presidentEmail);
+      if (presToken) sendPush_(presToken, 'New Volunteer Registration',
+        `${formData.fname} ${formData.lname} from ${formData.branch} is awaiting your approval.`);
+    }
+    const zTokens = getFcmTokensByPositionCode_('Z');
+    sendPushToMany_(zTokens, 'New Volunteer Registration',
+      `${formData.fname} ${formData.lname} registered for the ${formData.branch} branch.`);
+  } catch(pushErr) { console.warn('Push failed (registerVolunteer):', pushErr.message); }
 
   return { success: true };
 }
@@ -423,10 +500,11 @@ function getRosterMembers() {
     const data = sheet.getDataRange().getValues();
     const members = [];
     for (let i = 1; i < data.length; i++) {
-      const name  = (data[i][1] || "").toString().trim();
-      const phone = (data[i][2] || "").toString().trim();
-      const email = (data[i][3] || "").toString().trim().toLowerCase();
-      if (name && email) members.push({ name, phone, email });
+      const name       = (data[i][1] || "").toString().trim();
+      const phone      = (data[i][2] || "").toString().trim();
+      const email      = (data[i][3] || "").toString().trim().toLowerCase();
+      const branchCode = (data[i][5] || "").toString().trim().toUpperCase();
+      if (name && email) members.push({ name, phone, email, branchCode });
     }
     members.sort((a, b) => a.name.localeCompare(b.name));
     return { members };
@@ -1008,5 +1086,285 @@ function tbSaveChange(type, key, value, extra) {
     )
   ]]);
 
+  // Push assignee when a task is assigned
+  if (type === 'taskAssignee' && value) {
+    try {
+      const roster = SpreadsheetApp.openById(ROSTER_SS_ID).getSheetByName('Roster');
+      if (roster) {
+        const rData   = roster.getDataRange().getValues();
+        const nameLc  = value.toString().toLowerCase().trim();
+        for (let i = 1; i < rData.length; i++) {
+          if ((rData[i][1] || '').toString().toLowerCase().trim() === nameLc) {
+            const assigneeEmail = (rData[i][3] || '').toString().trim();
+            const token = getFcmToken_(assigneeEmail);
+            const taskLabel = extra ? `"${extra}"` : 'a task';
+            if (token) sendPush_(token, 'Task Assigned', `You've been assigned ${taskLabel}.`);
+            break;
+          }
+        }
+      }
+    } catch(pushErr) { console.warn('Push failed (taskAssignee):', pushErr.message); }
+  }
+
   return { success: true };
 }
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  FCM TOKEN STORAGE
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+function getFcmSheet_() {
+  const ss = SpreadsheetApp.openById(ROSTER_SS_ID);
+  let sheet = ss.getSheetByName('FCM Tokens');
+  if (!sheet) {
+    sheet = ss.insertSheet('FCM Tokens');
+    sheet.appendRow(['Email', 'Token', 'Updated']);
+    sheet.getRange(1, 1, 1, 3).setFontWeight('bold').setBackground('#1A1311').setFontColor('#F9F6F0');
+    sheet.setFrozenRows(1);
+    sheet.setColumnWidth(1, 220);
+    sheet.setColumnWidth(2, 380);
+    sheet.setColumnWidth(3, 160);
+  }
+  return sheet;
+}
+
+function storeFcmToken_(email, token) {
+  if (!email || !token) return;
+  const sheet = getFcmSheet_();
+  const data  = sheet.getDataRange().getValues();
+  const lc    = email.toLowerCase().trim();
+  for (let i = 1; i < data.length; i++) {
+    if ((data[i][0] || '').toString().toLowerCase().trim() === lc) {
+      sheet.getRange(i + 1, 2, 1, 2).setValues([[token, new Date()]]);
+      return;
+    }
+  }
+  sheet.appendRow([lc, token, new Date()]);
+}
+
+function getFcmToken_(email) {
+  if (!email) return null;
+  const sheet = getFcmSheet_();
+  const data  = sheet.getDataRange().getValues();
+  const lc    = email.toLowerCase().trim();
+  for (let i = 1; i < data.length; i++) {
+    if ((data[i][0] || '').toString().toLowerCase().trim() === lc) {
+      return (data[i][1] || '').toString().trim() || null;
+    }
+  }
+  return null;
+}
+
+function getFcmTokensByBranch_(branchCode) {
+  const roster = SpreadsheetApp.openById(ROSTER_SS_ID).getSheetByName('Roster');
+  if (!roster) return [];
+  const rData  = roster.getDataRange().getValues();
+  const tokens = [];
+  for (let i = 1; i < rData.length; i++) {
+    const bc     = (rData[i][5] || '').toString().trim().toUpperCase(); // col F
+    const active = (rData[i][7] || '').toString().trim().toLowerCase(); // col H
+    if (bc === branchCode.toUpperCase() && active === 'yes') {
+      const em = (rData[i][3] || '').toString().trim().toLowerCase();   // col D
+      if (em) {
+        const t = getFcmToken_(em);
+        if (t) tokens.push(t);
+      }
+    }
+  }
+  return tokens;
+}
+
+function getFcmTokensByPositionCode_(code) {
+  const roster = SpreadsheetApp.openById(ROSTER_SS_ID).getSheetByName('Roster');
+  if (!roster) return [];
+  const rData  = roster.getDataRange().getValues();
+  const tokens = [];
+  for (let i = 1; i < rData.length; i++) {
+    const pos    = (rData[i][4] || '').toString().trim();               // col E
+    const active = (rData[i][7] || '').toString().trim().toLowerCase(); // col H
+    if (pos.includes(code) && active === 'yes') {
+      const em = (rData[i][3] || '').toString().trim().toLowerCase();   // col D
+      if (em) {
+        const t = getFcmToken_(em);
+        if (t) tokens.push(t);
+      }
+    }
+  }
+  return tokens;
+}
+
+function getFcmTokensByBranchAndCode_(branchCode, posCode) {
+  const roster = SpreadsheetApp.openById(ROSTER_SS_ID).getSheetByName('Roster');
+  if (!roster) return [];
+  const rData  = roster.getDataRange().getValues();
+  const tokens = [];
+  for (let i = 1; i < rData.length; i++) {
+    const bc     = (rData[i][5] || '').toString().trim().toUpperCase(); // col F
+    const pos    = (rData[i][4] || '').toString().trim();               // col E
+    const active = (rData[i][7] || '').toString().trim().toLowerCase(); // col H
+    if (bc === branchCode.toUpperCase() && pos.includes(posCode) && active === 'yes') {
+      const em = (rData[i][3] || '').toString().trim().toLowerCase();   // col D
+      if (em) {
+        const t = getFcmToken_(em);
+        if (t) tokens.push(t);
+      }
+    }
+  }
+  return tokens;
+}
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  FCM SEND (HTTP v1 API via service account)
+//  Set FCM_PROJECT_ID and FCM_SERVICE_ACCOUNT in Script Properties.
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+function getFcmAccessToken_() {
+  const props  = PropertiesService.getScriptProperties();
+  const saJson = props.getProperty('FCM_SERVICE_ACCOUNT');
+  if (!saJson) { console.warn('FCM_SERVICE_ACCOUNT not set in Script Properties'); return null; }
+  const sa  = JSON.parse(saJson);
+  const now = Math.floor(Date.now() / 1000);
+
+  const header = Utilities.base64EncodeWebSafe(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).replace(/=+$/, '');
+  const claim  = Utilities.base64EncodeWebSafe(JSON.stringify({
+    iss:   sa.client_email,
+    scope: 'https://www.googleapis.com/auth/firebase.messaging',
+    aud:   'https://oauth2.googleapis.com/token',
+    iat:   now,
+    exp:   now + 3600
+  })).replace(/=+$/, '');
+
+  const unsigned  = header + '.' + claim;
+  const signature = Utilities.base64EncodeWebSafe(
+    Utilities.computeRsaSha256Signature(unsigned, sa.private_key)
+  ).replace(/=+$/, '');
+
+  const tokenRes = UrlFetchApp.fetch('https://oauth2.googleapis.com/token', {
+    method:             'POST',
+    contentType:        'application/x-www-form-urlencoded',
+    payload:            'grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=' + unsigned + '.' + signature,
+    muteHttpExceptions: true
+  });
+  return JSON.parse(tokenRes.getContentText()).access_token || null;
+}
+
+function sendPush_(token, title, body) {
+  if (!token) return;
+  const projectId   = PropertiesService.getScriptProperties().getProperty('FCM_PROJECT_ID');
+  if (!projectId)   { console.warn('FCM_PROJECT_ID not set'); return; }
+  const accessToken = getFcmAccessToken_();
+  if (!accessToken) return;
+  UrlFetchApp.fetch('https://fcm.googleapis.com/v1/projects/' + projectId + '/messages:send', {
+    method:             'POST',
+    contentType:        'application/json',
+    headers:            { Authorization: 'Bearer ' + accessToken },
+    payload:            JSON.stringify({ message: { token, notification: { title, body } } }),
+    muteHttpExceptions: true
+  });
+}
+
+function sendPushToMany_(tokens, title, body) {
+  if (!tokens || !tokens.length) return;
+  const projectId   = PropertiesService.getScriptProperties().getProperty('FCM_PROJECT_ID');
+  if (!projectId)   return;
+  const accessToken = getFcmAccessToken_();
+  if (!accessToken) return;
+  const url     = 'https://fcm.googleapis.com/v1/projects/' + projectId + '/messages:send';
+  const headers = { Authorization: 'Bearer ' + accessToken };
+  tokens.forEach(function(t) {
+    try {
+      UrlFetchApp.fetch(url, {
+        method:             'POST',
+        contentType:        'application/json',
+        headers:            headers,
+        payload:            JSON.stringify({ message: { token: t, notification: { title, body } } }),
+        muteHttpExceptions: true
+      });
+    } catch(e) { console.warn('sendPushToMany_ token failed:', e.message); }
+  });
+}
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  MEETING CONFIG
+//  Sheet "Meeting Config" in ROSTER_SS_ID: Key | Value rows
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+function getMeetingConfigSheet_() {
+  const ss = SpreadsheetApp.openById(ROSTER_SS_ID);
+  let sheet = ss.getSheetByName('Meeting Config');
+  if (!sheet) {
+    sheet = ss.insertSheet('Meeting Config');
+    sheet.getRange(1, 1, 1, 2).setValues([['Key', 'Value']]).setFontWeight('bold');
+    sheet.setFrozenRows(1);
+    [['meetingDay','1'],['meetingTime','17:00'],
+     ['cancel_A','No'],['cancel_H','No'],['cancel_W','No'],['cancel_S','No'],['cancel_M','No']]
+     .forEach(function(row) { sheet.appendRow(row); });
+  }
+  return sheet;
+}
+
+function getMeetingConfig_() {
+  const sheet  = getMeetingConfigSheet_();
+  const data   = sheet.getDataRange().getValues();
+  const config = {};
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0]) config[String(data[i][0])] = String(data[i][1] || '');
+  }
+  return config;
+}
+
+function setMeetingConfigKey_(key, value) {
+  const sheet = getMeetingConfigSheet_();
+  const data  = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === key) { sheet.getRange(i + 1, 2).setValue(value); return; }
+  }
+  sheet.appendRow([key, value]);
+}
+
+// Hourly trigger: fires every hour, sends push 4 hours before meeting time on meeting day.
+// Run setupMeetingTrigger() once from the Apps Script editor to install.
+function checkMeetingNotifications() {
+  const config      = getMeetingConfig_();
+  const meetingDay  = parseInt(config.meetingDay  || '1');
+  const meetingTime = config.meetingTime || '17:00';
+  const parts = meetingTime.split(':');
+  const meetH = parseInt(parts[0]);
+  const meetM = parseInt(parts[1] || '0');
+
+  const tz  = Session.getScriptTimeZone();
+  const now = new Date();
+  if (now.getDay() !== meetingDay) return;
+
+  const nowH    = parseInt(Utilities.formatDate(now, tz, 'H'));
+  const nowM    = parseInt(Utilities.formatDate(now, tz, 'm'));
+  const notifyH = meetH - 4;
+  if (nowH !== notifyH || nowM > 9) return;  // 10-minute window
+
+  const days    = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const hour12  = meetH % 12 || 12;
+  const ampm    = meetH < 12 ? 'AM' : 'PM';
+  const timeStr = hour12 + ':' + String(meetM).padStart(2,'0') + ' ' + ampm;
+
+  ['A','H','W','S','M'].forEach(function(bc) {
+    const cancelled = (config['cancel_' + bc] || 'No').toLowerCase() === 'yes';
+    const tokens    = getFcmTokensByBranch_(bc);
+    if (!tokens.length) return;
+    if (cancelled) {
+      sendPushToMany_(tokens, 'No Meeting This Week',
+        'Reminder: we will NOT be meeting this ' + days[meetingDay] + '. See you next week!');
+    } else {
+      sendPushToMany_(tokens, 'Meeting Today!',
+        'Branch meeting is today at ' + timeStr + '. See you there!');
+    }
+    setMeetingConfigKey_('cancel_' + bc, 'No');  // reset after sending
+  });
+}
+
+function setupMeetingTrigger() {
+  ScriptApp.getProjectTriggers()
+    .filter(function(t) { return t.getHandlerFunction() === 'checkMeetingNotifications'; })
+    .forEach(function(t) { ScriptApp.deleteTrigger(t); });
+  ScriptApp.newTrigger('checkMeetingNotifications').timeBased().everyHours(1).create();
+  Logger.log('Meeting notification trigger installed (hourly).');
+}
+

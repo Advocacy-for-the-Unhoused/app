@@ -88,7 +88,10 @@ window.onSignedIn = async function (preloadedPayload = null) {
       branchCode: branchLetter,
       email: volunteerEmail,
       photoUrl: payload.picture || null,
+      position: info.position || '',
     };
+
+    await registerPushNotifications();
 
     // Wire loadDashboard to pull real stats + activity once data is ready
     window.loadDashboard = async function() {
@@ -644,6 +647,40 @@ async function submitHoursRequest() {
     msgEl.textContent = "Error: " + err.message;
     msgEl.style.display = "block";
     console.error("Hours submit error:", err);
+  }
+}
+
+// =====================================================
+// PUSH NOTIFICATIONS (Capacitor / FCM)
+// =====================================================
+async function registerPushNotifications() {
+  if (!window.Capacitor?.isNativePlatform()) return;
+  const { PushNotifications } = window.Capacitor.Plugins;
+  if (!PushNotifications) return;
+
+  try {
+    let perm = await PushNotifications.checkPermissions();
+    if (perm.receive === 'prompt') perm = await PushNotifications.requestPermissions();
+    if (perm.receive !== 'granted') return;
+
+    await PushNotifications.register();
+
+    PushNotifications.addListener('registration', async (token) => {
+      if (!volunteerEmail || !token?.value) return;
+      try {
+        await fetch(SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: `action=storeFcmToken&email=${encodeURIComponent(volunteerEmail)}&token=${encodeURIComponent(token.value)}`
+        });
+      } catch (e) { console.warn('FCM token store failed:', e); }
+    });
+
+    PushNotifications.addListener('registrationError', (err) => {
+      console.warn('Push registration error:', err);
+    });
+  } catch (e) {
+    console.warn('Push notification setup failed:', e);
   }
 }
 

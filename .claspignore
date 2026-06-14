@@ -1,0 +1,4 @@
+# Ignore everything except GAS files
+**
+!Code.gs
+!appsscript.json

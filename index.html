@@ -752,6 +752,21 @@
       letter-spacing: 1.2px;
     }
 
+    /* ── Meeting Scheduler ── */
+    .meeting-row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .meeting-label { font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:rgba(26,19,17,0.5); flex-shrink:0; }
+    .meeting-field { padding:8px 10px; border:2px solid var(--dark); background:white; font-family:'Montserrat',sans-serif; font-size:0.85rem; font-weight:600; color:var(--dark); border-radius:0; -webkit-appearance:none; }
+    .meeting-cancel-grid { display:flex; flex-direction:column; gap:8px; margin-top:16px; padding-top:16px; border-top:1.5px solid var(--border); }
+    .meeting-cancel-eyebrow { font-size:0.6rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:rgba(26,19,17,0.4); margin-bottom:4px; }
+    .meeting-cancel-row { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border); }
+    .meeting-cancel-row:last-child { border-bottom:none; }
+    .meeting-branch-name { font-size:0.8rem; font-weight:700; color:var(--dark); }
+    .meeting-cancel-label { display:flex; align-items:center; gap:8px; font-size:0.72rem; font-weight:600; color:rgba(26,19,17,0.55); cursor:pointer; }
+    .meeting-cancel-label input[type=checkbox] { width:16px; height:16px; accent-color:var(--orange); cursor:pointer; }
+    .meeting-save-msg { display:none; margin-top:12px; font-size:0.7rem; font-weight:700; letter-spacing:0.5px; color:#1D9E75; }
+    .push-reminder-btn { display:flex; align-items:center; gap:6px; font-family:'Montserrat',sans-serif; font-size:0.62rem; font-weight:700; letter-spacing:1px; text-transform:uppercase; padding:7px 12px; border:2px solid var(--dark); background:white; color:var(--dark); cursor:pointer; box-shadow:2px 2px 0 var(--dark); transition:opacity 0.15s; }
+    .push-reminder-btn:active { opacity:0.7; }
+
     /* ── Boston Trip Banner ── */
     .boston-banner {
       margin: 0 0 16px;
@@ -2200,6 +2215,16 @@
   ──────────────────────────────────────────────── -->
   <div id="tabAdmin" class="tab-view hidden">
 
+    <!-- Lock screen for non-admins -->
+    <div id="admin-lock" class="hidden" style="padding:60px 24px;text-align:center;">
+      <div style="font-size:2.5rem;margin-bottom:16px;">🔒</div>
+      <div style="font-family:'Abril Fatface',serif;font-size:1.3rem;color:var(--camp-dark);margin-bottom:8px;">Admin Access Required</div>
+      <div style="font-size:0.75rem;font-weight:600;color:rgba(26,19,17,0.45);line-height:1.5;">Contact your branch coordinator<br>to request access.</div>
+    </div>
+
+    <!-- Admin content (shown only for A / Z / P) -->
+    <div id="admin-content">
+
     <!-- Finance Panel (collapsible, collapsed by default) -->
     <div class="admin-section" id="finance-section">
       <div class="admin-section-hdr" onclick="toggleAdminSection('finance-section')">
@@ -2238,9 +2263,14 @@
               <i class="bi bi-check-circle"></i> Paid <span class="count-pill" id="pill-paid">0</span>
             </button>
           </div>
-          <button class="btn-ghost" id="refresh-btn" onclick="loadAdmin()" style="height:36px;font-size:0.62rem;padding:0 10px;box-shadow:2px 2px 0 var(--dark);">
-            <i class="bi bi-arrow-clockwise"></i> Refresh
-          </button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <button class="push-reminder-btn" onclick="sendBostonDeadlineReminderAll()" style="height:36px;">
+              <i class="bi bi-bell-fill"></i> Notify All: Deadline
+            </button>
+            <button class="btn-ghost" id="refresh-btn" onclick="loadAdmin()" style="height:36px;font-size:0.62rem;padding:0 10px;box-shadow:2px 2px 0 var(--dark);">
+              <i class="bi bi-arrow-clockwise"></i> Refresh
+            </button>
+          </div>
         </div>
         <div id="vol-roster" style="padding:0 16px 16px;"></div>
       </div>
@@ -2375,6 +2405,23 @@
       </div>
     </div>
 
+    <!-- Branch Meetings (collapsible) -->
+    <div class="admin-section" id="meeting-section">
+      <div class="admin-section-hdr" onclick="toggleAdminSection('meeting-section'); if(this.parentElement.classList.contains('open')) window.loadMeetingConfig && window.loadMeetingConfig()">
+        <div>
+          <div class="admin-eyebrow">Weekly</div>
+          <div class="admin-title">Branch <span>Meetings</span></div>
+        </div>
+        <i class="bi bi-chevron-down admin-section-chev"></i>
+      </div>
+      <div class="admin-section-body">
+        <div id="meeting-config-body" style="padding:16px;">
+          <div class="hrs-empty"><i class="bi bi-hourglass-split spinner"></i> Loading…</div>
+        </div>
+      </div>
+    </div>
+
+    </div><!-- /#admin-content -->
   </div>
 <!-- ── End Admin Tab ── -->
 
@@ -2688,7 +2735,12 @@
     } else if (tab === 'admin') {
       document.getElementById('tabAdmin').classList.remove('hidden');
       document.getElementById('navAdmin').classList.add('active');
-      if (typeof window.loadAdmin === 'function') window.loadAdmin();
+      var pos = (window.volunteerProfile && window.volunteerProfile.position) || '';
+      var isAdmin = /[AZP]/.test(pos);
+      document.getElementById('admin-lock').classList.toggle('hidden', isAdmin);
+      document.getElementById('admin-content').classList.toggle('hidden', !isAdmin);
+      if (isAdmin && typeof window.loadAdmin === 'function') window.loadAdmin();
+      if (isAdmin && typeof window.loadMeetingConfig === 'function') window.loadMeetingConfig();
 
     } else if (tab === 'tasks') {
       document.getElementById('tabTasks').classList.remove('hidden');
@@ -2779,41 +2831,89 @@
   }
   window.loadQualifiedPersons = loadQualifiedPersons;
 
+  var QUAL_BRANCH_NAMES   = { 'A': 'Hopkinton', 'W': 'Westford', 'H': 'Holliston', 'M': 'Medway' };
+  var QUAL_BRANCH_COLORS  = { 'A': '#378ADD',   'W': '#1D9E75',  'H': '#D4537E',  'M': '#BA7517' };
+  var QUAL_BRANCH_ORDER   = ['A', 'W', 'H', 'M'];
+
+  function qualCanEdit(memberBranchCode) {
+    var pos = (window.volunteerProfile && window.volunteerProfile.position) || '';
+    if (/[AZ]/.test(pos)) return true; // A or Z can edit anyone
+    if (pos.includes('P')) {           // P can only edit their own branch
+      var myBranch = (window.volunteerProfile && window.volunteerProfile.branchCode) || '';
+      return myBranch.toUpperCase() === (memberBranchCode || '').toUpperCase();
+    }
+    return false;
+  }
+
   function renderQualList(body, members) {
     if (!members.length) { body.innerHTML = '<div style="padding:20px;text-align:center;font-size:0.65rem;color:rgba(26,19,17,0.3);">No roster members found.</div>'; return; }
 
     var qualCount = members.filter(function(m) { return qualSheetEmails[m.email.toLowerCase()]; }).length;
     document.getElementById('qual-count-pill').textContent = qualCount + '/' + members.length;
 
-    var html = '<div class="qual-count">' + qualCount + ' of ' + members.length + ' marked qualified</div><div class="qual-list">';
+    // Group members by branch
+    var byBranch = {};
     members.forEach(function(m) {
-      var key = m.email.toLowerCase();
-      var isQual = !!qualSheetEmails[key];
-      var qdata = qualSheetEmails[key] || {};
-      var minorLabel = isQual ? (qdata.isMinor ? ' · Minor' : ' · Adult') : '';
-      html += '<div class="qual-row' + (isQual ? ' qualified' : '') + '" id="qual-row-' + encodeURIComponent(m.email) + '">' +
-        '<input type="checkbox"' + (isQual ? ' checked' : '') + ' onchange="qualCheckboxChanged(' + JSON.stringify(m.email) + ',' + JSON.stringify(m.name) + ',this)">' +
-        '<div style="flex:1;min-width:0;">' +
-          '<div class="qual-row-name">' + m.name + '<span style="font-size:0.55rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(26,19,17,0.35);margin-left:6px;">' + minorLabel + '</span></div>' +
-          '<div class="qual-row-email">' + m.email + '</div>' +
-        '</div>' +
-        (isQual ? '<span style="font-size:0.55rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:2px 6px;background:var(--green);color:white;">✓</span>' : '') +
-        '</div>';
-      // Inline confirm form (hidden by default, shown when unchecked person is checked)
-      html += '<div class="qual-confirm-form" id="qual-form-' + encodeURIComponent(m.email) + '" style="display:none;padding:10px 12px 12px 38px;background:#f5f5f0;border-left:3px solid var(--orange);margin-bottom:4px;">' +
-        '<div style="font-size:0.62rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(26,19,17,0.5);margin-bottom:8px;">Qualifying ' + m.name + '</div>' +
-        '<div style="display:flex;gap:8px;margin-bottom:8px;">' +
-          '<button onclick="qualSetMinor(' + JSON.stringify(m.email) + ',false)" id="qual-adult-' + encodeURIComponent(m.email) + '" style="flex:1;padding:6px;font-size:0.62rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;border:2px solid var(--dark);background:var(--dark);color:white;cursor:pointer;">Adult</button>' +
-          '<button onclick="qualSetMinor(' + JSON.stringify(m.email) + ',true)"  id="qual-minor-' + encodeURIComponent(m.email) + '" style="flex:1;padding:6px;font-size:0.62rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;border:2px solid var(--dark);background:white;color:var(--dark);cursor:pointer;">Minor</button>' +
-        '</div>' +
-        (m.phone ? '<div style="font-size:0.62rem;font-weight:600;color:rgba(26,19,17,0.45);margin-bottom:8px;">📞 ' + m.phone + '</div>' : '') +
-        '<div style="display:flex;gap:8px;">' +
-          '<button onclick="qualCancelForm(' + JSON.stringify(m.email) + ')" style="flex:1;padding:7px;font-size:0.62rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;border:2px solid var(--dark);background:white;color:var(--dark);cursor:pointer;">Cancel</button>' +
-          '<button onclick="qualConfirmAdd(' + JSON.stringify(m.email) + ',' + JSON.stringify(m.name) + ')" style="flex:1;padding:7px;font-size:0.62rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;border:2px solid var(--orange);background:var(--orange);color:white;cursor:pointer;">Confirm</button>' +
-        '</div>' +
-        '</div>';
+      var bc = (m.branchCode || '').toUpperCase() || 'X';
+      if (!byBranch[bc]) byBranch[bc] = [];
+      byBranch[bc].push(m);
     });
-    html += '</div>';
+
+    var branchOrder = QUAL_BRANCH_ORDER.concat(
+      Object.keys(byBranch).filter(function(bc) { return QUAL_BRANCH_ORDER.indexOf(bc) === -1; })
+    );
+
+    var html = '<div class="qual-count">' + qualCount + ' of ' + members.length + ' marked qualified</div>';
+
+    branchOrder.forEach(function(bc) {
+      var group = byBranch[bc];
+      if (!group || !group.length) return;
+      var branchName  = QUAL_BRANCH_NAMES[bc]  || bc;
+      var branchColor = QUAL_BRANCH_COLORS[bc] || '#888780';
+      var branchQual  = group.filter(function(m) { return qualSheetEmails[m.email.toLowerCase()]; }).length;
+      var canEdit     = qualCanEdit(bc);
+
+      html += '<div style="margin:0;">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px 5px;background:' + branchColor + '10;border-top:2px solid ' + branchColor + ';border-bottom:1px solid ' + branchColor + '30;">' +
+          '<span style="font-size:0.6rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:' + branchColor + ';">' + branchName + '</span>' +
+          '<span style="font-size:0.58rem;font-weight:700;color:' + branchColor + ';opacity:0.8;">' + branchQual + '/' + group.length + (!canEdit ? ' · view only' : '') + '</span>' +
+        '</div>' +
+        '<div class="qual-list" style="padding:8px 16px;gap:5px;">';
+
+      group.forEach(function(m) {
+        var key = m.email.toLowerCase();
+        var isQual = !!qualSheetEmails[key];
+        var qdata = qualSheetEmails[key] || {};
+        var minorLabel = isQual ? (qdata.isMinor ? ' · Minor' : ' · Adult') : '';
+        var editable = canEdit;
+
+        html += '<div class="qual-row' + (isQual ? ' qualified' : '') + '" id="qual-row-' + encodeURIComponent(m.email) + '">' +
+          '<input type="checkbox"' + (isQual ? ' checked' : '') + (editable ? ' onchange="qualCheckboxChanged(' + JSON.stringify(m.email) + ',' + JSON.stringify(m.name) + ',this)"' : ' disabled style="opacity:0.35;cursor:not-allowed;"') + '>' +
+          '<div style="flex:1;min-width:0;">' +
+            '<div class="qual-row-name">' + m.name + '<span style="font-size:0.55rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(26,19,17,0.35);margin-left:6px;">' + minorLabel + '</span></div>' +
+            '<div class="qual-row-email">' + m.email + '</div>' +
+          '</div>' +
+          (isQual ? '<span style="font-size:0.55rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:2px 6px;background:var(--green);color:white;">✓</span>' : '') +
+          '</div>';
+        // Inline confirm form
+        if (editable) {
+          html += '<div class="qual-confirm-form" id="qual-form-' + encodeURIComponent(m.email) + '" style="display:none;padding:10px 12px 12px 38px;background:#f5f5f0;border-left:3px solid var(--orange);margin-bottom:4px;">' +
+            '<div style="font-size:0.62rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(26,19,17,0.5);margin-bottom:8px;">Qualifying ' + m.name + '</div>' +
+            '<div style="display:flex;gap:8px;margin-bottom:8px;">' +
+              '<button onclick="qualSetMinor(' + JSON.stringify(m.email) + ',false)" id="qual-adult-' + encodeURIComponent(m.email) + '" style="flex:1;padding:6px;font-size:0.62rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;border:2px solid var(--dark);background:var(--dark);color:white;cursor:pointer;">Adult</button>' +
+              '<button onclick="qualSetMinor(' + JSON.stringify(m.email) + ',true)"  id="qual-minor-' + encodeURIComponent(m.email) + '" style="flex:1;padding:6px;font-size:0.62rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;border:2px solid var(--dark);background:white;color:var(--dark);cursor:pointer;">Minor</button>' +
+            '</div>' +
+            (m.phone ? '<div style="font-size:0.62rem;font-weight:600;color:rgba(26,19,17,0.45);margin-bottom:8px;">📞 ' + m.phone + '</div>' : '') +
+            '<div style="display:flex;gap:8px;">' +
+              '<button onclick="qualCancelForm(' + JSON.stringify(m.email) + ')" style="flex:1;padding:7px;font-size:0.62rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;border:2px solid var(--dark);background:white;color:var(--dark);cursor:pointer;">Cancel</button>' +
+              '<button onclick="qualConfirmAdd(' + JSON.stringify(m.email) + ',' + JSON.stringify(m.name) + ')" style="flex:1;padding:7px;font-size:0.62rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;border:2px solid var(--orange);background:var(--orange);color:white;cursor:pointer;">Confirm</button>' +
+            '</div>' +
+            '</div>';
+        }
+      });
+      html += '</div></div>';
+    });
+
     body.innerHTML = html;
   }
 
@@ -3627,6 +3727,11 @@
           ${buildPaidToggleStrips(vol)}
           ${buildFixedCosts(vol)}
           ${buildFoodSection(vol)}
+          ${!vol.paid ? `<div style="padding:10px 14px 0;">
+            <button class="push-reminder-btn" onclick="sendPaymentReminder('${esc(vol.email)}')">
+              <i class="bi bi-bell-fill"></i> Push Payment Reminder
+            </button>
+          </div>` : ''}
           <div class="vol-card-subtotals">
             <div class="vol-card-subtotals-lbl">Total Due</div>
             <div class="vol-card-subtotals-amt">${totalStr}</div>
@@ -4841,6 +4946,158 @@
     window.tbEditAssignee    = tbEditAssignee;
     window.tbAddTaskKey      = tbAddTaskKey;
     window.tbDeleteTask      = tbDeleteTask;
+  })();
+</script>
+
+<script>
+  /* ── Meeting Scheduler + Push Reminder JS ── */
+  (function() {
+    var GAS_URL = window.SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbwM8DrClchV9B5bfKYMaDURSRzTqlHA3mIVfKLe5HNO85zQYys2rL55WXSDEz89_PxS/exec';
+
+    var BRANCHES = [
+      { code: 'A', name: 'Hopkinton' },
+      { code: 'H', name: 'Holliston' },
+      { code: 'W', name: 'Westford' },
+      { code: 'S', name: 'Shrewsbury' },
+      { code: 'M', name: 'Medway' }
+    ];
+
+    var DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+    async function loadMeetingConfig() {
+      var body = document.getElementById('meeting-config-body');
+      if (!body) return;
+      body.innerHTML = '<div style="padding:8px;font-size:0.65rem;opacity:0.4;">Loading…</div>';
+      try {
+        var res = await fetch(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: 'action=getMeetingConfig'
+        });
+        var cfg = await res.json();
+        var pos = (window.volunteerProfile && window.volunteerProfile.position) || '';
+        var isAZ = /[AZ]/.test(pos);
+        var bc   = (window.volunteerProfile && window.volunteerProfile.branchCode) || '';
+
+        var dayVal  = String(cfg.meetingDay  || '2');
+        var timeVal = cfg.meetingTime || '17:00';
+
+        var visibleBranches = isAZ ? BRANCHES : BRANCHES.filter(function(b) { return b.code === bc; });
+
+        var cancelRowsHTML = visibleBranches.map(function(b) {
+          var cancelled = (cfg['cancel_' + b.code] || 'No') === 'Yes';
+          return '<div class="meeting-cancel-row">' +
+            '<span class="meeting-cancel-branch-name">' + b.name + '</span>' +
+            '<label class="meeting-cancel-label">' +
+              '<input type="checkbox"' + (cancelled ? ' checked' : '') +
+              ' onchange="saveMeetingCancel(\'' + b.code + '\', this.checked)"> Cancel this week' +
+            '</label>' +
+          '</div>';
+        }).join('');
+
+        var dayOptions = DAY_NAMES.map(function(d, i) {
+          return '<option value="' + i + '"' + (String(i) === dayVal ? ' selected' : '') + '>' + d + '</option>';
+        }).join('');
+
+        body.innerHTML =
+          '<div class="meeting-row">' +
+            '<span class="meeting-label">Meeting Day</span>' +
+            '<select class="meeting-field" onchange="saveMeetingDay(this.value)">' + dayOptions + '</select>' +
+          '</div>' +
+          '<div class="meeting-row">' +
+            '<span class="meeting-label">Meeting Time</span>' +
+            '<input type="time" class="meeting-field" value="' + timeVal + '" onchange="saveMeetingTime(this.value)">' +
+          '</div>' +
+          '<div class="meeting-cancel-eyebrow" style="margin-top:14px;font-size:0.6rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;opacity:0.5;padding:0 2px 6px;">Cancel This Week\'s Meeting</div>' +
+          '<div class="meeting-cancel-grid">' +
+            (cancelRowsHTML || '<div style="font-size:0.65rem;opacity:0.4;padding:4px 0;">No branches to manage.</div>') +
+          '</div>' +
+          '<div class="meeting-save-msg" id="meeting-save-msg"></div>';
+      } catch(e) {
+        body.innerHTML = '<div style="padding:8px;font-size:0.65rem;color:#b83232;">Failed to load — try reopening this section.</div>';
+      }
+    }
+
+    function showMeetingMsg(msg, ok) {
+      var el = document.getElementById('meeting-save-msg');
+      if (!el) return;
+      el.textContent = msg;
+      el.style.color = ok ? '#1D9E75' : '#b83232';
+      el.style.fontSize = '0.65rem';
+      el.style.fontWeight = '700';
+      el.style.padding = '6px 2px 0';
+      clearTimeout(el._t);
+      el._t = setTimeout(function() { el.textContent = ''; }, 3000);
+    }
+
+    async function saveMeetingDay(day) {
+      try {
+        var res = await fetch(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: 'action=saveMeetingConfig&day=' + encodeURIComponent(day)
+        });
+        var r = await res.json();
+        showMeetingMsg(r.ok ? 'Saved!' : (r.error || 'Error saving.'), !!r.ok);
+      } catch(e) { showMeetingMsg('Error saving.', false); }
+    }
+
+    async function saveMeetingTime(time) {
+      try {
+        var res = await fetch(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: 'action=saveMeetingConfig&time=' + encodeURIComponent(time)
+        });
+        var r = await res.json();
+        showMeetingMsg(r.ok ? 'Saved!' : (r.error || 'Error saving.'), !!r.ok);
+      } catch(e) { showMeetingMsg('Error saving.', false); }
+    }
+
+    async function saveMeetingCancel(branchCode, cancelled) {
+      try {
+        var res = await fetch(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: 'action=cancelMeeting&branchCode=' + encodeURIComponent(branchCode) + '&cancelled=' + (cancelled ? 'Yes' : 'No')
+        });
+        var r = await res.json();
+        showMeetingMsg(r.ok ? 'Saved!' : (r.error || 'Error saving.'), !!r.ok);
+      } catch(e) { showMeetingMsg('Error saving.', false); }
+    }
+
+    async function sendPaymentReminder(email) {
+      if (!confirm('Send payment push notification to ' + email + '?')) return;
+      try {
+        var res = await fetch(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: 'action=sendBostonPaymentReminder&email=' + encodeURIComponent(email)
+        });
+        var r = await res.json();
+        alert(r.ok ? 'Reminder sent!' : (r.error || 'Failed to send.'));
+      } catch(e) { alert('Failed to send.'); }
+    }
+
+    async function sendBostonDeadlineReminderAll() {
+      if (!confirm('Send "deadline approaching" push notification to all Boston registrants?')) return;
+      try {
+        var res = await fetch(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: 'action=sendBostonDeadlineReminder'
+        });
+        var r = await res.json();
+        alert(r.ok ? 'Notifications sent to all registrants!' : (r.error || 'Failed to send.'));
+      } catch(e) { alert('Failed to send.'); }
+    }
+
+    window.loadMeetingConfig          = loadMeetingConfig;
+    window.saveMeetingDay             = saveMeetingDay;
+    window.saveMeetingTime            = saveMeetingTime;
+    window.saveMeetingCancel          = saveMeetingCancel;
+    window.sendPaymentReminder        = sendPaymentReminder;
+    window.sendBostonDeadlineReminderAll = sendBostonDeadlineReminderAll;
   })();
 </script>
 
