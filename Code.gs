@@ -267,6 +267,16 @@ function doPost(e) {
         'Reminder: the permission form deadline is approaching. Open the app to complete your form!');
       result = { success: true, sent: dTokens.length };
 
+    // ── Volunteer Approvals ────────────────────────────────────────────────────
+    } else if (p.action === "getPendingVolunteers") {
+      result = getPendingVolunteers();
+
+    } else if (p.action === "approveVolunteer") {
+      result = approveVolunteer(parseInt(p.rowIndex, 10));
+
+    } else if (p.action === "denyVolunteer") {
+      result = denyVolunteer(parseInt(p.rowIndex, 10));
+
     } else {
       result = { error: "Invalid request" };
     }
@@ -379,7 +389,7 @@ function handleVolunteerRegistration(formData) {
       <tr style="background:#f9f9f9;"><td><b>Photo</b></td><td>${photoUrl ? `<a href="${photoUrl}">View photo</a>` : "No photo uploaded"}</td></tr>
     </table>
     <br>
-    <p style="font-family:sans-serif;font-size:14px;">To approve: open the <a href="${sheetLink}">volunteer roster</a>, go to the <b>Pending Volunteers</b> tab, select their row, and click <b>HAU → Approve Volunteer</b>.</p>
+    <p style="font-family:sans-serif;font-size:14px;">To approve or deny: open the <b>AFU Volunteer Portal app</b>, go to <b>Admin → Volunteer Approvals</b>.</p>
   `;
 
   GmailApp.sendEmail(config.presidentEmail, `New volunteer registration — ${formData.branch}`, "", { htmlBody: emailHtml });
@@ -402,6 +412,73 @@ function handleVolunteerRegistration(formData) {
     sendPushToMany_(zTokens, 'New Volunteer Registration',
       `${formData.fname} ${formData.lname} registered for the ${formData.branch} branch.`);
   } catch(pushErr) { console.warn('Push failed (registerVolunteer):', pushErr.message); }
+
+  return { success: true };
+}
+
+// ── Volunteer Approvals ────────────────────────────────────────────────────────
+function getPendingVolunteers() {
+  const ss    = SpreadsheetApp.openById(SHEET_ID);
+  const sheet = ss.getSheetByName(PENDING_SHEET);
+  if (!sheet || sheet.getLastRow() < 2) return { volunteers: [] };
+  const data  = sheet.getDataRange().getValues();
+  const volunteers = [];
+  for (let i = 1; i < data.length; i++) {
+    const status = (data[i][5] || '').toString().trim().toLowerCase();
+    if (status === 'pending') {
+      volunteers.push({
+        rowIndex:   i + 1,
+        name:       (data[i][0] || '').toString().trim(),
+        phone:      (data[i][1] || '').toString().trim(),
+        email:      (data[i][2] || '').toString().trim(),
+        photoUrl:   (data[i][3] || '').toString().trim(),
+        branchCode: (data[i][4] || '').toString().trim().toUpperCase()
+      });
+    }
+  }
+  return { volunteers };
+}
+
+function approveVolunteer(rowIndex) {
+  const ss      = SpreadsheetApp.openById(SHEET_ID);
+  const pending = ss.getSheetByName(PENDING_SHEET);
+  if (!pending) return { error: 'Pending Volunteers sheet not found' };
+
+  const row        = pending.getRange(rowIndex, 1, 1, 6).getValues()[0];
+  const name       = (row[0] || '').toString().trim();
+  const phone      = (row[1] || '').toString().trim();
+  const email      = (row[2] || '').toString().trim();
+  const photoUrl   = (row[3] || '').toString().trim();
+  const branchCode = (row[4] || '').toString().trim().toUpperCase();
+
+  pending.getRange(rowIndex, 6).setValue('Approved');
+
+  // Add to Roster: A=blank, B=name, C=phone, D=email, E=position, F=branchCode, G=photoUrl, H=Active, I=DoB
+  const roster = ss.getSheetByName('Roster') || ss.insertSheet('Roster');
+  roster.appendRow(['', name, phone, email, '', branchCode, photoUrl, 'Yes', '']);
+
+  // Notify the volunteer
+  try {
+    const token = getFcmToken_(email);
+    if (token) sendPush_(token, 'Application Approved!',
+      "Welcome to AFU! Your volunteer application has been approved. You're now part of the team.");
+  } catch(e) { console.warn('Push failed (approveVolunteer):', e.message); }
+
+  return { success: true };
+}
+
+function denyVolunteer(rowIndex) {
+  const ss      = SpreadsheetApp.openById(SHEET_ID);
+  const pending = ss.getSheetByName(PENDING_SHEET);
+  if (!pending) return { error: 'Pending Volunteers sheet not found' };
+  const email = (pending.getRange(rowIndex, 3).getValue() || '').toString().trim();
+  pending.getRange(rowIndex, 6).setValue('Denied');
+
+  try {
+    const token = getFcmToken_(email);
+    if (token) sendPush_(token, 'Application Update',
+      'Your volunteer application could not be approved at this time. Please contact your branch officer for details.');
+  } catch(e) { console.warn('Push failed (denyVolunteer):', e.message); }
 
   return { success: true };
 }

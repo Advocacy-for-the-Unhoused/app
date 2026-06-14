@@ -800,6 +800,23 @@
     .toggle-switch input:checked + .toggle-track { background: var(--orange); }
     .toggle-switch input:checked + .toggle-track::before { transform: translateX(18px); }
 
+    /* ── Volunteer Approvals ── */
+    .pv-list { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+    .pv-card { background: white; border: 2px solid var(--border); overflow: hidden; }
+    .pv-card-header { display: flex; align-items: center; gap: 12px; padding: 12px; }
+    .pv-avatar { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+    .pv-avatar-ph { width: 46px; height: 46px; border-radius: 50%; background: var(--border); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0; }
+    .pv-name { font-weight: 800; font-size: 0.85rem; color: var(--dark); }
+    .pv-meta { font-size: 0.6rem; color: rgba(26,19,17,0.5); margin-top: 1px; word-break: break-all; }
+    .pv-branch-tag { font-size: 0.52rem; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; padding: 2px 6px; color: white; }
+    .pv-actions { display: flex; border-top: 1.5px solid var(--border); }
+    .pv-btn { flex: 1; padding: 10px; font-size: 0.62rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; border: none; cursor: pointer; transition: opacity 0.15s; }
+    .pv-btn:active { opacity: 0.75; }
+    .pv-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .pv-btn-approve { background: var(--green); color: white; }
+    .pv-btn-deny { background: white; color: rgba(26,19,17,0.45); border-left: 1.5px solid var(--border); }
+    .pv-branch-hdr { font-size: 0.6rem; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; padding: 4px 0 8px; }
+
     /* ── Qualified Persons ── */
     .qual-list { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; }
     .qual-row { display: flex; align-items: center; gap: 10px; padding: 9px 12px; background: white; border: 2px solid var(--border); }
@@ -2384,6 +2401,25 @@
       </div>
     </div>
 
+    <!-- Volunteer Approvals (collapsible) -->
+    <div class="admin-section" id="pending-section">
+      <div class="admin-section-hdr" onclick="toggleAdminSection('pending-section'); if(this.parentElement.classList.contains('open')) loadPendingVolunteers()">
+        <div>
+          <div class="admin-eyebrow">Onboarding</div>
+          <div class="admin-title">Volunteer <span>Approvals</span></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="reg-pill" id="pending-count-pill" style="display:none;background:var(--orange);color:white;"></span>
+          <i class="bi bi-chevron-down admin-section-chev"></i>
+        </div>
+      </div>
+      <div class="admin-section-body">
+        <div id="pending-vol-body">
+          <div style="padding:20px;text-align:center;font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(26,19,17,0.3);">Open section to load</div>
+        </div>
+      </div>
+    </div>
+
     <!-- Qualified Persons (collapsible) -->
     <div class="admin-section" id="qual-section">
       <div class="admin-section-hdr" onclick="toggleAdminSection('qual-section'); if(this.parentElement.classList.contains('open')) loadQualifiedPersons()">
@@ -3009,6 +3045,142 @@
     var countEl = document.querySelector('#qual-list-body .qual-count');
     if (countEl) countEl.textContent = qualCount + ' of ' + all.length + ' marked qualified';
   }
+
+  /* ─────────────────────────────────────────
+     Volunteer Approvals
+  ───────────────────────────────────────── */
+  var pendingVolsCache = [];
+  var pendingSU = window.SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbwM8DrClchV9B5bfKYMaDURSRzTqlHA3mIVfKLe5HNO85zQYys2rL55WXSDEz89_PxS/exec';
+
+  function pendingCanSeeBranch(branchCode) {
+    var pos = (window.volunteerProfile && window.volunteerProfile.position) || '';
+    if (/[AZ]/.test(pos)) return true;
+    if (pos.includes('P')) {
+      var myBranch = (window.volunteerProfile && window.volunteerProfile.branchCode) || '';
+      return myBranch.toUpperCase() === (branchCode || '').toUpperCase();
+    }
+    return false;
+  }
+
+  function loadPendingVolunteers() {
+    var body = document.getElementById('pending-vol-body');
+    if (!body) return;
+    body.innerHTML = '<div style="padding:20px;text-align:center;font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(26,19,17,0.3);"><i class="bi bi-hourglass-split spinner"></i> Loading&hellip;</div>';
+    fetch(pendingSU, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'action=getPendingVolunteers' })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var all = (data && data.volunteers) || [];
+        pendingVolsCache = all.filter(function(v) { return pendingCanSeeBranch(v.branchCode); });
+        renderPendingVolunteers(body);
+      })
+      .catch(function() {
+        body.innerHTML = '<div style="padding:20px;text-align:center;font-size:0.65rem;color:rgba(26,19,17,0.3);">Failed to load. Check connection.</div>';
+      });
+  }
+  window.loadPendingVolunteers = loadPendingVolunteers;
+
+  function renderPendingVolunteers(body) {
+    var pill = document.getElementById('pending-count-pill');
+    if (pill) {
+      if (pendingVolsCache.length) {
+        pill.textContent = pendingVolsCache.length + ' pending';
+        pill.style.display = '';
+      } else {
+        pill.style.display = 'none';
+      }
+    }
+
+    if (!pendingVolsCache.length) {
+      body.innerHTML = '<div style="padding:24px;text-align:center;font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(26,19,17,0.3);">No pending volunteers</div>';
+      return;
+    }
+
+    var byBranch = {};
+    pendingVolsCache.forEach(function(v) {
+      var bc = v.branchCode || 'X';
+      if (!byBranch[bc]) byBranch[bc] = [];
+      byBranch[bc].push(v);
+    });
+    var order = QUAL_BRANCH_ORDER.concat(Object.keys(byBranch).filter(function(bc) { return QUAL_BRANCH_ORDER.indexOf(bc) === -1; }));
+
+    var html = '<div class="pv-list">';
+    order.forEach(function(bc) {
+      var group = byBranch[bc];
+      if (!group || !group.length) return;
+      var bName  = QUAL_BRANCH_NAMES[bc]  || bc;
+      var bColor = QUAL_BRANCH_COLORS[bc] || '#888780';
+      html += '<div class="pv-branch-hdr" style="color:' + bColor + ';border-bottom:2px solid ' + bColor + ';">' + bName + ' · ' + group.length + ' pending</div>';
+      group.forEach(function(v) {
+        var imgHtml = v.photoUrl
+          ? '<img class="pv-avatar" src="' + v.photoUrl + '" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">' +
+            '<div class="pv-avatar-ph" style="display:none;">👤</div>'
+          : '<div class="pv-avatar-ph">👤</div>';
+        html += '<div class="pv-card" id="pv-card-' + v.rowIndex + '">' +
+          '<div class="pv-card-header">' +
+            imgHtml +
+            '<div style="flex:1;min-width:0;">' +
+              '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">' +
+                '<span class="pv-name">' + v.name + '</span>' +
+                '<span class="pv-branch-tag" style="background:' + bColor + ';">' + bName + '</span>' +
+              '</div>' +
+              '<div class="pv-meta">' + v.email + '</div>' +
+              (v.phone ? '<div class="pv-meta">📞 ' + v.phone + '</div>' : '') +
+            '</div>' +
+          '</div>' +
+          '<div class="pv-actions">' +
+            '<button class="pv-btn pv-btn-approve" onclick="pendingApprove(' + v.rowIndex + ')">✓ Approve</button>' +
+            '<button class="pv-btn pv-btn-deny"    onclick="pendingDeny(' + v.rowIndex + ')">✕ Deny</button>' +
+          '</div>' +
+        '</div>';
+      });
+      html += '<div style="height:4px;"></div>';
+    });
+    html += '</div>';
+    body.innerHTML = html;
+  }
+
+  function pendingApprove(rowIndex) {
+    var card = document.getElementById('pv-card-' + rowIndex);
+    if (card) { card.style.opacity = '0.4'; card.querySelectorAll('button').forEach(function(b){b.disabled=true;}); }
+    fetch(pendingSU, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'action=approveVolunteer&rowIndex=' + rowIndex })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.success) {
+          pendingVolsCache = pendingVolsCache.filter(function(v) { return v.rowIndex !== rowIndex; });
+          renderPendingVolunteers(document.getElementById('pending-vol-body'));
+        } else {
+          if (card) { card.style.opacity='1'; card.querySelectorAll('button').forEach(function(b){b.disabled=false;}); }
+          alert('Approval failed: ' + (d.error || 'Unknown error'));
+        }
+      })
+      .catch(function() {
+        if (card) { card.style.opacity='1'; card.querySelectorAll('button').forEach(function(b){b.disabled=false;}); }
+        alert('Network error — please try again.');
+      });
+  }
+  window.pendingApprove = pendingApprove;
+
+  function pendingDeny(rowIndex) {
+    if (!confirm('Deny this volunteer application?')) return;
+    var card = document.getElementById('pv-card-' + rowIndex);
+    if (card) { card.style.opacity = '0.4'; card.querySelectorAll('button').forEach(function(b){b.disabled=true;}); }
+    fetch(pendingSU, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'action=denyVolunteer&rowIndex=' + rowIndex })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.success) {
+          pendingVolsCache = pendingVolsCache.filter(function(v) { return v.rowIndex !== rowIndex; });
+          renderPendingVolunteers(document.getElementById('pending-vol-body'));
+        } else {
+          if (card) { card.style.opacity='1'; card.querySelectorAll('button').forEach(function(b){b.disabled=false;}); }
+          alert('Denial failed: ' + (d.error || 'Unknown error'));
+        }
+      })
+      .catch(function() {
+        if (card) { card.style.opacity='1'; card.querySelectorAll('button').forEach(function(b){b.disabled=false;}); }
+        alert('Network error — please try again.');
+      });
+  }
+  window.pendingDeny = pendingDeny;
 
   window.loadDashboard = function() {
     if (window.volunteerProfile) {
