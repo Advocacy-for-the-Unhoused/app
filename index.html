@@ -2441,12 +2441,12 @@
       </div>
     </div>
 
-    <!-- Branch Meetings (collapsible) -->
+    <!-- Branch Management (collapsible) -->
     <div class="admin-section" id="meeting-section">
-      <div class="admin-section-hdr" onclick="toggleAdminSection('meeting-section'); if(this.parentElement.classList.contains('open')) window.loadMeetingConfig && window.loadMeetingConfig()">
+      <div class="admin-section-hdr" onclick="toggleAdminSection('meeting-section'); if(this.parentElement.classList.contains('open')) window.loadBranchManagement && window.loadBranchManagement()">
         <div>
-          <div class="admin-eyebrow">Weekly</div>
-          <div class="admin-title">Branch <span>Meetings</span></div>
+          <div class="admin-eyebrow">Branches</div>
+          <div class="admin-title">Branch <span>Management</span></div>
         </div>
         <i class="bi bi-chevron-down admin-section-chev"></i>
       </div>
@@ -2776,7 +2776,6 @@
       document.getElementById('admin-lock').classList.toggle('hidden', isAdmin);
       document.getElementById('admin-content').classList.toggle('hidden', !isAdmin);
       if (isAdmin && typeof window.loadAdmin === 'function') window.loadAdmin();
-      if (isAdmin && typeof window.loadMeetingConfig === 'function') window.loadMeetingConfig();
 
     } else if (tab === 'tasks') {
       document.getElementById('tabTasks').classList.remove('hidden');
@@ -5126,17 +5125,18 @@
   (function() {
     var GAS_URL = window.SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbwM8DrClchV9B5bfKYMaDURSRzTqlHA3mIVfKLe5HNO85zQYys2rL55WXSDEz89_PxS/exec';
 
-    var BRANCHES = [
-      { code: 'A', name: 'Hopkinton' },
-      { code: 'H', name: 'Holliston' },
-      { code: 'W', name: 'Westford' },
-      { code: 'S', name: 'Shrewsbury' },
-      { code: 'M', name: 'Medway' }
-    ];
-
     var DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
-    async function loadMeetingConfig() {
+    var _bmCache = null; // last-loaded branch data, used to repopulate dropdowns
+
+    function _esc(s) {
+      return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function _ea(s) {
+      return String(s || '').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    }
+
+    async function loadBranchManagement() {
       var body = document.getElementById('meeting-config-body');
       if (!body) return;
       body.innerHTML = '<div style="padding:8px;font-size:0.65rem;opacity:0.4;">Loading…</div>';
@@ -5144,86 +5144,318 @@
         var res = await fetch(GAS_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: 'action=getMeetingConfig'
+          body: 'action=getBranchManagement'
         });
-        var cfg = await res.json();
-        var pos = (window.volunteerProfile && window.volunteerProfile.position) || '';
-        var isAZ = /[AZ]/.test(pos);
-        var bc   = (window.volunteerProfile && window.volunteerProfile.branchCode) || '';
+        var data = await res.json();
+        if (data.error) throw new Error(data.error);
 
-        var dayVal  = String(cfg.meetingDay  || '2');
-        var timeVal = cfg.meetingTime || '17:00';
+        _bmCache = data.branches;
 
-        var visibleBranches = isAZ ? BRANCHES : BRANCHES.filter(function(b) { return b.code === bc; });
+        var pos     = (window.volunteerProfile && window.volunteerProfile.position) || '';
+        var userBc  = (window.volunteerProfile && window.volunteerProfile.branchCode) || '';
+        var isAZ    = /[AZ]/.test(pos);
+        var isAdmin = /[AZP]/.test(pos);
 
-        var cancelRowsHTML = visibleBranches.map(function(b) {
-          var cancelled = (cfg['cancel_' + b.code] || 'No') === 'Yes';
-          return '<div class="meeting-cancel-row">' +
-            '<span class="meeting-cancel-branch-name">' + b.name + '</span>' +
-            '<label class="meeting-cancel-label">' +
-              '<input type="checkbox"' + (cancelled ? ' checked' : '') +
-              ' onchange="saveMeetingCancel(\'' + b.code + '\', this.checked)"> Cancel this week' +
-            '</label>' +
+        var visibleBranches = isAZ ? data.branches : data.branches.filter(function(b) { return b.code === userBc; });
+
+        var html = '';
+
+        if (isAZ) {
+          html +=
+            '<div style="margin-bottom:16px;">' +
+              '<button onclick="showAddBranchForm()" style="background:var(--dark);color:var(--cream);border:none;padding:9px 18px;font-family:\'Montserrat\',sans-serif;font-size:0.7rem;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:1px;">' +
+                '<i class="bi bi-plus-lg"></i>&nbsp; Add Branch' +
+              '</button>' +
+            '</div>' +
+            '<div id="add-branch-form" class="hidden" style="background:#faf8f5;border:1.5px solid var(--dark);padding:14px;margin-bottom:18px;">' +
+              '<div style="font-size:0.62rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;">New Branch</div>' +
+              '<input id="nb-code" type="text" maxlength="3" placeholder="Code (e.g. S)" style="width:100%;box-sizing:border-box;padding:9px;border:1.5px solid var(--dark);font-family:\'Montserrat\',sans-serif;font-size:0.8rem;margin-bottom:8px;">' +
+              '<input id="nb-name" type="text" placeholder="Name (e.g. Shrewsbury)" style="width:100%;box-sizing:border-box;padding:9px;border:1.5px solid var(--dark);font-family:\'Montserrat\',sans-serif;font-size:0.8rem;margin-bottom:10px;">' +
+              '<div style="display:flex;gap:8px;">' +
+                '<button onclick="submitAddBranch()" style="background:var(--dark);color:var(--cream);border:none;padding:8px 16px;font-family:\'Montserrat\',sans-serif;font-size:0.7rem;font-weight:700;cursor:pointer;text-transform:uppercase;">Add</button>' +
+                '<button onclick="document.getElementById(\'add-branch-form\').classList.add(\'hidden\')" style="background:none;border:1.5px solid var(--dark);padding:8px 16px;font-family:\'Montserrat\',sans-serif;font-size:0.7rem;font-weight:700;cursor:pointer;">Cancel</button>' +
+              '</div>' +
+              '<div id="add-branch-msg" style="font-size:0.65rem;margin-top:8px;font-weight:700;"></div>' +
+            '</div>';
+        }
+
+        if (!visibleBranches.length) {
+          body.innerHTML = html + '<div style="font-size:0.65rem;opacity:0.4;padding:4px 0;">No branches to manage.</div>';
+          return;
+        }
+
+        html += visibleBranches.map(function(b) {
+          var canEdit   = isAZ || (isAdmin && b.code === userBc);
+          var pct       = b.goal > 0 ? Math.min(100, Math.round((b.raised / b.goal) * 100)) : 0;
+          var pctColor  = pct >= 100 ? '#1D9E75' : (pct >= 60 ? 'var(--orange)' : 'var(--dark)');
+
+          var dayOpts = DAY_NAMES.map(function(d, i) {
+            return '<option value="' + i + '"' + (String(i) === String(b.meetingDay) ? ' selected' : '') + '>' + d + '</option>';
+          }).join('');
+
+          // ── Fundraising section ──────────────────────────────────────────────
+          var fundHtml =
+            '<div style="margin-bottom:16px;padding:12px 14px;background:#faf8f5;border:1px solid #e8e4de;">' +
+              '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">' +
+                '<span style="font-size:0.6rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;">Fundraising</span>' +
+                (canEdit
+                  ? '<span id="goal-toggle-' + b.code + '" onclick="toggleGoalEdit(\'' + _ea(b.code) + '\')" style="font-size:0.62rem;font-weight:700;cursor:pointer;text-decoration:underline;opacity:0.5;">Edit Goal</span>'
+                  : '') +
+              '</div>' +
+              '<div id="goal-view-' + b.code + '">' +
+                '<div style="font-size:1rem;font-weight:800;color:' + pctColor + ';">$' + b.raised.toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2}) + '</div>' +
+                '<div style="font-size:0.65rem;opacity:0.55;margin-bottom:6px;">raised of $' + b.goal.toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2}) + ' goal</div>' +
+                '<div style="background:#e0ddd9;height:7px;border-radius:4px;overflow:hidden;">' +
+                  '<div style="width:' + pct + '%;height:100%;background:' + pctColor + ';border-radius:4px;transition:width 0.4s;"></div>' +
+                '</div>' +
+                '<div style="font-size:0.6rem;opacity:0.45;margin-top:4px;">' + pct + '% of goal</div>' +
+              '</div>' +
+              (canEdit
+                ? '<div id="goal-edit-' + b.code + '" class="hidden" style="margin-top:10px;">' +
+                    '<input type="number" id="goal-input-' + b.code + '" value="' + b.goal + '" min="0" step="100" style="width:100%;box-sizing:border-box;padding:8px;border:1.5px solid var(--dark);font-family:\'Montserrat\',sans-serif;font-size:0.85rem;margin-bottom:8px;">' +
+                    '<div style="display:flex;align-items:center;gap:10px;">' +
+                      '<button onclick="saveGoal(\'' + _ea(b.code) + '\')" style="background:var(--dark);color:var(--cream);border:none;padding:7px 14px;font-family:\'Montserrat\',sans-serif;font-size:0.7rem;font-weight:700;cursor:pointer;text-transform:uppercase;">Save</button>' +
+                      '<span id="goal-msg-' + b.code + '" style="font-size:0.65rem;font-weight:700;"></span>' +
+                    '</div>' +
+                  '</div>'
+                : '') +
+            '</div>';
+
+          // ── Leadership section ───────────────────────────────────────────────
+          var leaderRows = b.leadership.length === 0
+            ? '<div style="font-size:0.65rem;opacity:0.4;padding:6px 0;">No leadership set.</div>'
+            : b.leadership.map(function(l) {
+                return '<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid #eee;">' +
+                  '<div>' +
+                    '<div style="font-size:0.78rem;font-weight:700;">' + _esc(l.name) + '</div>' +
+                    '<div style="font-size:0.62rem;opacity:0.5;">' + _esc(l.roleCode) + ' · ' + _esc(l.email) + '</div>' +
+                  '</div>' +
+                  (canEdit
+                    ? '<button onclick="removeLeader(\'' + _ea(l.email) + '\',\'' + _ea(b.code) + '\')" style="background:none;border:1.5px solid #b83232;color:#b83232;padding:3px 9px;font-size:0.6rem;font-weight:700;cursor:pointer;font-family:\'Montserrat\',sans-serif;text-transform:uppercase;flex-shrink:0;">Remove</button>'
+                    : '') +
+                '</div>';
+              }).join('');
+
+          var addLeaderHtml = canEdit
+            ? '<button onclick="showAddLeaderForm(\'' + _ea(b.code) + '\')" style="margin-top:10px;background:none;border:1.5px solid var(--dark);padding:6px 12px;font-size:0.65rem;font-weight:700;cursor:pointer;font-family:\'Montserrat\',sans-serif;text-transform:uppercase;">' +
+                '<i class="bi bi-person-plus"></i>&nbsp;Add to Leadership' +
+              '</button>' +
+              '<div id="add-leader-form-' + b.code + '" class="hidden" style="margin-top:10px;padding:12px;background:#faf8f5;border:1.5px solid var(--dark);">' +
+                '<div style="font-size:0.62rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Add Leader</div>' +
+                '<select id="add-leader-email-' + b.code + '" style="width:100%;box-sizing:border-box;padding:8px;border:1.5px solid var(--dark);font-family:\'Montserrat\',sans-serif;font-size:0.75rem;margin-bottom:8px;background:white;">' +
+                  '<option value="">— select member —</option>' +
+                '</select>' +
+                '<input id="add-leader-role-' + b.code + '" type="text" placeholder="Role code (e.g. P)" maxlength="5" style="width:100%;box-sizing:border-box;padding:8px;border:1.5px solid var(--dark);font-family:\'Montserrat\',sans-serif;font-size:0.8rem;margin-bottom:8px;">' +
+                '<div style="display:flex;align-items:center;gap:10px;">' +
+                  '<button onclick="submitAddLeader(\'' + _ea(b.code) + '\')" style="background:var(--dark);color:var(--cream);border:none;padding:8px 16px;font-family:\'Montserrat\',sans-serif;font-size:0.7rem;font-weight:700;cursor:pointer;text-transform:uppercase;">Save</button>' +
+                  '<button onclick="document.getElementById(\'add-leader-form-' + b.code + '\').classList.add(\'hidden\')" style="background:none;border:1.5px solid var(--dark);padding:8px 14px;font-family:\'Montserrat\',sans-serif;font-size:0.7rem;font-weight:700;cursor:pointer;">Cancel</button>' +
+                  '<span id="add-leader-msg-' + b.code + '" style="font-size:0.65rem;font-weight:700;"></span>' +
+                '</div>' +
+              '</div>'
+            : '';
+
+          // ── Meeting schedule section ─────────────────────────────────────────
+          var meetHtml = canEdit
+            ? '<div style="border-top:1px solid #e8e4de;padding-top:12px;margin-top:4px;">' +
+                '<div style="font-size:0.6rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;">Meeting Schedule</div>' +
+                '<div class="meeting-row">' +
+                  '<span class="meeting-label">Day</span>' +
+                  '<select class="meeting-field" onchange="saveMeetingDay(\'' + _ea(b.code) + '\',this.value)">' + dayOpts + '</select>' +
+                '</div>' +
+                '<div class="meeting-row" style="margin-top:8px;">' +
+                  '<span class="meeting-label">Time</span>' +
+                  '<input type="time" class="meeting-field" value="' + _esc(b.meetingTime) + '" onchange="saveMeetingTime(\'' + _ea(b.code) + '\',this.value)">' +
+                '</div>' +
+                '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">' +
+                  '<label class="meeting-cancel-label">' +
+                    '<input type="checkbox"' + (b.cancelled ? ' checked' : '') + ' onchange="saveMeetingCancel(\'' + _ea(b.code) + '\',this.checked)">' +
+                    ' Cancel this week\'s meeting' +
+                  '</label>' +
+                '</div>' +
+                '<div class="meeting-save-msg" id="meeting-save-msg-' + b.code + '"></div>' +
+              '</div>'
+            : '';
+
+          return '<div style="border:1.5px solid var(--border);margin-bottom:20px;">' +
+            '<div style="background:var(--dark);padding:10px 14px;">' +
+              '<span style="font-family:\'Abril Fatface\',serif;font-size:1rem;color:var(--cream);">' + _esc(b.name) + '</span>' +
+              '<span style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:rgba(249,246,240,0.4);margin-left:8px;">' + _esc(b.code) + '</span>' +
+            '</div>' +
+            '<div style="padding:14px;">' +
+              fundHtml +
+              '<div style="margin-bottom:14px;">' +
+                '<div style="font-size:0.6rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;">Leadership</div>' +
+                leaderRows +
+                addLeaderHtml +
+              '</div>' +
+              meetHtml +
+            '</div>' +
           '</div>';
         }).join('');
 
-        var dayOptions = DAY_NAMES.map(function(d, i) {
-          return '<option value="' + i + '"' + (String(i) === dayVal ? ' selected' : '') + '>' + d + '</option>';
-        }).join('');
+        body.innerHTML = html;
 
-        body.innerHTML =
-          '<div class="meeting-row">' +
-            '<span class="meeting-label">Meeting Day</span>' +
-            '<select class="meeting-field" onchange="saveMeetingDay(this.value)">' + dayOptions + '</select>' +
-          '</div>' +
-          '<div class="meeting-row">' +
-            '<span class="meeting-label">Meeting Time</span>' +
-            '<input type="time" class="meeting-field" value="' + timeVal + '" onchange="saveMeetingTime(this.value)">' +
-          '</div>' +
-          '<div class="meeting-cancel-eyebrow" style="margin-top:14px;font-size:0.6rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;opacity:0.5;padding:0 2px 6px;">Cancel This Week\'s Meeting</div>' +
-          '<div class="meeting-cancel-grid">' +
-            (cancelRowsHTML || '<div style="font-size:0.65rem;opacity:0.4;padding:4px 0;">No branches to manage.</div>') +
-          '</div>' +
-          '<div class="meeting-save-msg" id="meeting-save-msg"></div>';
+        // Populate member dropdowns for add-leader forms
+        if (isAdmin) await _populateLeaderDropdowns(data.branches, userBc, isAZ);
+
       } catch(e) {
         body.innerHTML = '<div style="padding:8px;font-size:0.65rem;color:#b83232;">Failed to load — try reopening this section.</div>';
+        console.error('loadBranchManagement:', e);
       }
     }
 
-    function showMeetingMsg(msg, ok) {
-      var el = document.getElementById('meeting-save-msg');
+    async function _populateLeaderDropdowns(branches, userBc, isAZ) {
+      try {
+        var res = await fetch(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: 'action=getRosterMembers'
+        });
+        var data = await res.json();
+        if (!data.members) return;
+        branches.forEach(function(b) {
+          var sel = document.getElementById('add-leader-email-' + b.code);
+          if (!sel) return;
+          var leaderEmails = {};
+          (b.leadership || []).forEach(function(l) { leaderEmails[l.email.toLowerCase()] = true; });
+          var nonLeaders = data.members.filter(function(m) {
+            return m.branchCode === b.code && !leaderEmails[m.email.toLowerCase()];
+          });
+          nonLeaders.forEach(function(m) {
+            var opt = document.createElement('option');
+            opt.value = m.email;
+            opt.textContent = m.name + ' (' + m.email + ')';
+            sel.appendChild(opt);
+          });
+        });
+      } catch(e) { console.warn('_populateLeaderDropdowns:', e); }
+    }
+
+    function showAddBranchForm() {
+      var f = document.getElementById('add-branch-form');
+      if (f) f.classList.toggle('hidden');
+    }
+
+    async function submitAddBranch() {
+      var code = (document.getElementById('nb-code').value || '').trim().toUpperCase();
+      var name = (document.getElementById('nb-name').value || '').trim();
+      var msg  = document.getElementById('add-branch-msg');
+      if (!code || !name) { if(msg){msg.textContent='Code and name required.';msg.style.color='#b83232';} return; }
+      try {
+        var res = await fetch(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: 'action=addBranch&code=' + encodeURIComponent(code) + '&name=' + encodeURIComponent(name)
+        });
+        var r = await res.json();
+        if (r.ok) {
+          if(msg){msg.textContent='Branch added!';msg.style.color='#1D9E75';}
+          setTimeout(loadBranchManagement, 900);
+        } else { if(msg){msg.textContent=r.error||'Error.';msg.style.color='#b83232';} }
+      } catch(e) { if(msg){msg.textContent='Network error.';msg.style.color='#b83232';} }
+    }
+
+    function showAddLeaderForm(branchCode) {
+      var f = document.getElementById('add-leader-form-' + branchCode);
+      if (f) f.classList.toggle('hidden');
+    }
+
+    async function submitAddLeader(branchCode) {
+      var sel      = document.getElementById('add-leader-email-' + branchCode);
+      var roleInp  = document.getElementById('add-leader-role-' + branchCode);
+      var msg      = document.getElementById('add-leader-msg-' + branchCode);
+      var email    = sel     ? sel.value.trim()             : '';
+      var roleCode = roleInp ? roleInp.value.trim().toUpperCase() : '';
+      if (!email || !roleCode) { if(msg){msg.textContent='Select a member and enter a role code.';msg.style.color='#b83232';} return; }
+      try {
+        var res = await fetch(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: 'action=setBranchLeaderRole&email=' + encodeURIComponent(email) + '&roleCode=' + encodeURIComponent(roleCode)
+        });
+        var r = await res.json();
+        if (r.ok) { if(msg){msg.textContent='Saved!';msg.style.color='#1D9E75';} setTimeout(loadBranchManagement, 800); }
+        else { if(msg){msg.textContent=r.error||'Error.';msg.style.color='#b83232';} }
+      } catch(e) { if(msg){msg.textContent='Network error.';msg.style.color='#b83232';} }
+    }
+
+    async function removeLeader(email, branchCode) {
+      if (!confirm('Remove this person from the leadership team? Their role code will be cleared.')) return;
+      try {
+        var res = await fetch(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: 'action=setBranchLeaderRole&email=' + encodeURIComponent(email) + '&roleCode='
+        });
+        var r = await res.json();
+        if (r.ok) loadBranchManagement();
+        else alert(r.error || 'Failed to remove.');
+      } catch(e) { alert('Network error.'); }
+    }
+
+    function toggleGoalEdit(branchCode) {
+      var view   = document.getElementById('goal-view-'   + branchCode);
+      var edit   = document.getElementById('goal-edit-'   + branchCode);
+      var toggle = document.getElementById('goal-toggle-' + branchCode);
+      if (!edit) return;
+      var opening = edit.classList.contains('hidden');
+      edit.classList.toggle('hidden', !opening);
+      if (view) view.classList.toggle('hidden', opening);
+      if (toggle) toggle.textContent = opening ? 'Cancel' : 'Edit Goal';
+    }
+
+    async function saveGoal(branchCode) {
+      var input = document.getElementById('goal-input-' + branchCode);
+      var msg   = document.getElementById('goal-msg-'   + branchCode);
+      var goal  = parseFloat(input ? input.value : 0);
+      if (isNaN(goal) || goal < 0) { if(msg){msg.textContent='Invalid amount.';msg.style.color='#b83232';} return; }
+      try {
+        var res = await fetch(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: 'action=saveBranchGoal&branchCode=' + encodeURIComponent(branchCode) + '&goal=' + encodeURIComponent(goal)
+        });
+        var r = await res.json();
+        if (r.ok) { if(msg){msg.textContent='Saved!';msg.style.color='#1D9E75';} setTimeout(loadBranchManagement, 800); }
+        else { if(msg){msg.textContent=r.error||'Error.';msg.style.color='#b83232';} }
+      } catch(e) { if(msg){msg.textContent='Network error.';msg.style.color='#b83232';} }
+    }
+
+    function showMeetingMsg(bc, msg, ok) {
+      var el = document.getElementById('meeting-save-msg-' + bc);
       if (!el) return;
       el.textContent = msg;
+      el.style.display = 'block';
       el.style.color = ok ? '#1D9E75' : '#b83232';
       el.style.fontSize = '0.65rem';
       el.style.fontWeight = '700';
       el.style.padding = '6px 2px 0';
       clearTimeout(el._t);
-      el._t = setTimeout(function() { el.textContent = ''; }, 3000);
+      el._t = setTimeout(function() { el.textContent = ''; el.style.display = 'none'; }, 3000);
     }
 
-    async function saveMeetingDay(day) {
+    async function saveMeetingDay(branchCode, day) {
       try {
         var res = await fetch(GAS_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: 'action=saveMeetingConfig&day=' + encodeURIComponent(day)
+          body: 'action=saveMeetingConfig&branchCode=' + encodeURIComponent(branchCode) + '&day=' + encodeURIComponent(day)
         });
         var r = await res.json();
-        showMeetingMsg(r.ok ? 'Saved!' : (r.error || 'Error saving.'), !!r.ok);
-      } catch(e) { showMeetingMsg('Error saving.', false); }
+        showMeetingMsg(branchCode, r.ok ? 'Saved!' : (r.error || 'Error saving.'), !!r.ok);
+      } catch(e) { showMeetingMsg(branchCode, 'Error saving.', false); }
     }
 
-    async function saveMeetingTime(time) {
+    async function saveMeetingTime(branchCode, time) {
       try {
         var res = await fetch(GAS_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: 'action=saveMeetingConfig&time=' + encodeURIComponent(time)
+          body: 'action=saveMeetingConfig&branchCode=' + encodeURIComponent(branchCode) + '&time=' + encodeURIComponent(time)
         });
         var r = await res.json();
-        showMeetingMsg(r.ok ? 'Saved!' : (r.error || 'Error saving.'), !!r.ok);
-      } catch(e) { showMeetingMsg('Error saving.', false); }
+        showMeetingMsg(branchCode, r.ok ? 'Saved!' : (r.error || 'Error saving.'), !!r.ok);
+      } catch(e) { showMeetingMsg(branchCode, 'Error saving.', false); }
     }
 
     async function saveMeetingCancel(branchCode, cancelled) {
@@ -5234,8 +5466,8 @@
           body: 'action=cancelMeeting&branchCode=' + encodeURIComponent(branchCode) + '&cancelled=' + (cancelled ? 'Yes' : 'No')
         });
         var r = await res.json();
-        showMeetingMsg(r.ok ? 'Saved!' : (r.error || 'Error saving.'), !!r.ok);
-      } catch(e) { showMeetingMsg('Error saving.', false); }
+        showMeetingMsg(branchCode, r.ok ? 'Saved!' : (r.error || 'Error saving.'), !!r.ok);
+      } catch(e) { showMeetingMsg(branchCode, 'Error saving.', false); }
     }
 
     async function sendPaymentReminder(email) {
@@ -5264,11 +5496,19 @@
       } catch(e) { alert('Failed to send.'); }
     }
 
-    window.loadMeetingConfig          = loadMeetingConfig;
-    window.saveMeetingDay             = saveMeetingDay;
-    window.saveMeetingTime            = saveMeetingTime;
-    window.saveMeetingCancel          = saveMeetingCancel;
-    window.sendPaymentReminder        = sendPaymentReminder;
+    window.loadBranchManagement         = loadBranchManagement;
+    window.loadMeetingConfig            = loadBranchManagement; // backward compat
+    window.showAddBranchForm            = showAddBranchForm;
+    window.submitAddBranch              = submitAddBranch;
+    window.showAddLeaderForm            = showAddLeaderForm;
+    window.submitAddLeader              = submitAddLeader;
+    window.removeLeader                 = removeLeader;
+    window.toggleGoalEdit               = toggleGoalEdit;
+    window.saveGoal                     = saveGoal;
+    window.saveMeetingDay               = saveMeetingDay;
+    window.saveMeetingTime              = saveMeetingTime;
+    window.saveMeetingCancel            = saveMeetingCancel;
+    window.sendPaymentReminder          = sendPaymentReminder;
     window.sendBostonDeadlineReminderAll = sendBostonDeadlineReminderAll;
   })();
 </script>

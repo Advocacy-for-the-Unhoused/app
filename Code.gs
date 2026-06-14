@@ -245,9 +245,10 @@ function doPost(e) {
       result = getMeetingConfig_();
 
     } else if (p.action === "saveMeetingConfig") {
-      if (p.day  !== undefined) setMeetingConfigKey_('meetingDay',  p.day);
-      if (p.time !== undefined) setMeetingConfigKey_('meetingTime', p.time);
-      result = { success: true };
+      const bc = (p.branchCode || '').toUpperCase();
+      if (bc && p.day  !== undefined) setMeetingConfigKey_('meetingDay_'  + bc, p.day);
+      if (bc && p.time !== undefined) setMeetingConfigKey_('meetingTime_' + bc, p.time);
+      result = { ok: true };
 
     } else if (p.action === "cancelMeeting") {
       setMeetingConfigKey_('cancel_' + (p.branchCode || '').toUpperCase(), p.cancelled || 'No');
@@ -276,6 +277,20 @@ function doPost(e) {
 
     } else if (p.action === "denyVolunteer") {
       result = denyVolunteer(parseInt(p.rowIndex, 10));
+
+    // ── Branch Management ──────────────────────────────────────────────────────
+    } else if (p.action === "getBranchManagement") {
+      result = getBranchManagement();
+
+    } else if (p.action === "addBranch") {
+      result = addBranch_(p.code || '', p.name || '');
+
+    } else if (p.action === "saveBranchGoal") {
+      setMeetingConfigKey_('goal_' + (p.branchCode || '').toUpperCase(), p.goal || '0');
+      result = { ok: true };
+
+    } else if (p.action === "setBranchLeaderRole") {
+      result = setBranchLeaderRole_(p.email || '', p.roleCode || '');
 
     } else {
       result = { error: "Invalid request" };
@@ -454,8 +469,18 @@ function approveVolunteer(rowIndex) {
   pending.getRange(rowIndex, 6).setValue('Approved');
 
   // Add to Roster: A=blank, B=name, C=phone, D=email, E=position, F=branchCode, G=photoUrl, H=Active, I=DoB
+  // Insert after the last row whose branch code matches, so the roster stays grouped by branch.
   const roster = ss.getSheetByName('Roster') || ss.insertSheet('Roster');
-  roster.appendRow(['', name, phone, email, '', branchCode, photoUrl, 'Yes', '']);
+  const allRows   = roster.getDataRange().getValues();
+  let insertAfter = allRows.length; // default: after last row
+  for (let i = 0; i < allRows.length; i++) {
+    if ((allRows[i][5] || '').toString().trim().toUpperCase() === branchCode) {
+      insertAfter = i + 1; // 1-based sheet row
+    }
+  }
+  roster.insertRowAfter(insertAfter);
+  roster.getRange(insertAfter + 1, 1, 1, 9)
+        .setValues([['', name, phone, email, '', branchCode, photoUrl, 'Yes', '']]);
 
   // Notify the volunteer
   try {
@@ -1373,7 +1398,12 @@ function getMeetingConfigSheet_() {
     sheet.getRange(1, 1, 1, 2).setValues([['Key', 'Value']]).setFontWeight('bold');
     sheet.setFrozenRows(1);
     [['meetingDay','1'],['meetingTime','17:00'],
-     ['cancel_A','No'],['cancel_H','No'],['cancel_W','No'],['cancel_S','No'],['cancel_M','No']]
+     ['cancel_A','No'],['cancel_H','No'],['cancel_W','No'],['cancel_S','No'],['cancel_M','No'],
+     ['meetingDay_A','1'],['meetingTime_A','17:00'],
+     ['meetingDay_H','1'],['meetingTime_H','17:00'],
+     ['meetingDay_W','1'],['meetingTime_W','17:00'],
+     ['meetingDay_S','1'],['meetingTime_S','17:00'],
+     ['meetingDay_M','1'],['meetingTime_M','17:00']]
      .forEach(function(row) { sheet.appendRow(row); });
   }
   return sheet;
@@ -1401,39 +1431,40 @@ function setMeetingConfigKey_(key, value) {
 // Hourly trigger: fires every hour, sends push 4 hours before meeting time on meeting day.
 // Run setupMeetingTrigger() once from the Apps Script editor to install.
 function checkMeetingNotifications() {
-  const config      = getMeetingConfig_();
-  const meetingDay  = parseInt(config.meetingDay  || '1');
-  const meetingTime = config.meetingTime || '17:00';
-  const parts = meetingTime.split(':');
-  const meetH = parseInt(parts[0]);
-  const meetM = parseInt(parts[1] || '0');
-
-  const tz  = Session.getScriptTimeZone();
-  const now = new Date();
-  if (now.getDay() !== meetingDay) return;
-
-  const nowH    = parseInt(Utilities.formatDate(now, tz, 'H'));
-  const nowM    = parseInt(Utilities.formatDate(now, tz, 'm'));
-  const notifyH = meetH - 4;
-  if (nowH !== notifyH || nowM > 9) return;  // 10-minute window
-
-  const days    = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  const hour12  = meetH % 12 || 12;
-  const ampm    = meetH < 12 ? 'AM' : 'PM';
-  const timeStr = hour12 + ':' + String(meetM).padStart(2,'0') + ' ' + ampm;
+  const config = getMeetingConfig_();
+  const tz     = Session.getScriptTimeZone();
+  const now    = new Date();
+  const nowDay = now.getDay();
+  const nowH   = parseInt(Utilities.formatDate(now, tz, 'H'));
+  const nowM   = parseInt(Utilities.formatDate(now, tz, 'm'));
+  const days   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
   ['A','H','W','S','M'].forEach(function(bc) {
-    const cancelled = (config['cancel_' + bc] || 'No').toLowerCase() === 'yes';
-    const tokens    = getFcmTokensByBranch_(bc);
+    const meetingDay  = parseInt(config['meetingDay_'  + bc] || config.meetingDay  || '1');
+    const meetingTime = config['meetingTime_' + bc] || config.meetingTime || '17:00';
+    const parts   = meetingTime.split(':');
+    const meetH   = parseInt(parts[0]);
+    const meetM   = parseInt(parts[1] || '0');
+    const notifyH = meetH - 4;
+
+    if (nowDay !== meetingDay) return;
+    if (nowH !== notifyH || nowM > 9) return;
+
+    const tokens = getFcmTokensByBranch_(bc);
     if (!tokens.length) return;
+
+    const cancelled = (config['cancel_' + bc] || 'No').toLowerCase() === 'yes';
     if (cancelled) {
       sendPushToMany_(tokens, 'No Meeting This Week',
         'Reminder: we will NOT be meeting this ' + days[meetingDay] + '. See you next week!');
     } else {
+      const hour12  = meetH % 12 || 12;
+      const ampm    = meetH < 12 ? 'AM' : 'PM';
+      const timeStr = hour12 + ':' + String(meetM).padStart(2,'0') + ' ' + ampm;
       sendPushToMany_(tokens, 'Meeting Today!',
         'Branch meeting is today at ' + timeStr + '. See you there!');
     }
-    setMeetingConfigKey_('cancel_' + bc, 'No');  // reset after sending
+    setMeetingConfigKey_('cancel_' + bc, 'No');
   });
 }
 
@@ -1443,5 +1474,129 @@ function setupMeetingTrigger() {
     .forEach(function(t) { ScriptApp.deleteTrigger(t); });
   ScriptApp.newTrigger('checkMeetingNotifications').timeBased().everyHours(1).create();
   Logger.log('Meeting notification trigger installed (hourly).');
+}
+
+// ── Branch Management ─────────────────────────────────────────────────────────
+
+function getBranchesSheet_() {
+  const ss = SpreadsheetApp.openById(ROSTER_SS_ID);
+  let sheet = ss.getSheetByName('Branches');
+  if (!sheet) {
+    sheet = ss.insertSheet('Branches');
+    sheet.getRange(1, 1, 1, 2).setValues([['Code', 'Name']]).setFontWeight('bold');
+    sheet.setFrozenRows(1);
+    Object.entries(BRANCH_NAMES).forEach(function([code, name]) {
+      sheet.appendRow([code, name]);
+    });
+  }
+  return sheet;
+}
+
+function getBranches_() {
+  const sheet = getBranchesSheet_();
+  const data  = sheet.getDataRange().getValues();
+  const branches = [];
+  for (let i = 1; i < data.length; i++) {
+    const code = String(data[i][0] || '').trim().toUpperCase();
+    const name = String(data[i][1] || '').trim();
+    if (code && name) branches.push({ code, name });
+  }
+  return branches;
+}
+
+function getBranchManagement() {
+  try {
+    const branches = getBranches_();
+    const config   = getMeetingConfig_();
+
+    // Raised totals by branch from donations sheet
+    const donSheet = SpreadsheetApp.openById(DONATIONS_SS_ID).getSheetByName('Sheet1');
+    const raisedByBranch = {};
+    if (donSheet) {
+      const dlast = donSheet.getLastRow();
+      if (dlast > 1) {
+        const ddata = donSheet.getRange(2, 1, dlast - 1, 7).getValues();
+        ddata.forEach(function(row) {
+          const bc  = String(row[5] || '').trim().toUpperCase();
+          const amt = Number(row[1] || 0);
+          if (bc) raisedByBranch[bc] = (raisedByBranch[bc] || 0) + amt;
+        });
+      }
+    }
+
+    // Leadership by branch: roster members with non-empty role code (col A)
+    const rosterSheet = SpreadsheetApp.openById(ROSTER_SS_ID).getSheetByName('Roster');
+    const leadersByBranch = {};
+    if (rosterSheet) {
+      const rdata = rosterSheet.getDataRange().getValues();
+      for (let i = 1; i < rdata.length; i++) {
+        const roleCode = String(rdata[i][0] || '').trim();
+        const name     = String(rdata[i][1] || '').trim();
+        const email    = String(rdata[i][3] || '').trim().toLowerCase();
+        const bc       = String(rdata[i][5] || '').trim().toUpperCase();
+        if (roleCode && name && email && bc) {
+          if (!leadersByBranch[bc]) leadersByBranch[bc] = [];
+          leadersByBranch[bc].push({ name, email, roleCode });
+        }
+      }
+    }
+
+    const result = branches.map(function(b) {
+      const goal = parseFloat(config['goal_' + b.code] || String(BRANCH_GOAL_TARGET)) || BRANCH_GOAL_TARGET;
+      return {
+        code:       b.code,
+        name:       b.name,
+        meetingDay: config['meetingDay_'  + b.code] || '1',
+        meetingTime:config['meetingTime_' + b.code] || '17:00',
+        cancelled:  (config['cancel_' + b.code] || 'No').toLowerCase() === 'yes',
+        goal:       goal,
+        raised:     Math.round((raisedByBranch[b.code] || 0) * 100) / 100,
+        leadership: leadersByBranch[b.code] || []
+      };
+    });
+
+    return { branches: result };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+function addBranch_(code, name) {
+  code = String(code || '').trim().toUpperCase();
+  name = String(name || '').trim();
+  if (!code || !name) return { error: 'Code and name required' };
+  if (code.length > 3) return { error: 'Branch code must be 1-3 characters' };
+
+  const existing = getBranches_();
+  if (existing.find(function(b) { return b.code === code; })) {
+    return { error: 'Branch code already exists' };
+  }
+
+  getBranchesSheet_().appendRow([code, name]);
+  setMeetingConfigKey_('meetingDay_'  + code, '1');
+  setMeetingConfigKey_('meetingTime_' + code, '17:00');
+  setMeetingConfigKey_('cancel_'      + code, 'No');
+  setMeetingConfigKey_('goal_'        + code, String(BRANCH_GOAL_TARGET));
+
+  return { ok: true };
+}
+
+function setBranchLeaderRole_(email, roleCode) {
+  email    = String(email    || '').trim().toLowerCase();
+  roleCode = String(roleCode || '').trim();
+  if (!email) return { error: 'Email required' };
+
+  const sheet = SpreadsheetApp.openById(ROSTER_SS_ID).getSheetByName('Roster');
+  if (!sheet) return { error: 'Roster sheet not found' };
+
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    const rowEmail = String(data[i][3] || '').trim().toLowerCase();
+    if (rowEmail === email) {
+      sheet.getRange(i + 1, 1).setValue(roleCode);
+      return { ok: true };
+    }
+  }
+  return { error: 'Member not found in roster' };
 }
 
