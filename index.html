@@ -1456,13 +1456,13 @@
     .vol-card.expanded .vol-card-body { display: block; }
 
     /* PAID TOGGLE STRIPS */
-    .paid-toggle-strip { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+    .paid-toggle-strip { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--border); }
     .paid-toggle-strip:last-of-type { border-bottom: 2px solid var(--dark); }
-    .paid-toggle-strip-label { display: flex; flex-direction: column; gap: 2px; }
+    .paid-toggle-strip-label { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow: hidden; }
     .paid-toggle-strip-label .micro { color: rgba(26,19,17,0.35); }
-    .paid-status-text { font-size: 0.8rem; font-weight: 700; color: var(--dark); }
+    .paid-status-text { font-size: 0.78rem; font-weight: 700; color: var(--dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-    .paid-toggle-btn { font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 0.62rem; letter-spacing: 0.5px; text-transform: uppercase; padding: 0 14px; height: 36px; cursor: pointer; display: flex; align-items: center; gap: 5px; border-radius: 0; -webkit-appearance: none; border: 2px solid var(--dark); box-shadow: 2px 2px 0 var(--dark); touch-action: manipulation; flex-shrink: 0; }
+    .paid-toggle-btn { font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 0.6rem; letter-spacing: 0.5px; text-transform: uppercase; padding: 0 10px; height: 34px; cursor: pointer; display: flex; align-items: center; gap: 4px; border-radius: 0; -webkit-appearance: none; border: 2px solid var(--dark); box-shadow: 2px 2px 0 var(--dark); touch-action: manipulation; white-space: nowrap; }
     .paid-toggle-btn.mark-paid         { background: var(--green); color: white; }
     .paid-toggle-btn.mark-unpaid       { background: white;        color: var(--dark); }
     .paid-toggle-btn.mark-train-paid   { background: var(--blue);  color: white; }
@@ -3898,9 +3898,9 @@
           ${buildPaidToggleStrips(vol)}
           ${buildFixedCosts(vol)}
           ${buildFoodSection(vol)}
-          ${!vol.paid ? `<div style="padding:10px 14px 0;">
-            <button class="push-reminder-btn" onclick="sendPaymentReminder('${esc(vol.email)}')">
-              <i class="bi bi-bell-fill"></i> Push Payment Reminder
+          ${!vol.paid ? `<div style="padding:10px 12px 0;">
+            <button class="push-reminder-btn" style="width:100%;box-sizing:border-box;justify-content:center;" onclick="sendPaymentReminder('${esc(vol.email)}')">
+              <i class="bi bi-bell-fill"></i> Send Payment Reminder
             </button>
           </div>` : ''}
           <div class="vol-card-subtotals">
@@ -3922,8 +3922,8 @@
           <button class="paid-toggle-btn ${vol.trainPaid ? 'mark-train-unpaid' : 'mark-train-paid'}"
             onclick="toggleTrainPaid(this, '${esc(vol.email)}', ${vol.trainPaid})">
             ${vol.trainPaid
-              ? '<i class="bi bi-x-circle"></i> Unmark Train'
-              : '<i class="bi bi-train-front"></i> Mark Train Paid'}
+              ? '<i class="bi bi-x-circle"></i> Unmark'
+              : '<i class="bi bi-train-front"></i> Mark Train'}
           </button>
         </div>` : '';
 
@@ -3936,8 +3936,8 @@
           <button class="paid-toggle-btn ${vol.paid ? 'mark-unpaid' : 'mark-paid'}"
             onclick="togglePaid(this, '${esc(vol.email)}', ${vol.paid})">
             ${vol.paid
-              ? '<i class="bi bi-x-circle"></i> Mark Unpaid'
-              : '<i class="bi bi-check-circle"></i> Mark Fully Paid'}
+              ? '<i class="bi bi-x-circle"></i> Unmark'
+              : '<i class="bi bi-check-circle"></i> Mark Paid'}
           </button>
         </div>`;
 
@@ -3950,7 +3950,7 @@
       gasCall('updateVolunteerPaid', {email: email, paid: newPaid}, res => {
           btn.disabled = false;
           if (!res.success) {
-            btn.innerHTML = currentlyPaid ? '<i class="bi bi-x-circle"></i> Mark Unpaid' : '<i class="bi bi-check-circle"></i> Mark Fully Paid';
+            btn.innerHTML = currentlyPaid ? '<i class="bi bi-x-circle"></i> Unmark' : '<i class="bi bi-check-circle"></i> Mark Paid';
             alert('Update failed: ' + (res.error || 'unknown')); return;
           }
           const card  = btn.closest('.vol-card');
@@ -3967,7 +3967,7 @@
             badge.innerHTML = '<i class="bi bi-clock"></i> Unpaid';
           }
           btn.className = 'paid-toggle-btn ' + (newPaid ? 'mark-unpaid' : 'mark-paid');
-          btn.innerHTML = newPaid ? '<i class="bi bi-x-circle"></i> Mark Unpaid' : '<i class="bi bi-check-circle"></i> Mark Fully Paid';
+          btn.innerHTML = newPaid ? '<i class="bi bi-x-circle"></i> Unmark' : '<i class="bi bi-check-circle"></i> Mark Paid';
           btn.onclick   = () => togglePaid(btn, email, newPaid);
           btn.closest('.paid-toggle-strip').querySelector('.paid-status-text').textContent = newPaid ? '✓ Full payment received' : 'Awaiting full payment';
           applyFilter(currentFilter);
@@ -3978,7 +3978,7 @@
           document.getElementById('pill-unpaid').textContent     = allCards.length - paidCards.length;
         }, () => {
           btn.disabled = false;
-          btn.innerHTML = currentlyPaid ? '<i class="bi bi-x-circle"></i> Mark Unpaid' : '<i class="bi bi-check-circle"></i> Mark Fully Paid';
+          btn.innerHTML = currentlyPaid ? '<i class="bi bi-x-circle"></i> Unmark' : '<i class="bi bi-check-circle"></i> Mark Paid';
           alert('Network error — try again.');
         });
     }
@@ -3989,7 +3989,7 @@
       gasCall('updateVolunteerTrainPaid', {email: email, paid: newPaid}, res => {
           btn.disabled = false;
           if (!res.success) {
-            btn.innerHTML = currentlyPaid ? '<i class="bi bi-x-circle"></i> Unmark Train' : '<i class="bi bi-train-front"></i> Mark Train Paid';
+            btn.innerHTML = currentlyPaid ? '<i class="bi bi-x-circle"></i> Unmark' : '<i class="bi bi-train-front"></i> Mark Train';
             alert('Update failed: ' + (res.error || 'unknown')); return;
           }
           const card  = btn.closest('.vol-card');
@@ -4000,12 +4000,12 @@
             badge.innerHTML = newPaid ? '<i class="bi bi-train-front"></i> Train Paid' : '<i class="bi bi-clock"></i> Unpaid';
           }
           btn.className = 'paid-toggle-btn ' + (newPaid ? 'mark-train-unpaid' : 'mark-train-paid');
-          btn.innerHTML = newPaid ? '<i class="bi bi-x-circle"></i> Unmark Train' : '<i class="bi bi-train-front"></i> Mark Train Paid';
+          btn.innerHTML = newPaid ? '<i class="bi bi-x-circle"></i> Unmark' : '<i class="bi bi-train-front"></i> Mark Train';
           btn.onclick   = () => toggleTrainPaid(btn, email, newPaid);
           btn.closest('.paid-toggle-strip').querySelector('.paid-status-text').textContent = newPaid ? '✓ Train ticket paid' : 'Train ticket unpaid';
         }, () => {
           btn.disabled = false;
-          btn.innerHTML = currentlyPaid ? '<i class="bi bi-x-circle"></i> Unmark Train' : '<i class="bi bi-train-front"></i> Mark Train Paid';
+          btn.innerHTML = currentlyPaid ? '<i class="bi bi-x-circle"></i> Unmark' : '<i class="bi bi-train-front"></i> Mark Train';
           alert('Network error — try again.');
         });
     }
