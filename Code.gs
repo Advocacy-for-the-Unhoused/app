@@ -1504,6 +1504,11 @@ function getBranches_() {
   return branches;
 }
 
+function isOfficerCode_(code) {
+  if (!code) return false;
+  return /^[AZP]$/.test(code) || /O$/.test(code);
+}
+
 function getBranchManagement() {
   try {
     const branches = getBranches_();
@@ -1524,7 +1529,7 @@ function getBranchManagement() {
       }
     }
 
-    // Leadership by branch: roster members with non-empty role code (col A)
+    // Leadership by branch: only officers (A, Z, P, or any code ending in O e.g. WO, SO, FO, CO)
     const rosterSheet = SpreadsheetApp.openById(ROSTER_SS_ID).getSheetByName('Roster');
     const leadersByBranch = {};
     if (rosterSheet) {
@@ -1534,7 +1539,7 @@ function getBranchManagement() {
         const name     = String(rdata[i][1] || '').trim();
         const email    = String(rdata[i][3] || '').trim().toLowerCase();
         const bc       = String(rdata[i][5] || '').trim().toUpperCase();
-        if (roleCode && name && email && bc) {
+        if (isOfficerCode_(roleCode) && name && email && bc) {
           if (!leadersByBranch[bc]) leadersByBranch[bc] = [];
           leadersByBranch[bc].push({ name, email, roleCode });
         }
