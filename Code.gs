@@ -1539,6 +1539,11 @@ function setupMeetingTrigger() {
     .forEach(function(t) { ScriptApp.deleteTrigger(t); });
   ScriptApp.newTrigger('checkMeetingNotifications').timeBased().everyHours(1).create();
   Logger.log('Meeting notification trigger installed (hourly).');
+  setupTaskDueTrigger();
+}
+
+function setupAllTriggers() {
+  setupMeetingTrigger();
 }
 
 // ── Branch Management ─────────────────────────────────────────────────────────
