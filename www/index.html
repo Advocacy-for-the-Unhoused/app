@@ -5043,19 +5043,19 @@
       const task = tbFindTask(id);
       if (!task) return;
       const chip = row.querySelector('.due-chip');
+      if (!chip) return;
       const inp = document.createElement('input');
       inp.type = 'date'; inp.className = 'due-date-input'; inp.value = task.dueDate || '';
       chip.replaceWith(inp);
-      try { inp.showPicker(); } catch(e) { inp.focus(); }
+      inp.focus();
       let committed = false;
-      const save = async () => {
+      inp.onchange = async () => {
         if (committed) return; committed = true;
         const val = inp.value;
         task.dueDate = val; tbRender();
         await tbSaveChange('taskDueDate', id, val);
       };
-      inp.onchange = () => inp.blur();
-      inp.onblur = save;
+      inp.onblur = () => { if (!committed) { committed = true; tbRender(); } };
       inp.onkeydown = e => { if (e.key==='Escape') { committed=true; tbRender(); } };
     }
 
