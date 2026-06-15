@@ -699,6 +699,10 @@ function handleGetDashboard(email, branchCode) {
     recentActivity.reverse();
     const activity = recentActivity.slice(0, 5);
 
+    // ── Branch fundraising goal (from Meeting Config, falls back to constant) ──
+    const config    = getMeetingConfig_();
+    const goalTarget = parseFloat(config['goal_' + (branchCode || '').toUpperCase()]) || BRANCH_GOAL_TARGET;
+
     // ── Donations for this volunteer + branch totals ───────────────────────────
     const donSheet = SpreadsheetApp.openById(DONATIONS_SS_ID).getSheetByName("Sheet1");
     let donationCount = 0;
@@ -728,7 +732,7 @@ function handleGetDashboard(email, branchCode) {
       hoursApproved,
       donationCount,
       goalRaised: Math.round(goalRaised * 100) / 100,
-      goalTarget: BRANCH_GOAL_TARGET,
+      goalTarget,
       recentActivity: activity
     };
 
