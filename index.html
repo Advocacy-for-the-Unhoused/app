@@ -3304,7 +3304,8 @@
           body += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(String(params[k]));
         });
       }
-      fetch(SCRIPT_URL, {
+      var _su = window.SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbwM8DrClchV9B5bfKYMaDURSRzTqlHA3mIVfKLe5HNO85zQYys2rL55WXSDEz89_PxS/exec';
+      fetch(_su, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: body
@@ -4659,7 +4660,8 @@
           if (args[i] !== undefined) body += '&' + name + '=' + encodeURIComponent(String(args[i]));
         });
       }
-      return fetch(SCRIPT_URL, {
+      var _su2 = window.SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbwM8DrClchV9B5bfKYMaDURSRzTqlHA3mIVfKLe5HNO85zQYys2rL55WXSDEz89_PxS/exec';
+      return fetch(_su2, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body
