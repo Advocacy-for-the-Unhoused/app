@@ -2325,7 +2325,8 @@
           <div class="admin-eyebrow">Advocacy for the Unhoused</div>
           <div class="admin-title">Volunteer <span>Hours</span></div>
         </div>
-        <div style="display:flex;align-items:center;gap:12px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="reg-pill" id="hrs-total-pill" style="display:none;"></span>
           <span class="reg-pill" id="hrs-pending-pill" style="display:none;"></span>
           <i class="bi bi-chevron-down admin-section-chev"></i>
         </div>
@@ -3784,6 +3785,7 @@
         });
       loadRegistrations();
       loadHoursSection();
+      if (typeof window.loadQualifiedPersons === 'function') window.loadQualifiedPersons();
     }
 
     function loadRegistrations() {
@@ -4389,6 +4391,16 @@
         pill.className = 'reg-pill submitted';
       } else {
         pill.style.display = 'none';
+      }
+      var approved = hrsAllRecords.filter(function(r) {
+        var a = (r.approved || '').toLowerCase();
+        return a === 'yes' || a === 'approved';
+      });
+      var totalHrs = approved.reduce(function(sum, r) { return sum + (parseFloat(r.hours) || 0); }, 0);
+      var totalPill = document.getElementById('hrs-total-pill');
+      if (totalPill) {
+        totalPill.textContent = totalHrs + ' hrs logged';
+        totalPill.style.display = '';
       }
 
       var list = document.getElementById('hrs-pending-list');
