@@ -1896,6 +1896,16 @@
   }
   #tabTasks .btn-ghost:active { border-color: var(--dark); color: var(--dark); }
   #tabTasks .btn-primary.full { flex: 2; justify-content: center; }
+  /* COMPLETED TASK HIDING */
+  #tabTasks .task-row.tb-task-done { display: none; }
+  #tabTasks .team-card.show-done .task-row.tb-task-done { display: flex; }
+  #tabTasks .show-done-btn {
+    width: 100%; padding: 10px 16px; background: none; border: none; border-top: 1px solid var(--border);
+    font-family: 'Montserrat', sans-serif; font-size: 0.68rem; font-weight: 700;
+    letter-spacing: 0.5px; text-transform: uppercase; color: rgba(26,19,17,0.45);
+    cursor: pointer; text-align: left; touch-action: manipulation;
+  }
+  #tabTasks .show-done-btn:active { color: var(--dark); }
   /* TOAST */
   #tabTasks .toast {
     position: fixed; bottom: calc(72px + 16px + env(safe-area-inset-bottom)); left: 50%;
@@ -2706,6 +2716,19 @@
         <div class="modal-btns">
           <button class="btn-ghost" onclick="tbCloseModal()">Cancel</button>
           <button class="btn-primary full" onclick="tbConfirmAddTeam()">Add Team</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-bg" id="tb-hours-prompt-bg">
+      <div class="modal-box">
+        <h3>Log hours?</h3>
+        <p style="font-size:0.82rem;font-family:'Montserrat',sans-serif;color:rgba(26,19,17,0.65);margin-bottom:20px;line-height:1.5;">
+          Would you like to submit an hours request for this task?
+        </p>
+        <div class="modal-btns">
+          <button class="btn-ghost" onclick="tbCloseHoursPrompt()">No thanks</button>
+          <button class="btn-primary full" onclick="tbGoToHours()">Yes, log hours</button>
         </div>
       </div>
     </div>
@@ -4887,6 +4910,7 @@
         <div class="tasks-list" id="tb-tl-${tbCssId(team.name)}">
           ${team.tasks.map(t => tbTaskHTML(team, t)).join('')}
         </div>
+        ${done > 0 ? `<button class="show-done-btn" onclick="tbToggleShowDone(this)">Show ${done} completed</button>` : ''}
         <div class="add-task-row">
           <input class="add-task-input" placeholder="Add a task…"
             onkeydown="tbAddTaskKey(event, '${tbEsc(team.name)}', this)" />
@@ -4918,7 +4942,7 @@
       const tagColor = task.assignee ? `border-color:${team.color};color:${team.color}` : '';
       const dueClass = tbDueClass(task.dueDate);
       const dueText  = tbFmtDue(task.dueDate);
-      return `<div class="task-row" id="tb-tr-${tbEsc(task.id)}">
+      return `<div class="task-row${task.done ? ' tb-task-done' : ''}" id="tb-tr-${tbEsc(task.id)}">
         <button class="check-btn${task.done ? ' done' : ''}" onclick="tbToggleDone('${tbEsc(task.id)}',${task.done})">
           <div class="check-inner"
             style="border-color:${team.color};background:${task.done ? team.color : 'transparent'}">
@@ -4949,8 +4973,26 @@
     async function tbToggleDone(id, currentDone) {
       const task = tbFindTask(id);
       if (!task) return;
-      task.done = !currentDone; tbRender();
-      await tbSaveChange('taskDone', id, String(!currentDone));
+      const markingDone = !currentDone;
+      task.done = markingDone; tbRender();
+      await tbSaveChange('taskDone', id, String(markingDone));
+      if (markingDone) {
+        document.getElementById('tb-hours-prompt-bg').classList.add('open');
+      }
+    }
+
+    function tbCloseHoursPrompt() {
+      document.getElementById('tb-hours-prompt-bg').classList.remove('open');
+    }
+    function tbGoToHours() {
+      tbCloseHoursPrompt();
+      switchTab('hours');
+    }
+    function tbToggleShowDone(btn) {
+      const card = btn.closest('.team-card');
+      const showing = card.classList.toggle('show-done');
+      const doneCount = card.querySelectorAll('.tb-task-done').length;
+      btn.textContent = showing ? `Hide completed` : `Show ${doneCount} completed`;
     }
 
     function tbEditTaskText(id) {
@@ -5195,6 +5237,9 @@
     document.getElementById('tb-modal-bg').addEventListener('click', e => {
       if (e.target===document.getElementById('tb-modal-bg')) tbCloseModal();
     });
+    document.getElementById('tb-hours-prompt-bg').addEventListener('click', e => {
+      if (e.target===document.getElementById('tb-hours-prompt-bg')) tbCloseHoursPrompt();
+    });
 
     /* Expose to window for onclick handlers and switchTab */
     window.initTaskBoard   = function() { if (!tbInitialized) { tbInitialized = true; tbLoadData(); } };
@@ -5206,6 +5251,9 @@
     window.tbConfirmDeleteTeam = tbConfirmDeleteTeam;
     window.tbEditMeeting     = tbEditMeeting;
     window.tbToggleDone      = tbToggleDone;
+    window.tbCloseHoursPrompt = tbCloseHoursPrompt;
+    window.tbGoToHours       = tbGoToHours;
+    window.tbToggleShowDone  = tbToggleShowDone;
     window.tbEditTaskText    = tbEditTaskText;
     window.tbEditAssignee    = tbEditAssignee;
     window.tbAddTaskKey      = tbAddTaskKey;
