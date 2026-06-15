@@ -330,8 +330,9 @@ function getMemberInfo(email) {
       const firstName = fullName.split(" ")[0] || "User";
       const position  = (data[i][0] || "").toString().trim();            // col A (role code)
       let branchCode  = (data[i][5] || "").toString().trim().toUpperCase(); // col F
+      const photoUrl  = (data[i][6] || "").toString().trim();            // col G
       Logger.log("Match at row " + (i + 1) + " | " + fullName + " | " + branchCode);
-      return { firstName, branchCode, branchName: BRANCH_NAMES[branchCode] || branchCode || "Unknown", position };
+      return { firstName, branchCode, branchName: BRANCH_NAMES[branchCode] || branchCode || "Unknown", position, photoUrl };
     }
   }
 

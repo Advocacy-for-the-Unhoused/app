@@ -87,7 +87,7 @@ window.onSignedIn = async function (preloadedPayload = null) {
       branchName,
       branchCode: branchLetter,
       email: volunteerEmail,
-      photoUrl: payload.picture || null,
+      photoUrl: info.photoUrl || payload.picture || null,
       position: info.position || '',
     };
 
@@ -97,7 +97,8 @@ window.onSignedIn = async function (preloadedPayload = null) {
     window.loadDashboard = async function() {
       document.getElementById('dashName').textContent = volunteerName;
       document.getElementById('dashBranch').textContent = branchName + ' Branch';
-      if (payload.picture) document.getElementById('dashAvatar').src = payload.picture;
+      const avatarSrc = info.photoUrl || payload.picture;
+      if (avatarSrc) document.getElementById('dashAvatar').src = avatarSrc;
 
       // Fetch stats from the Apps Script
       try {
