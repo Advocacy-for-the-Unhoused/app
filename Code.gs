@@ -177,7 +177,7 @@ function doPost(e) {
       result = getQualifiedNames();
 
     } else if (p.action === "addQualifiedPerson") {
-      result = addQualifiedPerson(p.name || '', p.email || '', p.phone || '', p.isMinor === 'true');
+      result = addQualifiedPerson(p.name || '', p.email || '', p.phone || '', p.dob || '');
 
     } else if (p.action === "removeQualifiedPerson") {
       result = removeQualifiedPerson(p.email || '');
@@ -782,6 +782,30 @@ const BOSTON_COL_PHONE     = 4;
 const BOSTON_COL_TIMESTAMP = 5;
 
 // ── REGISTRATION: qualified names + registration status ───────────────────────
+function isUnder18_(dobStr) {
+  try {
+    const dob   = new Date(dobStr + 'T00:00:00');
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const m = today.getMonth() - dob.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+    return age < 18;
+  } catch (e) { return false; }
+}
+
+function saveDobToRoster_(email, dob) {
+  const sheet = SpreadsheetApp.openById(ROSTER_SS_ID).getSheetByName('Roster');
+  if (!sheet) return;
+  const data = sheet.getDataRange().getValues();
+  const lc   = email.toLowerCase().trim();
+  for (let i = 1; i < data.length; i++) {
+    if ((data[i][3] || '').toString().toLowerCase().trim() === lc) {
+      sheet.getRange(i + 1, 9).setValue(dob ? new Date(dob + 'T00:00:00') : '');
+      return;
+    }
+  }
+}
+
 function getQualifiedNames() {
   const ss    = SpreadsheetApp.openById(BOSTON_SHEET_ID);
   const sheet = ss.getSheetByName(BOSTON_REG_SHEET);
@@ -791,17 +815,31 @@ function getQualifiedNames() {
   const data = sheet.getRange(2, 1, lastRow - 1, 13).getValues();
   return data
     .filter(row => (row[0] || '').toString().trim())
-    .map((row, i) => ({
-      name:         row[0].toString().trim(),
-      email:        row[1].toString().trim(),
-      isMinor:      row[2].toString().trim().toLowerCase() === 'yes',
-      phone:        row[3].toString().trim(),
-      rowIndex:     i + 2,
-      isRegistered: !!(row[12] || '').toString().trim(),
-    }));
+    .map((row, i) => {
+      const colC = row[2];
+      let isMinor, dob;
+      if (colC instanceof Date) {
+        dob     = Utilities.formatDate(colC, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+        isMinor = isUnder18_(dob);
+      } else {
+        const s = colC.toString().trim().toLowerCase();
+        if (s === 'yes' || s === 'no') { isMinor = s === 'yes'; dob = ''; }
+        else if (s)                    { dob = s; isMinor = isUnder18_(s); }
+        else                           { isMinor = false; dob = ''; }
+      }
+      return {
+        name:         row[0].toString().trim(),
+        email:        row[1].toString().trim(),
+        isMinor,
+        dob,
+        phone:        row[3].toString().trim(),
+        rowIndex:     i + 2,
+        isRegistered: !!(row[12] || '').toString().trim(),
+      };
+    });
 }
 
-function addQualifiedPerson(name, email, phone, isMinor) {
+function addQualifiedPerson(name, email, phone, dob) {
   try {
     const sheet = SpreadsheetApp.openById(BOSTON_SHEET_ID).getSheetByName(BOSTON_REG_SHEET);
     if (!sheet) return { error: 'Sheet not found' };
@@ -812,8 +850,10 @@ function addQualifiedPerson(name, email, phone, isMinor) {
         return { success: true, skipped: true };
       }
     }
-    const today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'M/d/yyyy');
-    sheet.appendRow([name, email, isMinor ? 'Yes' : 'No', phone, today, '', '', '', '', '', '', '', '']);
+    const today   = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'M/d/yyyy');
+    const dobDate = dob ? new Date(dob + 'T00:00:00') : '';
+    sheet.appendRow([name, email, dobDate, phone, today, '', '', '', '', '', '', '', '']);
+    if (dob) saveDobToRoster_(email, dob);
     return { success: true };
   } catch (err) {
     return { error: err.message };
