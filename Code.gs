@@ -330,7 +330,9 @@ function getMemberInfo(email) {
       const firstName = fullName.split(" ")[0] || "User";
       const position  = (data[i][0] || "").toString().trim();            // col A (role code)
       let branchCode  = (data[i][5] || "").toString().trim().toUpperCase(); // col F
-      const photoUrl  = (data[i][6] || "").toString().trim();            // col G
+      const rawPhoto  = (data[i][6] || "").toString().trim();            // col G
+      const photoId   = (rawPhoto.match(/\/d\/([A-Za-z0-9_-]+)/) || rawPhoto.match(/[?&]id=([A-Za-z0-9_-]+)/) || [])[1] || "";
+      const photoUrl  = photoId ? "https://drive.google.com/thumbnail?id=" + photoId + "&sz=w200" : "";
       Logger.log("Match at row " + (i + 1) + " | " + fullName + " | " + branchCode);
       return { firstName, branchCode, branchName: BRANCH_NAMES[branchCode] || branchCode || "Unknown", position, photoUrl };
     }
@@ -610,7 +612,14 @@ function getRosterMembers() {
       const phone      = (data[i][2] || "").toString().trim();
       const email      = (data[i][3] || "").toString().trim().toLowerCase();
       const branchCode = (data[i][5] || "").toString().trim().toUpperCase();
-      if (name && email) members.push({ name, phone, email, branchCode });
+      const rawDob     = data[i][8];
+      let dob = '';
+      if (rawDob instanceof Date && !isNaN(rawDob)) {
+        dob = Utilities.formatDate(rawDob, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+      } else if (rawDob) {
+        dob = rawDob.toString().trim();
+      }
+      if (name && email) members.push({ name, phone, email, branchCode, dob });
     }
     members.sort((a, b) => a.name.localeCompare(b.name));
     return { members };
@@ -843,6 +852,30 @@ function addQualifiedPerson(name, email, phone, dob) {
   try {
     const sheet = SpreadsheetApp.openById(BOSTON_SHEET_ID).getSheetByName(BOSTON_REG_SHEET);
     if (!sheet) return { error: 'Sheet not found' };
+
+    // Pull authoritative name, phone, and stored DOB from the Roster
+    const rosterSheet = SpreadsheetApp.openById(ROSTER_SS_ID).getSheetByName('Roster');
+    if (rosterSheet) {
+      const rData = rosterSheet.getDataRange().getValues();
+      const lc = email.toLowerCase().trim();
+      for (let i = 1; i < rData.length; i++) {
+        if ((rData[i][3] || '').toString().toLowerCase().trim() === lc) {
+          name  = (rData[i][1] || '').toString().trim() || name;
+          phone = (rData[i][2] || '').toString().trim() || phone;
+          // Use roster-stored DOB if caller didn't provide one
+          if (!dob) {
+            const rd = rData[i][8];
+            if (rd instanceof Date && !isNaN(rd)) {
+              dob = Utilities.formatDate(rd, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+            } else if (rd) {
+              dob = rd.toString().trim();
+            }
+          }
+          break;
+        }
+      }
+    }
+
     // Prevent duplicates
     const existing = sheet.getDataRange().getValues();
     for (let i = 1; i < existing.length; i++) {
