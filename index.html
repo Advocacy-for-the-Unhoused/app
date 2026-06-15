@@ -1827,6 +1827,21 @@
     width: 100px; background: var(--cream); color: var(--dark);
     border-radius: 0; -webkit-appearance: none;
   }
+  #tabTasks .due-chip {
+    display: inline-flex; align-items: center; gap: 3px;
+    font-size: 0.58rem; font-weight: 700; letter-spacing: 0.4px;
+    text-transform: uppercase; padding: 1px 5px; align-self: flex-start;
+    border: 1px solid rgba(26,19,17,0.18); color: rgba(26,19,17,0.35);
+    cursor: pointer; margin-top: 3px; touch-action: manipulation;
+  }
+  #tabTasks .due-chip.unset { border-color: rgba(26,19,17,0.1); color: rgba(26,19,17,0.2); }
+  #tabTasks .due-chip.overdue { border-color: #e53935; color: #e53935; }
+  #tabTasks .due-chip.soon { border-color: var(--orange); color: var(--orange); }
+  #tabTasks .due-date-input {
+    font-size: 13px; background: var(--cream); border: 1px solid var(--orange);
+    color: var(--dark); padding: 2px 6px; outline: none; margin-top: 3px;
+    border-radius: 0; -webkit-appearance: none; width: 130px; display: block;
+  }
   #tabTasks .del-task-btn {
     background: none; border: none; cursor: pointer;
     color: rgba(26,19,19,0.18); font-size: 14px; width: 44px;
@@ -4659,6 +4674,20 @@
 
     let tbTeams = tbDeepCopy(HARDCODED_TEAMS);
     let tbSelectedColor = TB_COLORS[0];
+    let tbRosterNames = null;
+
+    async function tbLoadRosterNames() {
+      if (tbRosterNames !== null) return tbRosterNames;
+      tbRosterNames = [];
+      try {
+        const names = await tbRun('tbGetRosterNames');
+        tbRosterNames = Array.isArray(names) ? names : [];
+        let dl = document.getElementById('tb-roster-dl');
+        if (!dl) { dl = document.createElement('datalist'); dl.id = 'tb-roster-dl'; document.body.appendChild(dl); }
+        dl.innerHTML = tbRosterNames.map(n => `<option value="${tbEsc(n)}">`).join('');
+      } catch(e) { tbRosterNames = []; }
+      return tbRosterNames;
+    }
 
     function tbDeepCopy(o) { return JSON.parse(JSON.stringify(o)); }
     function tbMkid() { return 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
@@ -4707,7 +4736,7 @@
     }
 
     const TB_DEDUP_TYPES = new Set([
-      'taskDone', 'taskAssignee', 'taskText',
+      'taskDone', 'taskAssignee', 'taskText', 'taskDueDate',
       'teamRename', 'teamColor', 'teamMeetingDate', 'teamMeetingTime'
     ]);
 
@@ -4758,7 +4787,7 @@
             let ex = {}; try { ex = JSON.parse(c.extra || '{}'); } catch {}
             const tm = tbTeams.find(tm => tm.name === ex.team);
             if (tm && !tm.tasks.find(tk => tk.id === c.key))
-              tm.tasks.push({ id: c.key, text: c.value, assignee: ex.assignee || '', done: false });
+              tm.tasks.push({ id: c.key, text: c.value, assignee: ex.assignee || '', dueDate: ex.dueDate || '', done: false });
             break;
           }
           case 'deleteTask':
@@ -4777,6 +4806,11 @@
           case 'taskText': {
             const tk = tbFindTask(c.key);
             if (tk) tk.text = c.value;
+            break;
+          }
+          case 'taskDueDate': {
+            const tk = tbFindTask(c.key);
+            if (tk) tk.dueDate = c.value || '';
             break;
           }
         }
@@ -4861,10 +4895,29 @@
       container.appendChild(card);
     }
 
+    function tbDueClass(dateStr) {
+      if (!dateStr) return 'unset';
+      const today = new Date(); today.setHours(0,0,0,0);
+      const due = new Date(dateStr + 'T00:00:00');
+      const diff = (due - today) / 86400000;
+      if (diff < 0) return 'overdue';
+      if (diff <= 1) return 'soon';
+      return '';
+    }
+
+    function tbFmtDue(dateStr) {
+      if (!dateStr) return '+ due date';
+      const [y, m, d] = dateStr.split('-').map(Number);
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return months[m-1] + ' ' + d;
+    }
+
     function tbTaskHTML(team, task) {
       const tagClass = task.assignee ? '' : ' unset';
       const tagText  = task.assignee || '+ assign';
       const tagColor = task.assignee ? `border-color:${team.color};color:${team.color}` : '';
+      const dueClass = tbDueClass(task.dueDate);
+      const dueText  = tbFmtDue(task.dueDate);
       return `<div class="task-row" id="tb-tr-${tbEsc(task.id)}">
         <button class="check-btn${task.done ? ' done' : ''}" onclick="tbToggleDone('${tbEsc(task.id)}',${task.done})">
           <div class="check-inner"
@@ -4875,6 +4928,7 @@
         <div class="task-body">
           <button class="task-text-btn${task.done ? ' done' : ''}"
             onclick="tbEditTaskText('${tbEsc(task.id)}')">${tbEsc(task.text)}</button>
+          <span class="due-chip ${dueClass}" onclick="tbEditDueDate('${tbEsc(task.id)}')">${tbEsc(dueText)}</span>
         </div>
         <div class="task-assignee-col">
           <span class="assignee-tag${tagClass}" style="${tagColor}"
@@ -4927,16 +4981,40 @@
       const tag = row.querySelector('.assignee-tag');
       const inp = document.createElement('input');
       inp.className = 'assignee-input'; inp.value = task.assignee || ''; inp.placeholder = 'Name…';
+      inp.setAttribute('list', 'tb-roster-dl');
       tag.replaceWith(inp); inp.focus(); inp.select();
+      tbLoadRosterNames();
       let committed = false;
       const save = async () => {
         if (committed) return; committed = true;
         const val = inp.value.trim();
         task.assignee = val; tbRender();
-        await tbSaveChange('taskAssignee', id, val);
+        await tbSaveChange('taskAssignee', id, val, task.text);
       };
       inp.onblur = save;
       inp.onkeydown = e => { if (e.key==='Enter') inp.blur(); if (e.key==='Escape') { committed=true; tbRender(); } };
+    }
+
+    function tbEditDueDate(id) {
+      const row = document.getElementById('tb-tr-' + id);
+      if (!row) return;
+      const task = tbFindTask(id);
+      if (!task) return;
+      const chip = row.querySelector('.due-chip');
+      const inp = document.createElement('input');
+      inp.type = 'date'; inp.className = 'due-date-input'; inp.value = task.dueDate || '';
+      chip.replaceWith(inp);
+      try { inp.showPicker(); } catch(e) { inp.focus(); }
+      let committed = false;
+      const save = async () => {
+        if (committed) return; committed = true;
+        const val = inp.value;
+        task.dueDate = val; tbRender();
+        await tbSaveChange('taskDueDate', id, val);
+      };
+      inp.onchange = () => inp.blur();
+      inp.onblur = save;
+      inp.onkeydown = e => { if (e.key==='Escape') { committed=true; tbRender(); } };
     }
 
     async function tbAddTaskKey(e, teamName, input) {
@@ -4945,7 +5023,7 @@
       const team = tbTeams.find(tm => tm.name === teamName);
       if (!team) return;
       const id = tbMkid();
-      team.tasks.push({ id, text, assignee: '', done: false });
+      team.tasks.push({ id, text, assignee: '', dueDate: '', done: false });
       tbRender(); tbToast('Task added');
       await tbSaveChange('newTask', id, text, JSON.stringify({ team: teamName, assignee: '' }));
     }

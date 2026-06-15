@@ -235,6 +235,9 @@ function doPost(e) {
     } else if (p.action === "tbSaveChange") {
       result = tbSaveChange(p.type || '', p.key || '', p.value || '', p.extra || '');
 
+    } else if (p.action === "tbGetRosterNames") {
+      result = tbGetRosterNames();
+
     // ── FCM Token Storage ──────────────────────────────────────────────────────
     } else if (p.action === "storeFcmToken") {
       storeFcmToken_(p.email || '', p.token || '');
@@ -1210,6 +1213,68 @@ function tbSaveChange(type, key, value, extra) {
 
   return { success: true };
 }
+
+function tbGetRosterNames() {
+  var roster = SpreadsheetApp.openById(ROSTER_SS_ID).getSheetByName('Roster');
+  if (!roster) return [];
+  var data = roster.getDataRange().getValues();
+  var names = [];
+  for (var i = 1; i < data.length; i++) {
+    var name = (data[i][1] || '').toString().trim();
+    if (name) names.push(name);
+  }
+  return names;
+}
+
+function tbCheckDueDates() {
+  var tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  var tomorrowStr = Utilities.formatDate(tomorrow, 'UTC', 'yyyy-MM-dd');
+
+  var changes = tbGetAllChanges();
+  var tasks = {};
+  changes.forEach(function(c) {
+    switch (c.type) {
+      case 'newTask': {
+        var ex = {}; try { ex = JSON.parse(c.extra || '{}'); } catch(e) {}
+        tasks[c.key] = { text: c.value, assignee: ex.assignee || '', dueDate: '', done: false };
+        break;
+      }
+      case 'deleteTask':   delete tasks[c.key]; break;
+      case 'taskAssignee': if (tasks[c.key]) tasks[c.key].assignee = c.value; break;
+      case 'taskText':     if (tasks[c.key]) tasks[c.key].text     = c.value; break;
+      case 'taskDone':     if (tasks[c.key]) tasks[c.key].done     = (c.value === 'true'); break;
+      case 'taskDueDate':  if (tasks[c.key]) tasks[c.key].dueDate  = c.value; break;
+    }
+  });
+
+  var roster = SpreadsheetApp.openById(ROSTER_SS_ID).getSheetByName('Roster');
+  if (!roster) return;
+  var rData = roster.getDataRange().getValues();
+
+  Object.keys(tasks).forEach(function(taskId) {
+    var task = tasks[taskId];
+    if (task.done || task.dueDate !== tomorrowStr || !task.assignee) return;
+    var nameLc = task.assignee.toLowerCase().trim();
+    for (var i = 1; i < rData.length; i++) {
+      if ((rData[i][1] || '').toString().toLowerCase().trim() === nameLc) {
+        var email = (rData[i][3] || '').toString().trim();
+        var token = getFcmToken_(email);
+        if (token) sendPush_(token, 'Task Due Tomorrow', '"' + task.text + '" is due tomorrow.');
+        break;
+      }
+    }
+  });
+}
+
+function setupTaskDueTrigger() {
+  ScriptApp.getProjectTriggers()
+    .filter(function(t) { return t.getHandlerFunction() === 'tbCheckDueDates'; })
+    .forEach(function(t) { ScriptApp.deleteTrigger(t); });
+  ScriptApp.newTrigger('tbCheckDueDates').timeBased().everyDays(1).atHour(9).create();
+  Logger.log('Task due-date trigger installed (daily at 9am).');
+}
+
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  FCM TOKEN STORAGE
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
