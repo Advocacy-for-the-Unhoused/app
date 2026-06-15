@@ -824,28 +824,14 @@ function getQualifiedNames() {
   const data = sheet.getRange(2, 1, lastRow - 1, 13).getValues();
   return data
     .filter(row => (row[0] || '').toString().trim())
-    .map((row, i) => {
-      const colC = row[2];
-      let isMinor, dob;
-      if (colC instanceof Date) {
-        dob     = Utilities.formatDate(colC, Session.getScriptTimeZone(), 'yyyy-MM-dd');
-        isMinor = isUnder18_(dob);
-      } else {
-        const s = colC.toString().trim().toLowerCase();
-        if (s === 'yes' || s === 'no') { isMinor = s === 'yes'; dob = ''; }
-        else if (s)                    { dob = s; isMinor = isUnder18_(s); }
-        else                           { isMinor = false; dob = ''; }
-      }
-      return {
-        name:         row[0].toString().trim(),
-        email:        row[1].toString().trim(),
-        isMinor,
-        dob,
-        phone:        row[3].toString().trim(),
-        rowIndex:     i + 2,
-        isRegistered: !!(row[12] || '').toString().trim(),
-      };
-    });
+    .map((row, i) => ({
+      name:         row[0].toString().trim(),
+      email:        row[1].toString().trim(),
+      isMinor:      row[2].toString().trim().toLowerCase() === 'yes',
+      phone:        row[3].toString().trim(),
+      rowIndex:     i + 2,
+      isRegistered: !!(row[12] || '').toString().trim(),
+    }));
 }
 
 function addQualifiedPerson(name, email, phone, dob) {
@@ -883,9 +869,9 @@ function addQualifiedPerson(name, email, phone, dob) {
         return { success: true, skipped: true };
       }
     }
-    const today   = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'M/d/yyyy');
-    const dobDate = dob ? new Date(dob + 'T00:00:00') : '';
-    sheet.appendRow([name, email, dobDate, phone, today, '', '', '', '', '', '', '', '']);
+    const today    = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'M/d/yyyy');
+    const isMinor  = dob ? isUnder18_(dob) : false;
+    sheet.appendRow([name, email, isMinor ? 'Yes' : 'No', phone, today, '', '', '', '', '', '', '', '']);
     if (dob) saveDobToRoster_(email, dob);
     return { success: true };
   } catch (err) {
