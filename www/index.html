@@ -5052,6 +5052,7 @@
       inp.type = 'date'; inp.className = 'due-date-input'; inp.value = task.dueDate || '';
       chip.replaceWith(inp);
       inp.focus();
+      try { inp.showPicker(); } catch(e) {}
       let committed = false;
       inp.onchange = async () => {
         if (committed) return; committed = true;
