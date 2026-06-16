@@ -608,6 +608,7 @@ function getRosterMembers() {
     const data = sheet.getDataRange().getValues();
     const members = [];
     for (let i = 1; i < data.length; i++) {
+      if (!(data[i][0] || "").toString().trim()) continue; // skip inactive (blank role)
       const name       = (data[i][1] || "").toString().trim();
       const phone      = (data[i][2] || "").toString().trim();
       const email      = (data[i][3] || "").toString().trim().toLowerCase();
