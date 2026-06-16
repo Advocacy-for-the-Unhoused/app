@@ -5281,7 +5281,7 @@
               '<input id="nb-name" type="text" placeholder="Name (e.g. Shrewsbury)" style="width:100%;box-sizing:border-box;padding:9px;border:1.5px solid var(--dark);font-family:\'Montserrat\',sans-serif;font-size:0.8rem;margin-bottom:10px;">' +
               '<div style="display:flex;gap:8px;">' +
                 '<button onclick="submitAddBranch()" style="background:var(--dark);color:var(--cream);border:none;padding:8px 16px;font-family:\'Montserrat\',sans-serif;font-size:0.7rem;font-weight:700;cursor:pointer;text-transform:uppercase;width:auto;margin-top:0;">Add</button>' +
-                '<button onclick="document.getElementById(\'add-branch-form\').classList.add(\'hidden\')" style="background:none;border:1.5px solid var(--dark);padding:8px 16px;font-family:\'Montserrat\',sans-serif;font-size:0.7rem;font-weight:700;cursor:pointer;width:auto;margin-top:0;">Cancel</button>' +
+                '<button onclick="document.getElementById(\'add-branch-form\').classList.add(\'hidden\')" style="background:none;border:1.5px solid var(--dark);color:var(--dark);padding:8px 16px;font-family:\'Montserrat\',sans-serif;font-size:0.7rem;font-weight:700;cursor:pointer;width:auto;margin-top:0;">Cancel</button>' +
               '</div>' +
               '<div id="add-branch-msg" style="font-size:0.65rem;margin-top:8px;font-weight:700;"></div>' +
             '</div>';
@@ -5345,7 +5345,7 @@
               }).join('');
 
           var addLeaderHtml = canEdit
-            ? '<button onclick="showAddLeaderForm(\'' + _ea(b.code) + '\')" style="margin-top:10px;background:none;border:1.5px solid var(--dark);padding:6px 12px;font-size:0.65rem;font-weight:700;cursor:pointer;font-family:\'Montserrat\',sans-serif;text-transform:uppercase;display:inline-block;width:fit-content;">' +
+            ? '<button onclick="showAddLeaderForm(\'' + _ea(b.code) + '\')" style="margin-top:10px;background:none;border:1.5px solid var(--dark);color:var(--dark);padding:6px 12px;font-size:0.65rem;font-weight:700;cursor:pointer;font-family:\'Montserrat\',sans-serif;text-transform:uppercase;display:inline-block;width:fit-content;">' +
                 '<i class="bi bi-person-plus"></i>&nbsp;Add to Leadership' +
               '</button>' +
               '<div id="add-leader-form-' + b.code + '" class="hidden" style="margin-top:10px;padding:12px;background:#faf8f5;border:1.5px solid var(--dark);">' +
@@ -5356,7 +5356,7 @@
                 '<input id="add-leader-role-' + b.code + '" type="text" placeholder="Role code (e.g. P)" maxlength="5" style="width:100%;box-sizing:border-box;padding:8px;border:1.5px solid var(--dark);font-family:\'Montserrat\',sans-serif;font-size:0.8rem;margin-bottom:8px;">' +
                 '<div style="display:flex;align-items:center;gap:10px;">' +
                   '<button onclick="submitAddLeader(\'' + _ea(b.code) + '\')" style="background:var(--dark);color:var(--cream);border:none;padding:8px 16px;font-family:\'Montserrat\',sans-serif;font-size:0.7rem;font-weight:700;cursor:pointer;text-transform:uppercase;width:auto;margin-top:0;">Save</button>' +
-                  '<button onclick="document.getElementById(\'add-leader-form-' + b.code + '\').classList.add(\'hidden\')" style="background:none;border:1.5px solid var(--dark);padding:8px 14px;font-family:\'Montserrat\',sans-serif;font-size:0.7rem;font-weight:700;cursor:pointer;width:auto;margin-top:0;">Cancel</button>' +
+                  '<button onclick="document.getElementById(\'add-leader-form-' + b.code + '\').classList.add(\'hidden\')" style="background:none;border:1.5px solid var(--dark);color:var(--dark);padding:8px 14px;font-family:\'Montserrat\',sans-serif;font-size:0.7rem;font-weight:700;cursor:pointer;width:auto;margin-top:0;">Cancel</button>' +
                   '<span id="add-leader-msg-' + b.code + '" style="font-size:0.65rem;font-weight:700;"></span>' +
                 '</div>' +
               '</div>'
