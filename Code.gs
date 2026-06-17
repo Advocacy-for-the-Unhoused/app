@@ -63,6 +63,9 @@ function doPost(e) {
     if (p.lookupEmail) {
       return handleLookup(p.lookupEmail);
 
+    } else if (p.action === "appleSignIn") {
+      result = appleSignIn_(p.sub, p.email);
+
     } else if (p.action === "registerVolunteer") {
       result = handleVolunteerRegistration({
         fname: p.fname, lname: p.lname, email: p.email,
@@ -383,6 +386,49 @@ function getMemberInfo(email) {
 
   Logger.log("No match for: '" + searchEmail + "'");
   return { firstName: "User", branchCode: "X", branchName: "Unknown Branch", position: "" };
+}
+
+function appleSignIn_(sub, email) {
+  if (!sub) return { error: 'No Apple sub provided' };
+  try {
+    const sheet = SpreadsheetApp.openById(ROSTER_SS_ID).getSheetByName('Roster');
+    if (!sheet) return { error: 'Roster sheet not found' };
+    const data = sheet.getDataRange().getValues();
+
+    // Returning user — find by Apple sub in col J (index 9)
+    for (let i = 1; i < data.length; i++) {
+      if ((data[i][9] || '').toString().trim() === sub) {
+        return buildMemberResult_(data[i]);
+      }
+    }
+
+    // First Apple login — find by email and write sub to col J
+    if (email) {
+      const lc = email.toLowerCase().trim();
+      for (let i = 1; i < data.length; i++) {
+        if ((data[i][3] || '').toString().toLowerCase().trim() === lc) {
+          sheet.getRange(i + 1, 10).setValue(sub);
+          return buildMemberResult_(data[i]);
+        }
+      }
+    }
+
+    return { error: 'Not found in roster' };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+function buildMemberResult_(row) {
+  const fullName   = (row[1] || '').toString().trim();
+  const firstName  = fullName.split(' ')[0] || 'User';
+  const position   = (row[0] || '').toString().trim();
+  const branchCode = (row[5] || '').toString().trim().toUpperCase();
+  const rawPhoto   = (row[6] || '').toString().trim();
+  const photoId    = (rawPhoto.match(/\/d\/([A-Za-z0-9_-]+)/) || rawPhoto.match(/[?&]id=([A-Za-z0-9_-]+)/) || [])[1] || '';
+  const photoUrl   = photoId ? 'https://drive.google.com/thumbnail?id=' + photoId + '&sz=w200' : '';
+  const email      = (row[3] || '').toString().trim();
+  return { firstName, branchCode, branchName: BRANCH_NAMES[branchCode] || branchCode || 'Unknown', position, photoUrl, email };
 }
 
 // ── Donation handler ──────────────────────────────────────────────────────────

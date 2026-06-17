@@ -153,6 +153,92 @@ window.onSignedIn = async function (preloadedPayload = null) {
   }
 };
 
+window.onAppleSignedIn = async function(sub, email, givenName, familyName) {
+  if (!sub) { alert('Apple sign-in did not return a user ID. Please try again.'); return; }
+
+  try {
+    const body = `action=appleSignIn&sub=${encodeURIComponent(sub)}&email=${encodeURIComponent(email || '')}`;
+    const res = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body
+    });
+    const info = JSON.parse(await res.text());
+
+    if (info.error || !info.firstName || info.firstName === 'User' || !info.branchCode || info.branchCode === 'X') {
+      document.getElementById('regFname').value = givenName  || '';
+      document.getElementById('regLname').value = familyName || '';
+      document.getElementById('regEmail').value = email || '';
+      document.getElementById('authCard').classList.add('hidden');
+      document.getElementById('registerCard').classList.remove('hidden');
+      return;
+    }
+
+    volunteerEmail = info.email || email || '';
+    volunteerName  = info.firstName;
+    branchLetter   = info.branchCode;
+    branchName     = info.branchName;
+
+    window.volunteerProfile = {
+      firstName: volunteerName,
+      branchName,
+      branchCode: branchLetter,
+      email: volunteerEmail,
+      photoUrl: info.photoUrl || null,
+      position: info.position || '',
+    };
+
+    await storeAuthForBiometric({ email: volunteerEmail, given_name: givenName || '', family_name: familyName || '', picture: '' });
+    await registerPushNotifications();
+
+    window.loadDashboard = async function() {
+      document.getElementById('dashName').textContent = volunteerName;
+      document.getElementById('dashBranch').textContent = branchName + ' Branch';
+      if (info.photoUrl) document.getElementById('dashAvatar').src = info.photoUrl;
+
+      try {
+        const statsRes = await fetch(SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: `getDashboard=${encodeURIComponent(volunteerEmail)}&branch=${encodeURIComponent(branchLetter)}`
+        });
+        const stats = JSON.parse(await statsRes.text());
+        if (stats.hoursApproved != null)
+          document.getElementById('dashHours').textContent = stats.hoursApproved;
+        if (stats.goalRaised != null && stats.goalTarget != null) {
+          const pct = Math.min(100, Math.round(stats.goalRaised / stats.goalTarget * 100));
+          document.getElementById('dashGoalRaised').textContent = '$' + stats.goalRaised.toLocaleString();
+          document.getElementById('dashGoalOf').textContent = 'of $' + stats.goalTarget.toLocaleString() + ' Goal — ' + pct + '%';
+          document.getElementById('dashGoalBar').style.width = pct + '%';
+        }
+        if (Array.isArray(stats.recentActivity) && stats.recentActivity.length > 0) {
+          const feed = document.getElementById('dashActivity');
+          feed.innerHTML = stats.recentActivity.map(item => `
+            <div class="activity-row">
+              <div class="activity-dot"></div>
+              <div class="activity-text">${item.text}</div>
+              ${item.time ? `<div class="activity-time">${item.time}</div>` : ''}
+            </div>
+          `).join('');
+        }
+      } catch (e) { console.warn('Dashboard stats unavailable:', e); }
+    };
+
+    document.getElementById('authCard').classList.add('hidden');
+    document.getElementById('appContent').classList.remove('hidden');
+    document.getElementById('mainNav').classList.remove('hidden');
+    document.getElementById('udiBranchDisplay').value = `${branchLetter} — ${branchName}`;
+
+    switchTab('home');
+    await syncDonations();
+    await loadEventTypes();
+
+  } catch (err) {
+    console.error('Apple sign-in error:', err);
+    alert('Could not connect to server. Please check your internet connection and try again.\n\nError: ' + (err.message || String(err)));
+  }
+};
+
 // ===== INDEXEDDB =====
 let dbPromise = null;
 
