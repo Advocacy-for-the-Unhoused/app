@@ -46,7 +46,9 @@
 	<key>NSFaceIDUsageDescription</key>
 	<string>Use Face ID to sign in quickly without re-entering your credentials each time.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Used to scan QR codes when logging donations.</string>
+	<string>Used to scan QR codes when logging donations, and to take photos for volunteer registration and expense receipts.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Used to select photos for volunteer registration and expense receipts.</string>
 	<key>GIDClientID</key>
 	<string>1016131808942-vckq48aah23fmk42vdmknpe8il1tfn3n.apps.googleusercontent.com</string>
 	<key>CFBundleURLTypes</key>
