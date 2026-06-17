@@ -841,15 +841,17 @@ function addQualifiedPerson(name, email, phone, dob) {
     const sheet = SpreadsheetApp.openById(BOSTON_SHEET_ID).getSheetByName(BOSTON_REG_SHEET);
     if (!sheet) return { error: 'Sheet not found' };
 
-    // Pull authoritative name, phone, and stored DOB from the Roster
+    // Pull authoritative name, phone, DOB, and branch code from the Roster
+    let branchCode = '';
     const rosterSheet = SpreadsheetApp.openById(ROSTER_SS_ID).getSheetByName('Roster');
     if (rosterSheet) {
       const rData = rosterSheet.getDataRange().getValues();
       const lc = email.toLowerCase().trim();
       for (let i = 1; i < rData.length; i++) {
         if ((rData[i][3] || '').toString().toLowerCase().trim() === lc) {
-          name  = (rData[i][1] || '').toString().trim() || name;
-          phone = (rData[i][2] || '').toString().trim() || phone;
+          name       = (rData[i][1] || '').toString().trim() || name;
+          phone      = (rData[i][2] || '').toString().trim() || phone;
+          branchCode = (rData[i][5] || '').toString().trim();
           // Use roster-stored DOB if caller didn't provide one
           if (!dob) {
             const rd = rData[i][8];
@@ -878,6 +880,22 @@ function addQualifiedPerson(name, email, phone, dob) {
     const newRow   = sheet.getLastRow();
     console.log('addQualifiedPerson: appended at row', newRow);
     if (dob) { try { saveDobToRoster_(email, dob); } catch(e) { console.warn('saveDobToRoster_ failed:', e.message); } }
+
+    // Auto-add a Costs row if one doesn't already exist for this email
+    try {
+      const costsSheet = SpreadsheetApp.openById(BOSTON_SHEET_ID).getSheetByName('Costs');
+      if (costsSheet) {
+        const costsData = costsSheet.getDataRange().getValues();
+        const alreadyInCosts = costsData.slice(1).some(
+          r => (r[2] || '').toString().trim().toLowerCase() === email.toLowerCase()
+        );
+        if (!alreadyInCosts) {
+          costsSheet.appendRow([name, branchCode, email, 0, 0, 0, 'No', 'No']);
+          console.log('addQualifiedPerson: added Costs row for', email);
+        }
+      }
+    } catch(e) { console.warn('addQualifiedPerson: Costs row failed:', e.message); }
+
     return { success: true, appendedRow: newRow };
   } catch (err) {
     console.error('addQualifiedPerson error:', err.message, err.stack);
