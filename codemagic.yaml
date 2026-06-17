@@ -3,8 +3,6 @@ workflows:
     name: AFU iOS App Store Build
     max_build_duration: 60
     environment:
-      groups:
-        - ios_credentials
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.afu.volunteerportal
