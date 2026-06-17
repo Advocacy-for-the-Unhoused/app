@@ -3003,9 +3003,13 @@
               '&email=' + encodeURIComponent(email) +
               '&phone=' + encodeURIComponent(phone) +
               '&dob='   + encodeURIComponent(dob)
-      }).then(function(r) { return r.json(); }).then(function(res) {
+      }).then(function(r) {
+        if (!r.ok) return r.text().then(function(t) { throw new Error('HTTP ' + r.status + ': ' + t.slice(0,200)); });
+        return r.json();
+      }).then(function(res) {
+        console.log('[qualAdd] response:', res);
         cb.disabled = false;
-        if (res.error) { alert('Error: ' + res.error); cb.checked = false; return; }
+        if (res.error) { alert('Error adding qualified person: ' + res.error); cb.checked = false; return; }
         var isMinor = isUnder18Client(dob);
         qualSheetEmails[email.toLowerCase()] = { isMinor: isMinor, dob: dob, phone: phone };
         var row = document.getElementById('qual-row-' + encodeURIComponent(email));

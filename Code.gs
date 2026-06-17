@@ -810,7 +810,8 @@ function saveDobToRoster_(email, dob) {
   const lc   = email.toLowerCase().trim();
   for (let i = 1; i < data.length; i++) {
     if ((data[i][3] || '').toString().toLowerCase().trim() === lc) {
-      sheet.getRange(i + 1, 9).setValue(dob ? new Date(dob + 'T00:00:00') : '');
+      const parsed = dob ? new Date(dob.includes('-') ? dob + 'T00:00:00' : dob) : null;
+      sheet.getRange(i + 1, 9).setValue(parsed && !isNaN(parsed) ? parsed : (dob || ''));
       return;
     }
   }
@@ -873,9 +874,10 @@ function addQualifiedPerson(name, email, phone, dob) {
     const today    = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'M/d/yyyy');
     const isMinor  = dob ? isUnder18_(dob) : false;
     sheet.appendRow([name, email, isMinor ? 'Yes' : 'No', phone, today, '', '', '', '', '', '', '', '']);
-    if (dob) saveDobToRoster_(email, dob);
+    if (dob) { try { saveDobToRoster_(email, dob); } catch(e) { console.warn('saveDobToRoster_ failed:', e.message); } }
     return { success: true };
   } catch (err) {
+    console.error('addQualifiedPerson error:', err.message, err.stack);
     return { error: err.message };
   }
 }
