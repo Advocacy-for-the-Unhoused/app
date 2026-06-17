@@ -70,8 +70,8 @@ function doPost(e) {
       else {
       const lastRow = sheet.getLastRow();
       const records = [];
-      if (lastRow >= 4) {
-        const data = sheet.getRange(4, 2, lastRow - 3, 5).getValues();
+      if (lastRow >= 2) {
+        const data = sheet.getRange(2, 2, lastRow - 1, 5).getValues();
         data.forEach(row => {
           if (String(row[0]).trim().toLowerCase() === p.email.trim().toLowerCase()) {
             const rawDate = row[2];
@@ -90,24 +90,28 @@ function doPost(e) {
       if (!p.email || !p.eventName || !p.eventDate || isNaN(hours) || hours <= 0) {
         result = { error: "Missing or invalid fields" };
       } else {
-        const sheet   = SpreadsheetApp.openById(HOURS_SS_ID).getSheetByName("volunteer hours");
-        const nextRow = Math.max(sheet.getLastRow() + 1, 4);
-        sheet.getRange(nextRow, 2).setValue(p.email);
-        sheet.getRange(nextRow, 3).setValue(p.eventName);
-        sheet.getRange(nextRow, 4).setValue(new Date(p.eventDate + "T00:00:00"));
-        sheet.getRange(nextRow, 5).setValue(hours);
-        sheet.getRange(nextRow, 6).setValue("No");
-        result = { success: true };
-        // Push branch president
-        try {
-          const memberInfo = getMemberInfo(p.email);
-          const cfg = BRANCH_CONFIG[memberInfo.branchName];
-          if (cfg) {
-            const token = getFcmToken_(cfg.presidentEmail);
-            if (token) sendPush_(token, 'Hours Submission',
-              `${memberInfo.firstName} submitted ${hours} hr${hours !== 1 ? 's' : ''} for "${p.eventName}".`);
-          }
-        } catch(pushErr) { console.warn('Push failed (submitHours):', pushErr.message); }
+        const sheet = SpreadsheetApp.openById(HOURS_SS_ID).getSheetByName("volunteer hours");
+        if (!sheet) {
+          result = { error: "Sheet 'volunteer hours' not found — contact your branch officer." };
+        } else {
+          const nextRow = Math.max(sheet.getLastRow() + 1, 2);
+          sheet.getRange(nextRow, 2).setValue(p.email);
+          sheet.getRange(nextRow, 3).setValue(p.eventName);
+          sheet.getRange(nextRow, 4).setValue(new Date(p.eventDate + "T00:00:00"));
+          sheet.getRange(nextRow, 5).setValue(hours);
+          sheet.getRange(nextRow, 6).setValue("No");
+          result = { success: true };
+          // Push branch president
+          try {
+            const memberInfo = getMemberInfo(p.email);
+            const cfg = BRANCH_CONFIG[memberInfo.branchName];
+            if (cfg) {
+              const token = getFcmToken_(cfg.presidentEmail);
+              if (token) sendPush_(token, 'Hours Submission',
+                `${memberInfo.firstName} submitted ${hours} hr${hours !== 1 ? 's' : ''} for "${p.eventName}".`);
+            }
+          } catch(pushErr) { console.warn('Push failed (submitHours):', pushErr.message); }
+        }
       }
 
     } else if (p.action === "getRosterMembers") {
@@ -142,7 +146,7 @@ function doPost(e) {
         const rowVals = sheet.getRange(rowIdx, 2, 1, 2).getValues()[0];
         const volEmail = String(rowVals[0] || '').trim();
         const eventName = String(rowVals[1] || '').trim();
-        sheet.deleteRow(rowIdx);
+        sheet.getRange(rowIdx, 6).setValue("Denied");
         result = { success: true };
         try {
           const token = getFcmToken_(volEmail);
@@ -157,7 +161,7 @@ function doPost(e) {
         result = { error: "Missing or invalid fields" };
       } else {
         const sheet   = SpreadsheetApp.openById(HOURS_SS_ID).getSheetByName("volunteer hours");
-        const nextRow = Math.max(sheet.getLastRow() + 1, 4);
+        const nextRow = Math.max(sheet.getLastRow() + 1, 2);
         sheet.getRange(nextRow, 2).setValue(p.email.trim().toLowerCase());
         sheet.getRange(nextRow, 3).setValue(p.eventName);
         sheet.getRange(nextRow, 4).setValue(new Date(p.eventDate + "T00:00:00"));
@@ -184,7 +188,7 @@ function doPost(e) {
 
     } else if (p.action === "bostonSubmitForm") {
       result = submitForm({
-        rowIndex:      parseInt(p.rowIndex, 10),
+        email:         p.email || '',
         isMinor:       p.isMinor === 'true',
         fullName:      p.fullName      || '',
         phone:         p.phone         || '',
@@ -664,8 +668,8 @@ function getAllHours() {
 
     const lastRow = hoursSheet.getLastRow();
     const records = [];
-    if (lastRow >= 4) {
-      const data = hoursSheet.getRange(4, 2, lastRow - 3, 5).getValues();
+    if (lastRow >= 2) {
+      const data = hoursSheet.getRange(2, 2, lastRow - 1, 5).getValues();
       data.forEach((row, i) => {
         const email = String(row[0]).trim();
         if (!email) return;
@@ -674,7 +678,7 @@ function getAllHours() {
           ? Utilities.formatDate(rawDate, Session.getScriptTimeZone(), "yyyy-MM-dd")
           : String(rawDate);
         records.push({
-          rowIndex:  i + 4,
+          rowIndex:  i + 2,
           email,
           name:      emailToName[email.toLowerCase()] || email,
           eventName: String(row[1]).trim(),
@@ -702,8 +706,8 @@ function handleGetDashboard(email, branchCode) {
 
     if (hoursSheet) {
       const lastRow = hoursSheet.getLastRow();
-      if (lastRow >= 4) {
-        const data = hoursSheet.getRange(4, 2, lastRow - 3, 5).getValues();
+      if (lastRow >= 2) {
+        const data = hoursSheet.getRange(2, 2, lastRow - 1, 5).getValues();
         data.forEach(row => {
           if (String(row[0]).trim().toLowerCase() === email.trim().toLowerCase()) {
             const hrs      = Number(row[3] || 0);
@@ -730,10 +734,9 @@ function handleGetDashboard(email, branchCode) {
     const config    = getMeetingConfig_();
     const goalTarget = parseFloat(config['goal_' + (branchCode || '').toUpperCase()]) || BRANCH_GOAL_TARGET;
 
-    // ── Donations for this volunteer + branch totals ───────────────────────────
+    // ── Branch fundraising goal totals ───────────────────────────────────────
     const donSheet = SpreadsheetApp.openById(DONATIONS_SS_ID).getSheetByName("Sheet1");
-    let donationCount = 0;
-    let goalRaised    = 0;
+    let goalRaised = 0;
 
     if (donSheet) {
       const dlastRow = donSheet.getLastRow();
@@ -745,19 +748,12 @@ function handleGetDashboard(email, branchCode) {
           if (rowBranch === (branchCode || "").trim().toUpperCase()) {
             goalRaised += amount;
           }
-          // Count donations logged by this volunteer (col D = volunteerName, but
-          // col 3 may be volunteerEmail in some rows; match either)
-          const rowVolEmail = String(row[3] || "").trim().toLowerCase();
-          if (rowVolEmail === email.trim().toLowerCase()) {
-            donationCount++;
-          }
         });
       }
     }
 
     return {
       hoursApproved,
-      donationCount,
       goalRaised: Math.round(goalRaised * 100) / 100,
       goalTarget,
       recentActivity: activity
@@ -841,13 +837,14 @@ function getQualifiedNames() {
   if (lastRow < 2) return [];
   const data = sheet.getRange(2, 1, lastRow - 1, 13).getValues();
   return data
-    .filter(row => (row[0] || '').toString().trim())
-    .map((row, i) => ({
+    .map((row, i) => ({ row, rawIdx: i + 2 }))
+    .filter(({ row }) => (row[0] || '').toString().trim())
+    .map(({ row, rawIdx }) => ({
       name:         row[0].toString().trim(),
       email:        row[1].toString().trim(),
       isMinor:      row[2].toString().trim().toLowerCase() === 'yes',
       phone:        row[3].toString().trim(),
-      rowIndex:     i + 2,
+      rowIndex:     rawIdx,
       isRegistered: !!(row[12] || '').toString().trim(),
     }));
 }
@@ -957,7 +954,19 @@ function submitForm(data) {
       sheet.autoResizeColumns(1, headers.length);
     }
 
-    const row = data.rowIndex;
+    // Find row by email (reliable) rather than filtered index
+    let row = -1;
+    const allRows = sheet.getDataRange().getValues();
+    const emailLc = (data.email || '').trim().toLowerCase();
+    for (let i = 1; i < allRows.length; i++) {
+      if ((allRows[i][1] || '').toString().trim().toLowerCase() === emailLc) {
+        row = i + 1; // 1-indexed sheet row
+        break;
+      }
+    }
+    if (row === -1) {
+      return { success: false, error: 'Volunteer not found. Please refresh and try again.' };
+    }
     const nameInSheet = sheet.getRange(row, 1).getValue().toString().trim();
     if (nameInSheet.toLowerCase() !== data.fullName.toLowerCase()) {
       return { success: false, error: 'Name mismatch. Please refresh and try again.' };

@@ -112,8 +112,6 @@ window.onSignedIn = async function (preloadedPayload = null) {
 
         if (stats.hoursApproved != null)
           document.getElementById('dashHours').textContent = stats.hoursApproved;
-        if (stats.donationCount != null)
-          document.getElementById('dashDonations').textContent = stats.donationCount;
 
         if (stats.goalRaised != null && stats.goalTarget != null) {
           const pct = Math.min(100, Math.round(stats.goalRaised / stats.goalTarget * 100));

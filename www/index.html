@@ -2148,10 +2148,6 @@
         <div class="dash-stat-num" id="dashHours">—</div>
         <div class="dash-stat-label">Hours Logged</div>
       </div>
-      <div class="dash-stat">
-        <div class="dash-stat-num" id="dashDonations">—</div>
-        <div class="dash-stat-label">Donations</div>
-      </div>
     </div>
 
     <!-- Branch fundraising goal -->
@@ -3909,7 +3905,7 @@
       if (!checked('reg-permission')) { showRegStatus('error', 'Please acknowledge the participation permission.'); return; }
 
       const data = {
-        rowIndex:      selectedPerson.rowIndex,
+        email:         selectedPerson.email,
         isMinor:       m,
         fullName:      get('reg-fullName'),
         phone:         get('reg-phone'),
@@ -4202,6 +4198,8 @@
       loadRegistrations();
       loadHoursSection();
       if (typeof window.loadQualifiedPersons === 'function') window.loadQualifiedPersons();
+      if (typeof window.loadPendingVolunteers === 'function') window.loadPendingVolunteers();
+      if (typeof window.loadCompRequests === 'function') window.loadCompRequests();
     }
 
     function loadRegistrations() {
@@ -4798,7 +4796,7 @@
     function renderPendingHours() {
       var pending = hrsAllRecords.filter(function(r) {
         var a = (r.approved || '').toLowerCase();
-        return a !== 'yes' && a !== 'approved';
+        return a !== 'yes' && a !== 'approved' && a !== 'denied';
       });
       var pill = document.getElementById('hrs-pending-pill');
       if (pending.length > 0) {
@@ -4860,14 +4858,13 @@
     }
 
     function denyHour(rowIndex) {
-      if (!confirm('Delete this hour request? This cannot be undone.')) return;
+      if (!confirm('Deny this hour request?')) return;
       var row = document.getElementById('hrs-row-' + rowIndex);
       if (row) { row.style.opacity = '0.4'; row.querySelectorAll('button').forEach(function(b){ b.disabled=true; }); }
       gasCall('denyHours', { rowIndex: rowIndex }, function(res) {
         if (res.success) {
-          hrsAllRecords = hrsAllRecords.filter(function(r){ return r.rowIndex !== rowIndex; });
-          // Re-index rows below the deleted one
-          hrsAllRecords.forEach(function(r){ if (r.rowIndex > rowIndex) r.rowIndex--; });
+          var rec = hrsAllRecords.find(function(r){ return r.rowIndex === rowIndex; });
+          if (rec) rec.approved = 'Denied';
           renderPendingHours();
         } else {
           if (row) { row.style.opacity = ''; row.querySelectorAll('button').forEach(function(b){ b.disabled=false; }); }
