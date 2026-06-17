@@ -53,7 +53,7 @@ window.demoSignIn = function () {
     position: 'A',
   };
 
-  document.getElementById('authCard').classList.add('hidden');
+  document.getElementById('authScreen').classList.add('hidden');
   document.getElementById('appContent').classList.remove('hidden');
   document.getElementById('mainNav').classList.remove('hidden');
   document.getElementById('udiBranchDisplay').value = 'A — Hopkinton';
@@ -97,7 +97,7 @@ window.onSignedIn = async function (preloadedPayload = null) {
       document.getElementById("regFname").value = payload.given_name  || "";
       document.getElementById("regLname").value = payload.family_name || "";
       document.getElementById("regEmail").value = volunteerEmail;
-      document.getElementById("authCard").classList.add("hidden");
+      document.getElementById("authScreen").classList.add("hidden");
       document.getElementById("registerCard").classList.remove("hidden");
       return;
     }
@@ -162,7 +162,7 @@ window.onSignedIn = async function (preloadedPayload = null) {
       }
     };
 
-    document.getElementById("authCard").classList.add("hidden");
+    document.getElementById("authScreen").classList.add("hidden");
     document.getElementById("appContent").classList.remove("hidden");
     document.getElementById("mainNav").classList.remove("hidden");
 
@@ -196,7 +196,7 @@ window.onAppleSignedIn = async function(sub, email, givenName, familyName) {
       document.getElementById('regFname').value = givenName  || '';
       document.getElementById('regLname').value = familyName || '';
       document.getElementById('regEmail').value = email || '';
-      document.getElementById('authCard').classList.add('hidden');
+      document.getElementById('authScreen').classList.add('hidden');
       document.getElementById('registerCard').classList.remove('hidden');
       return;
     }
@@ -251,7 +251,7 @@ window.onAppleSignedIn = async function(sub, email, givenName, familyName) {
       } catch (e) { console.warn('Dashboard stats unavailable:', e); }
     };
 
-    document.getElementById('authCard').classList.add('hidden');
+    document.getElementById('authScreen').classList.add('hidden');
     document.getElementById('appContent').classList.remove('hidden');
     document.getElementById('mainNav').classList.remove('hidden');
     document.getElementById('udiBranchDisplay').value = `${branchLetter} — ${branchName}`;
@@ -1039,7 +1039,7 @@ async function deleteAccount() {
     window.volunteerProfile = null;
     document.getElementById('appContent').classList.add('hidden');
     document.getElementById('mainNav').classList.add('hidden');
-    document.getElementById('authCard').classList.remove('hidden');
+    document.getElementById('authScreen').classList.remove('hidden');
     alert('Your account has been deleted.');
   } catch (err) {
     alert('Could not delete account: ' + err.message);
