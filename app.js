@@ -900,6 +900,39 @@ async function submitRegistration() {
   }
 }
 
+async function deleteAccount() {
+  if (!volunteerEmail) return;
+  const confirmed = confirm(
+    'Delete your account?\n\nThis will remove your email from the volunteer roster. Your activity history will remain but you will no longer be able to sign in.\n\nThis cannot be undone.'
+  );
+  if (!confirmed) return;
+  try {
+    haptic('warning');
+    const res = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `action=deleteAccount&email=${encodeURIComponent(volunteerEmail)}`
+    });
+    const data = await res.json();
+    if (data.error) { alert('Error: ' + data.error); return; }
+    haptic('success');
+    // Clear local auth and reload to login screen
+    const { Preferences } = window.Capacitor?.Plugins || {};
+    if (Preferences) await Preferences.remove({ key: 'biometricAuth' });
+    volunteerEmail = null;
+    volunteerName  = null;
+    branchLetter   = null;
+    branchName     = null;
+    window.volunteerProfile = null;
+    document.getElementById('appContent').classList.add('hidden');
+    document.getElementById('mainNav').classList.add('hidden');
+    document.getElementById('authCard').classList.remove('hidden');
+    alert('Your account has been deleted.');
+  } catch (err) {
+    alert('Could not delete account: ' + err.message);
+  }
+}
+
 function proceedAfterRegistration() {
   // Grant access with a pending-state welcome message.
   // branchLetter/branchName remain null until approved and re-verified next login.

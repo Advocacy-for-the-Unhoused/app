@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>AFU — Volunteer Portal</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AFU</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#C8522D">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet" />
@@ -13,15 +13,33 @@
       --camp-orange: #C8522D;
       --camp-cream: #F9F6F0;
       --camp-dark: #1A1311;
+      /* adaptive tokens — dark mode defaults */
+      --page-bg: #1A1311;
+      --page-text: #F9F6F0;
+      --nav-bg: #1A1311;
+      --nav-inactive: rgba(249,246,240,0.3);
+      --nav-hover: rgba(249,246,240,0.65);
+      --nav-border: rgba(249,246,240,0.1);
+      --stat-bg: rgba(249,246,240,0.04);
+      --stat-border: rgba(249,246,240,0.1);
+      --stat-label: rgba(249,246,240,0.35);
+      --section-label: rgba(249,246,240,0.25);
+      --divider-line: rgba(249,246,240,0.15);
+      --divider-text: rgba(249,246,240,0.3);
+      --udi-toggle-col: rgba(249,246,240,0.45);
+      --udi-toggle-border: rgba(249,246,240,0.2);
+      --delete-section-border: rgba(249,246,240,0.08);
+      --delete-label: rgba(249,246,240,0.25);
+      --privacy-link-col: rgba(249,246,240,0.4);
     }
 
     body {
       margin: 0;
-      background-color: var(--camp-dark);
+      background-color: var(--page-bg, var(--camp-dark));
       font-family: 'Montserrat', sans-serif;
       color: var(--camp-dark);
       line-height: 1.8;
-      padding: 40px 20px 0;
+      padding: max(40px, calc(env(safe-area-inset-top, 0px) + 20px)) 20px 0;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
@@ -33,7 +51,7 @@
     h1 {
       font-family: 'Abril Fatface', serif;
       font-size: clamp(2rem, 8vw, 3.5rem);
-      color: var(--camp-cream);
+      color: var(--page-text, var(--camp-cream));
       text-align: center;
       margin: 0 0 10px 0;
     }
@@ -287,15 +305,15 @@
       content: '';
       flex: 1;
       height: 1px;
-      background: rgba(249,246,240,0.15);
+      background: var(--divider-line);
     }
 
     .udi-divider span {
-      font-size: 0.65rem;
+      font-size: 0.72rem;
       font-weight: 700;
       letter-spacing: 3px;
       text-transform: uppercase;
-      color: rgba(249,246,240,0.3);
+      color: var(--divider-text);
       white-space: nowrap;
     }
 
@@ -303,8 +321,8 @@
     #udiToggle {
       width: 100%;
       background: transparent;
-      border: 2px dashed rgba(249,246,240,0.2);
-      color: rgba(249,246,240,0.45);
+      border: 2px dashed var(--udi-toggle-border);
+      color: var(--udi-toggle-col);
       font-size: 0.78rem;
       font-weight: 700;
       letter-spacing: 2px;
@@ -711,8 +729,8 @@
       bottom: 0;
       left: 0;
       right: 0;
-      background: var(--camp-dark);
-      border-top: 1px solid rgba(249,246,240,0.1);
+      background: var(--nav-bg);
+      border-top: 1px solid var(--nav-border);
       display: flex;
       z-index: 1100;
       padding-bottom: env(safe-area-inset-bottom);
@@ -733,19 +751,20 @@
       border-radius: 0;
       box-shadow: none;
       cursor: pointer;
-      color: rgba(249,246,240,0.3);
+      color: var(--nav-inactive);
       font-family: 'Montserrat', sans-serif;
-      font-size: 0.68rem;
+      font-size: 0.72rem;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 1px;
       width: auto;
       margin: 0;
       transition: color 0.2s;
+      min-height: 50px;
     }
 
     .nav-item:hover {
-      color: rgba(249,246,240,0.65);
+      color: var(--nav-hover);
       background: transparent;
       transform: none;
       box-shadow: none;
@@ -957,8 +976,8 @@
     }
 
     .dash-stat {
-      background: rgba(249,246,240,0.04);
-      border: 1px solid rgba(249,246,240,0.1);
+      background: var(--stat-bg);
+      border: 1px solid var(--stat-border);
       padding: 16px 18px;
       box-sizing: border-box;
     }
@@ -972,11 +991,11 @@
     }
 
     .dash-stat-label {
-      font-size: 0.65rem;
+      font-size: 0.72rem;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 2px;
-      color: rgba(249,246,240,0.35);
+      color: var(--stat-label);
     }
 
     /* Fundraising goal */
@@ -1032,11 +1051,11 @@
 
     /* Feature tiles */
     .dash-section-label {
-      font-size: 0.65rem;
+      font-size: 0.72rem;
       font-weight: 700;
       letter-spacing: 3px;
       text-transform: uppercase;
-      color: rgba(249,246,240,0.25);
+      color: var(--section-label);
       margin: 0 0 12px 0;
     }
 
@@ -1189,6 +1208,128 @@
       .reg-name-row { flex-direction: column; gap: 0; }
       .dash-grid { gap: 8px; }
       .dash-tile { padding: 16px 14px 14px; }
+    }
+
+    /* ── Dynamic Type: allow iOS font scaling ── */
+    html { -webkit-text-size-adjust: auto; text-size-adjust: auto; }
+
+    /* ── Minimum text sizes ── */
+    .reg-row-badge, .reg-row-minor, .hrs-breakdown-pending,
+    .pv-branch-tag, .cr-status-badge, .my-cr-status { font-size: 0.72rem; }
+    .hrs-row-meta, .hrs-assign-form label, .hrs-empty, .reg-row-email,
+    .qual-row-email, .pv-meta, .hours-row-status, .hrs-tab,
+    .reg-list-title, .meeting-label, .hrs-status { font-size: 0.75rem; }
+    .hours-total-label, .hours-pending-note { font-size: 0.78rem; }
+    .udi-tip { font-size: 0.78rem; }
+
+    /* ── Touch targets (min 44pt) ── */
+    .hrs-btn {
+      padding: 11px 12px;
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .hrs-row-actions { align-items: stretch; }
+    .pv-btn { padding: 14px 10px; min-height: 44px; }
+    .cr-btn { padding: 14px 11px; min-height: 44px; }
+    .admin-section-hdr { min-height: 50px; }
+    .hrs-tab { min-height: 44px; display: flex; align-items: center; justify-content: center; }
+    .hrs-dropdown-item { padding: 13px 10px; }
+
+    /* ── Privacy policy modal ── */
+    .privacy-modal-overlay {
+      position: fixed; inset: 0; background: rgba(26,19,17,0.7);
+      z-index: 9999; display: flex; align-items: flex-end; justify-content: center;
+    }
+    .privacy-modal-overlay.hidden { display: none; }
+    .privacy-modal {
+      background: white; width: 100%; max-width: 500px;
+      max-height: 80vh; overflow-y: auto;
+      border-radius: 16px 16px 0 0;
+      padding: 28px 24px calc(28px + env(safe-area-inset-bottom, 0px));
+      box-sizing: border-box;
+    }
+    .privacy-modal h3 {
+      font-family: 'Abril Fatface', serif; font-size: 1.4rem;
+      color: var(--camp-dark); margin: 0 0 16px;
+    }
+    .privacy-modal p, .privacy-modal li {
+      font-size: 0.88rem; color: #444; line-height: 1.7; margin-bottom: 10px;
+    }
+    .privacy-modal h4 {
+      font-family: 'Montserrat', sans-serif; font-size: 0.82rem;
+      font-weight: 800; text-transform: uppercase; letter-spacing: 1px;
+      color: var(--camp-dark); margin: 16px 0 6px;
+    }
+    .privacy-close-btn {
+      width: 100%; background: var(--camp-dark); color: var(--camp-cream);
+      border: none; padding: 15px; font-family: 'Montserrat', sans-serif;
+      font-size: 0.82rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1px; cursor: pointer; margin-top: 20px; border-radius: 0;
+    }
+    .privacy-link {
+      display: block; text-align: center; font-size: 0.72rem;
+      font-weight: 700; color: var(--privacy-link-col);
+      text-decoration: underline; margin-top: 14px;
+      cursor: pointer; letter-spacing: 0.5px; text-transform: uppercase;
+      background: none; border: none; width: 100%;
+      font-family: 'Montserrat', sans-serif;
+    }
+
+    /* ── Delete account section ── */
+    .delete-account-section {
+      margin-top: 32px; padding: 24px 0 8px;
+      border-top: 1px solid var(--delete-section-border);
+      text-align: center;
+    }
+    .delete-account-label {
+      font-size: 0.72rem; color: var(--delete-label); margin-bottom: 12px;
+      font-weight: 600; text-transform: uppercase; letter-spacing: 1px;
+    }
+    .delete-account-btn {
+      background: transparent; border: 1.5px solid rgba(184,50,50,0.35);
+      color: rgba(184,50,50,0.7); font-family: 'Montserrat', sans-serif;
+      font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1px; padding: 13px 28px; cursor: pointer;
+      width: auto; margin: 0; transition: border-color 0.2s, color 0.2s;
+      border-radius: 0; box-shadow: none; transform: none; min-height: 44px;
+    }
+    .delete-account-btn:hover, .delete-account-btn:active {
+      border-color: #b83232; color: #b83232;
+      background: rgba(184,50,50,0.05);
+      transform: none; box-shadow: none;
+    }
+
+    /* ── Light Mode ── */
+    @media (prefers-color-scheme: light) {
+      :root {
+        --page-bg: #F9F6F0;
+        --page-text: #1A1311;
+        --nav-bg: #ffffff;
+        --nav-inactive: rgba(26,19,17,0.35);
+        --nav-hover: rgba(26,19,17,0.6);
+        --nav-border: rgba(26,19,17,0.1);
+        --stat-bg: rgba(26,19,17,0.04);
+        --stat-border: rgba(26,19,17,0.1);
+        --stat-label: rgba(26,19,17,0.45);
+        --section-label: rgba(26,19,17,0.4);
+        --divider-line: rgba(26,19,17,0.12);
+        --divider-text: rgba(26,19,17,0.35);
+        --udi-toggle-col: rgba(26,19,17,0.45);
+        --udi-toggle-border: rgba(26,19,17,0.2);
+        --delete-section-border: rgba(26,19,17,0.08);
+        --delete-label: rgba(26,19,17,0.3);
+        --privacy-link-col: rgba(26,19,17,0.4);
+      }
+      /* hours badge stays dark — it's a branded design element */
+      .hours-total-badge { background: var(--camp-dark); }
+      /* Boston banner stays dark */
+      .boston-banner { background: var(--camp-dark); }
+      /* notification toast stays dark */
+      .native-push-toast { background: rgba(26,19,17,0.97); }
+      /* dash chip stays dark */
+      .dash-chip { background: var(--camp-dark); }
     }
   </style>
 <style>
@@ -2012,8 +2153,8 @@
 </head>
 <body>
 
-<h1>Advocacy for the <span>Unhoused</span></h1>
-<div class="subtitle">Volunteer Portal</div>
+<h1>AFU</h1>
+<div class="subtitle">Advocacy for the Unhoused</div>
 
 <!-- ═══════════════ Sign-in Card ═══════════════ -->
 <div id="authCard" class="card" style="max-width:500px;">
@@ -2044,6 +2185,7 @@
   </button>
   <!-- Biometric button — shown on native only if a previous session is stored -->
   <div id="biometricSignInOr" class="hidden" style="text-align:center;color:#888;font-size:13px;margin:10px 0 4px;">— or —</div>
+  <button class="privacy-link" onclick="document.getElementById('privacyModal').classList.remove('hidden')">Privacy Policy</button>
   <button id="biometricSignInBtn" class="hidden btn-biometric-native" onclick="biometricSignIn()">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right:9px;vertical-align:middle;">
       <!-- Face ID icon -->
@@ -2208,6 +2350,12 @@
       <div id="dashActivity">
         <div class="activity-empty">No recent activity yet.</div>
       </div>
+    </div>
+
+    <!-- Delete account -->
+    <div class="delete-account-section">
+      <div class="delete-account-label">Account</div>
+      <button class="delete-account-btn" onclick="deleteAccount()">Delete My Account</button>
     </div>
 
   </div>
@@ -6042,6 +6190,31 @@
     window.sendBostonDeadlineReminderAll = sendBostonDeadlineReminderAll;
   })();
 </script>
+
+<!-- ═══════════════ Privacy Policy Modal ═══════════════ -->
+<div id="privacyModal" class="privacy-modal-overlay hidden" onclick="if(event.target===this)this.classList.add('hidden')">
+  <div class="privacy-modal">
+    <h3>Privacy Policy</h3>
+    <p><strong>Effective June 17, 2026</strong></p>
+
+    <h4>What We Collect</h4>
+    <p>When you sign in and use AFU, we collect your name and email address (via Google Sign-In), volunteer hours and donation records you submit, task assignments, expense reimbursement requests, and push notification tokens to send you updates.</p>
+
+    <h4>How We Use Your Data</h4>
+    <p>Your information is used solely to coordinate volunteer activities within Advocacy for the Unhoused (AFU). Data is visible to AFU officers and branch coordinators as needed to manage volunteer operations.</p>
+
+    <h4>Third-Party Services</h4>
+    <p>We use Google for authentication, Firebase for push notifications, and Google Apps Script for data storage. We do not sell or share your data with any other parties.</p>
+
+    <h4>Data Retention</h4>
+    <p>Your data is retained while you are an active volunteer. You may delete your account at any time from the app dashboard, which removes your email from the volunteer roster.</p>
+
+    <h4>Contact</h4>
+    <p>Questions? Contact AFU leadership through the app or at maanya.shettigar@gmail.com.</p>
+
+    <button class="privacy-close-btn" onclick="document.getElementById('privacyModal').classList.add('hidden')">Close</button>
+  </div>
+</div>
 
 </body>
 </html>

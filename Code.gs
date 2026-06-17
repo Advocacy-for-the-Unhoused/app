@@ -22,6 +22,26 @@ const BRANCH_CONFIG = {
 const BRANCH_NAMES = { "A": "Hopkinton", "H": "Holliston", "W": "Westford", "S": "Shrewsbury", "M": "Medway" };
 const BRANCH_CODES = { "Hopkinton": "A", "Holliston": "H", "Westford": "W", "Shrewsbury": "S", "Medway": "M" };
 
+// ── Account deletion ──────────────────────────────────────────────────────────
+function deleteAccount_(email) {
+  try {
+    if (!email) return { error: 'No email provided' };
+    const sheet = SpreadsheetApp.openById(ROSTER_SS_ID).getSheetByName('Roster');
+    if (!sheet) return { error: 'Roster sheet not found' };
+    const data = sheet.getDataRange().getValues();
+    const lc   = email.toLowerCase().trim();
+    for (let i = 1; i < data.length; i++) {
+      if ((data[i][3] || '').toString().toLowerCase().trim() === lc) {
+        sheet.getRange(i + 1, 4).setValue('');
+        return { success: true };
+      }
+    }
+    return { error: 'Email not found in roster' };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
 // ── doGet ─────────────────────────────────────────────────────────────────────
 function doGet(e) {
   if (e.parameter.lookupEmail) {
@@ -314,6 +334,9 @@ function doPost(e) {
 
     } else if (p.action === "denyCompRequest") {
       result = denyCompRequest_(p.id || '');
+
+    } else if (p.action === "deleteAccount") {
+      result = deleteAccount_(p.email || '');
 
     } else {
       result = { error: "Invalid request" };
