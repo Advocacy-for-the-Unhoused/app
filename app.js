@@ -35,6 +35,33 @@ function parseJwt(token) {
 }
 
 // ===== SIGN-IN HANDLER =====
+window.demoSignIn = function () {
+  const pw = prompt('Enter demo password:');
+  if (pw !== 'APPLEDEMO12!@') { alert('Incorrect password.'); return; }
+
+  volunteerEmail = 'demo@afu.app';
+  volunteerName  = 'Demo User';
+  branchLetter   = 'A';
+  branchName     = 'Hopkinton';
+
+  window.volunteerProfile = {
+    firstName: 'Demo',
+    branchName: 'Hopkinton',
+    branchCode: 'A',
+    email: 'demo@afu.app',
+    photoUrl: null,
+    position: 'A',
+  };
+
+  document.getElementById('authCard').classList.add('hidden');
+  document.getElementById('appContent').classList.remove('hidden');
+  document.getElementById('mainNav').classList.remove('hidden');
+  document.getElementById('udiBranchDisplay').value = 'A — Hopkinton';
+
+  switchTab('home');
+  loadEventTypes();
+};
+
 window.onSignedIn = async function (preloadedPayload = null) {
   console.log("onSignedIn called!");
 
