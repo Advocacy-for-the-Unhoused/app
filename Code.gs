@@ -873,9 +873,8 @@ function addQualifiedPerson(name, email, phone, dob) {
       }
     }
     console.log('addQualifiedPerson: appending row for', email, 'name=', name, 'phone=', phone);
-    const today    = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'M/d/yyyy');
     const isMinor  = dob ? isUnder18_(dob) : false;
-    sheet.appendRow([name, email, isMinor ? 'Yes' : 'No', phone, today, '', '', '', '', '', '', '', '']);
+    sheet.appendRow([name, email, isMinor ? 'Yes' : 'No', phone, '', '', '', '', '', '', '', '', '']);
     const newRow   = sheet.getLastRow();
     console.log('addQualifiedPerson: appended at row', newRow);
     if (dob) { try { saveDobToRoster_(email, dob); } catch(e) { console.warn('saveDobToRoster_ failed:', e.message); } }
