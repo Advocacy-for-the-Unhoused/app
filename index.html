@@ -2996,6 +2996,7 @@
       var member = qualRosterCache.filter(function(m) { return m.email.toLowerCase() === email.toLowerCase(); })[0];
       var phone = (member && member.phone) || '';
       var dob   = (member && member.dob)   || '';
+      console.log('[qualAdd] sending:', { name: name, email: email, phone: phone, dob: dob });
       fetch(QUAL_GAS_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -3008,6 +3009,7 @@
         return r.json();
       }).then(function(res) {
         console.log('[qualAdd] response:', res);
+        if (res.skipped) console.warn('[qualAdd] SKIPPED — already in sheet at row', res.duplicateRow, '— uncheck if this is wrong');
         cb.disabled = false;
         if (res.error) { alert('Error adding qualified person: ' + res.error); cb.checked = false; return; }
         var isMinor = isUnder18Client(dob);

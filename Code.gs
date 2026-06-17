@@ -868,14 +868,18 @@ function addQualifiedPerson(name, email, phone, dob) {
     const existing = sheet.getDataRange().getValues();
     for (let i = 1; i < existing.length; i++) {
       if ((existing[i][1] || '').toString().trim().toLowerCase() === email.toLowerCase()) {
-        return { success: true, skipped: true };
+        console.log('addQualifiedPerson: SKIPPED duplicate at row', i + 1, 'email=', email);
+        return { success: true, skipped: true, duplicateRow: i + 1 };
       }
     }
+    console.log('addQualifiedPerson: appending row for', email, 'name=', name, 'phone=', phone);
     const today    = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'M/d/yyyy');
     const isMinor  = dob ? isUnder18_(dob) : false;
     sheet.appendRow([name, email, isMinor ? 'Yes' : 'No', phone, today, '', '', '', '', '', '', '', '']);
+    const newRow   = sheet.getLastRow();
+    console.log('addQualifiedPerson: appended at row', newRow);
     if (dob) { try { saveDobToRoster_(email, dob); } catch(e) { console.warn('saveDobToRoster_ failed:', e.message); } }
-    return { success: true };
+    return { success: true, appendedRow: newRow };
   } catch (err) {
     console.error('addQualifiedPerson error:', err.message, err.stack);
     return { error: err.message };
