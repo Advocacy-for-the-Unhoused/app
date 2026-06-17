@@ -2963,7 +2963,7 @@
         var editable = canEdit;
 
         html += '<div class="qual-row' + (isQual ? ' qualified' : '') + '" id="qual-row-' + encodeURIComponent(m.email) + '">' +
-          '<input type="checkbox"' + (isQual ? ' checked' : '') + (editable ? ' onchange="qualCheckboxChanged(' + JSON.stringify(m.email) + ',' + JSON.stringify(m.name) + ',this)"' : ' disabled style="opacity:0.35;cursor:not-allowed;"') + '>' +
+          '<input type="checkbox"' + (isQual ? ' checked' : '') + (editable ? ' onchange="qualCheckboxChanged(' + JSON.stringify(m.email).replace(/"/g,'&quot;') + ',' + JSON.stringify(m.name).replace(/"/g,'&quot;') + ',this)"' : ' disabled style="opacity:0.35;cursor:not-allowed;"') + '>' +
           '<div style="flex:1;min-width:0;">' +
             '<div class="qual-row-name">' + m.name + '<span style="font-size:0.55rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(26,19,17,0.35);margin-left:6px;">' + minorLabel + '</span></div>' +
             '<div class="qual-row-email">' + m.email + '</div>' +
