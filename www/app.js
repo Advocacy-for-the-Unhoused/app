@@ -91,6 +91,7 @@ window.onSignedIn = async function (preloadedPayload = null) {
       position: info.position || '',
     };
 
+    await storeAuthForBiometric(payload);
     await registerPushNotifications();
 
     // Wire loadDashboard to pull real stats + activity once data is ready
@@ -652,6 +653,135 @@ async function submitHoursRequest() {
 }
 
 // =====================================================
+// BIOMETRIC AUTH (Face ID / Touch ID via Capacitor)
+// =====================================================
+const BIOMETRIC_AUTH_KEY = 'afu_stored_auth';
+
+async function storeAuthForBiometric(payload) {
+  if (!window.Capacitor?.isNativePlatform()) return;
+  const { Preferences } = window.Capacitor.Plugins;
+  if (!Preferences) return;
+  try {
+    await Preferences.set({
+      key: BIOMETRIC_AUTH_KEY,
+      value: JSON.stringify({
+        email:       payload.email        || '',
+        given_name:  payload.given_name   || '',
+        family_name: payload.family_name  || '',
+        picture:     payload.picture      || ''
+      })
+    });
+  } catch (e) { console.warn('Biometric store failed:', e); }
+}
+
+async function clearStoredAuth() {
+  if (!window.Capacitor?.isNativePlatform()) return;
+  const { Preferences } = window.Capacitor.Plugins;
+  if (!Preferences) return;
+  try { await Preferences.remove({ key: BIOMETRIC_AUTH_KEY }); } catch (e) {}
+}
+
+async function getStoredAuth() {
+  if (!window.Capacitor?.isNativePlatform()) return null;
+  const { Preferences } = window.Capacitor.Plugins;
+  if (!Preferences) return null;
+  try {
+    const { value } = await Preferences.get({ key: BIOMETRIC_AUTH_KEY });
+    return value ? JSON.parse(value) : null;
+  } catch (e) { return null; }
+}
+
+async function initBiometricSignIn() {
+  if (!window.Capacitor?.isNativePlatform()) return;
+  const { BiometricAuth } = window.Capacitor.Plugins;
+  if (!BiometricAuth) return;
+
+  try {
+    const stored = await getStoredAuth();
+    if (!stored?.email) return;
+
+    const biometry = await BiometricAuth.checkBiometry();
+    if (!biometry.isAvailable) return;
+
+    const btn  = document.getElementById('biometricSignInBtn');
+    const orEl = document.getElementById('biometricSignInOr');
+    const lbl  = btn?.querySelector('.biometric-type-label');
+
+    const isFaceId = biometry.biometryTypes?.includes(2); // BiometryType.faceId = 2
+    if (lbl) lbl.textContent = isFaceId ? 'Sign in with Face ID' : 'Sign in with Touch ID';
+    if (btn)  btn.classList.remove('hidden');
+    if (orEl) orEl.classList.remove('hidden');
+
+    // Auto-prompt after a short delay so the UI is visible first
+    setTimeout(() => biometricSignIn(true), 700);
+  } catch (e) {
+    console.warn('Biometric init failed:', e);
+  }
+}
+
+async function biometricSignIn(auto = false) {
+  if (!window.Capacitor?.isNativePlatform()) return;
+  const { BiometricAuth } = window.Capacitor.Plugins;
+  if (!BiometricAuth) return;
+
+  const btn = document.getElementById('biometricSignInBtn');
+  const lbl = btn?.querySelector('.biometric-type-label');
+  const originalLabel = lbl?.textContent;
+
+  try {
+    const stored = await getStoredAuth();
+    if (!stored?.email) {
+      if (btn) btn.classList.add('hidden');
+      document.getElementById('biometricSignInOr')?.classList.add('hidden');
+      return;
+    }
+
+    await BiometricAuth.authenticate({
+      reason: 'Verify your identity to sign in to AFU',
+      cancelTitle: 'Use Google Sign-In',
+      allowDeviceCredential: false,
+      iosFallbackTitle: ''
+    });
+
+    // Biometric passed — sign in with stored credentials
+    haptic('success');
+    if (btn)  { btn.disabled = true; }
+    if (lbl)  lbl.textContent = 'Signing in…';
+
+    if (typeof window.onSignedIn === 'function') {
+      await window.onSignedIn(stored);
+    }
+  } catch (e) {
+    // User cancelled or device not enrolled — fall through to Google sign-in silently
+    if (!auto) haptic('error');
+    if (btn)  btn.disabled = false;
+    if (lbl)  lbl.textContent = originalLabel;
+    console.log('Biometric auth cancelled or failed:', e?.message || e);
+  }
+}
+
+window.biometricSignIn    = biometricSignIn;
+window.initBiometricSignIn = initBiometricSignIn;
+window.clearStoredAuth    = clearStoredAuth;
+
+// =====================================================
+// IN-APP PUSH TOAST (foreground notifications)
+// =====================================================
+function showNativeToast(title, body, tab) {
+  haptic('light');
+  const toast = document.createElement('div');
+  toast.className = 'native-push-toast';
+  toast.innerHTML = `<div class="native-toast-title">${title || 'AFU'}</div>${body ? `<div class="native-toast-body">${body}</div>` : ''}`;
+  if (tab) toast.addEventListener('click', () => { if (typeof switchTab === 'function') switchTab(tab); });
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('visible'));
+  setTimeout(() => {
+    toast.classList.remove('visible');
+    setTimeout(() => toast.remove(), 350);
+  }, 4500);
+}
+
+// =====================================================
 // PUSH NOTIFICATIONS (Capacitor / FCM)
 // =====================================================
 async function registerPushNotifications() {
@@ -679,6 +809,21 @@ async function registerPushNotifications() {
 
     PushNotifications.addListener('registrationError', (err) => {
       console.warn('Push registration error:', err);
+    });
+
+    // Show in-app banner when a push arrives while app is open
+    PushNotifications.addListener('pushNotificationReceived', (notification) => {
+      showNativeToast(
+        notification.title,
+        notification.body,
+        notification.data?.tab
+      );
+    });
+
+    // Route to correct tab when user taps a notification
+    PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+      const tab = action.notification.data?.tab;
+      if (tab && typeof switchTab === 'function') switchTab(tab);
     });
   } catch (e) {
     console.warn('Push notification setup failed:', e);

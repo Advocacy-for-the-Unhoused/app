@@ -235,6 +235,32 @@
     }
     .btn-google-native:active { background: #f8f8f8; }
 
+    .btn-biometric-native {
+      display: flex; align-items: center; justify-content: center;
+      width: 100%; padding: 12px 16px; margin-top: 4px;
+      background: #1a1311; color: #fff; border: 1.5px solid #3a2e2b;
+      border-radius: 4px; font-size: 14px; font-weight: 600;
+      font-family: 'Montserrat', sans-serif; cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0,0,0,.25);
+    }
+    .btn-biometric-native:active { background: #2e2220; }
+    .btn-biometric-native:disabled { opacity: 0.6; cursor: default; }
+
+    /* In-app push notification toast */
+    .native-push-toast {
+      position: fixed; top: -110px; left: 12px; right: 12px;
+      background: rgba(24,18,16,0.97); color: #fff;
+      padding: 13px 16px; border-radius: 14px;
+      font-family: 'Montserrat', sans-serif;
+      z-index: 10000; cursor: pointer;
+      box-shadow: 0 6px 24px rgba(0,0,0,.38);
+      transition: top 0.32s cubic-bezier(.22,.68,0,1.2);
+      max-width: 460px; margin: 0 auto;
+    }
+    .native-push-toast.visible { top: 54px; }
+    .native-toast-title { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+    .native-toast-body  { font-size: 13px; opacity: 0.85; }
+
     #appContent {
       width: 100%;
       max-width: 500px;
@@ -2016,6 +2042,22 @@
     </svg>
     Sign in with Google
   </button>
+  <!-- Biometric button — shown on native only if a previous session is stored -->
+  <div id="biometricSignInOr" class="hidden" style="text-align:center;color:#888;font-size:13px;margin:10px 0 4px;">— or —</div>
+  <button id="biometricSignInBtn" class="hidden btn-biometric-native" onclick="biometricSignIn()">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right:9px;vertical-align:middle;">
+      <!-- Face ID icon -->
+      <rect x="2" y="2" width="5" height="5" rx="1.5" stroke="currentColor" stroke-width="1.8" fill="none"/>
+      <rect x="17" y="2" width="5" height="5" rx="1.5" stroke="currentColor" stroke-width="1.8" fill="none"/>
+      <rect x="2" y="17" width="5" height="5" rx="1.5" stroke="currentColor" stroke-width="1.8" fill="none"/>
+      <rect x="17" y="17" width="5" height="5" rx="1.5" stroke="currentColor" stroke-width="1.8" fill="none"/>
+      <circle cx="9" cy="10" r="1.2" fill="currentColor"/>
+      <circle cx="15" cy="10" r="1.2" fill="currentColor"/>
+      <path d="M9 15 Q12 17.5 15 15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+      <line x1="12" y1="8" x2="12" y2="9.3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+    </svg>
+    <span class="biometric-type-label">Sign in with Face ID</span>
+  </button>
 </div>
 
 <!-- ═══════════════ Registration Card ═══════════════ -->
@@ -3608,6 +3650,10 @@
     if (window.Capacitor && window.Capacitor.isNativePlatform()) {
       document.getElementById('webSignIn').classList.add('hidden');
       document.getElementById('nativeSignInBtn').classList.remove('hidden');
+      // Check for stored biometric credentials and auto-prompt Face ID / Touch ID
+      if (typeof window.initBiometricSignIn === 'function') {
+        window.initBiometricSignIn();
+      }
     }
   });
 
