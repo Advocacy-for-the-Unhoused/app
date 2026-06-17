@@ -295,6 +295,22 @@ function doPost(e) {
     } else if (p.action === "setBranchLeaderRole") {
       result = setBranchLeaderRole_(p.email || '', p.roleCode || '');
 
+    // ── Compensation / Reimbursement Requests ──────────────────────────────────
+    } else if (p.action === "submitCompRequest") {
+      result = submitCompRequest_(p.email || '', p.amount || '0', p.description || '', p.payMethod || 'Cash', p.payHandle || '', p.imageBase64 || '', p.imageMime || '');
+
+    } else if (p.action === "getCompRequests") {
+      result = getCompRequests_();
+
+    } else if (p.action === "getMyCompRequests") {
+      result = getMyCompRequests_(p.email || '');
+
+    } else if (p.action === "approveCompRequest") {
+      result = approveCompRequest_(p.id || '');
+
+    } else if (p.action === "denyCompRequest") {
+      result = denyCompRequest_(p.id || '');
+
     } else {
       result = { error: "Invalid request" };
     }
@@ -890,7 +906,7 @@ function addQualifiedPerson(name, email, phone, dob) {
           r => (r[2] || '').toString().trim().toLowerCase() === email.toLowerCase()
         );
         if (!alreadyInCosts) {
-          costsSheet.appendRow([name, branchCode, email, 0, 0, 0, 'No', 'No']);
+          costsSheet.appendRow([name, branchCode, email, 20, 5, '', 0, 'No', 'No']);
           console.log('addQualifiedPerson: added Costs row for', email);
         }
       }
@@ -1761,5 +1777,203 @@ function setBranchLeaderRole_(email, roleCode) {
     }
   }
   return { error: 'Member not found in roster' };
+}
+
+// ── Compensation / Reimbursement Requests ─────────────────────────────────────
+// Sheet "Comp Requests" in ROSTER_SS_ID
+// Columns: A=ID | B=Name | C=Email | D=Branch | E=Amount | F=Description
+//          G=PayMethod | H=PayHandle | I=ImageUrl | J=Status | K=SubmittedAt
+
+function getCompSheet_() {
+  const ss = SpreadsheetApp.openById(ROSTER_SS_ID);
+  let sheet = ss.getSheetByName('Comp Requests');
+  if (!sheet) {
+    sheet = ss.insertSheet('Comp Requests');
+    const headers = ['ID','Name','Email','Branch','Amount','Description','PayMethod','PayHandle','ImageUrl','Status','SubmittedAt'];
+    sheet.getRange(1, 1, 1, headers.length)
+         .setValues([headers]).setFontWeight('bold')
+         .setBackground('#1A1311').setFontColor('#F9F6F0');
+    sheet.setFrozenRows(1);
+    sheet.setColumnWidth(1, 120);
+    sheet.setColumnWidth(6, 220);
+    sheet.setColumnWidth(9, 280);
+    sheet.setColumnWidth(11, 160);
+  }
+  return sheet;
+}
+
+function submitCompRequest_(email, amount, description, payMethod, payHandle, imageBase64, imageMime) {
+  try {
+    const memberInfo = getMemberInfo(email);
+    const branchCode = memberInfo.branchCode || '';
+
+    // Resolve full name from roster
+    const rosterSheet = SpreadsheetApp.openById(ROSTER_SS_ID).getSheetByName('Roster');
+    let fullName = memberInfo.firstName || email;
+    if (rosterSheet) {
+      const rData = rosterSheet.getDataRange().getValues();
+      const lc    = email.toLowerCase().trim();
+      for (let i = 1; i < rData.length; i++) {
+        if ((rData[i][3] || '').toString().toLowerCase().trim() === lc) {
+          fullName = (rData[i][1] || '').toString().trim() || fullName;
+          break;
+        }
+      }
+    }
+
+    // Upload bill image to branch Drive folder
+    let imageUrl = '';
+    if (imageBase64 && imageMime) {
+      try {
+        const branchName = BRANCH_NAMES[branchCode] || '';
+        const config = BRANCH_CONFIG[branchName] || Object.values(BRANCH_CONFIG)[0];
+        const folderId = config ? config.folderId : '17glZEMCfE7L65RVuSglffhaUEGxzTqTe';
+        const blob = Utilities.newBlob(
+          Utilities.base64Decode(imageBase64), imageMime,
+          'receipt_' + email + '_' + Date.now()
+        );
+        const file = DriveApp.getFolderById(folderId).createFile(blob);
+        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        imageUrl = 'https://drive.google.com/uc?export=view&id=' + file.getId();
+      } catch (imgErr) {
+        console.warn('Receipt image upload failed:', imgErr.message);
+      }
+    }
+
+    const id    = 'cr' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+    const sheet = getCompSheet_();
+    sheet.appendRow([
+      id, fullName, email.toLowerCase().trim(), branchCode,
+      parseFloat(amount) || 0, description || '',
+      payMethod || 'Cash', payHandle || '',
+      imageUrl, 'Pending', new Date()
+    ]);
+
+    // Notify A, Z, and FO officers
+    try {
+      const aTokens  = getFcmTokensByPositionCode_('A');
+      const zTokens  = getFcmTokensByPositionCode_('Z');
+      const foTokens = getFcmTokensByPositionCode_('FO');
+      const seen = {};
+      const allTokens = [...aTokens, ...zTokens, ...foTokens].filter(function(t) {
+        if (seen[t]) return false; seen[t] = true; return true;
+      });
+      if (allTokens.length) {
+        sendPushToMany_(allTokens, 'Reimbursement Request',
+          fullName + ' submitted a $' + (parseFloat(amount) || 0).toFixed(2) + ' expense request.');
+      }
+    } catch(pushErr) { console.warn('Push failed (submitCompRequest):', pushErr.message); }
+
+    return { success: true, id };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+function getCompRequests_() {
+  try {
+    const sheet = getCompSheet_();
+    const last  = sheet.getLastRow();
+    if (last < 2) return { requests: [] };
+    const data = sheet.getRange(2, 1, last - 1, 11).getValues();
+    const requests = data
+      .filter(function(row) { return row[0]; })
+      .map(function(row) {
+        return {
+          id:          String(row[0]),
+          name:        String(row[1]),
+          email:       String(row[2]),
+          branch:      String(row[3]),
+          amount:      parseFloat(row[4]) || 0,
+          description: String(row[5]),
+          payMethod:   String(row[6]),
+          payHandle:   String(row[7]),
+          imageUrl:    String(row[8]),
+          status:      String(row[9]),
+          submittedAt: row[10] instanceof Date
+            ? Utilities.formatDate(row[10], Session.getScriptTimeZone(), 'MM/dd/yyyy')
+            : String(row[10])
+        };
+      });
+    return { requests };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+function getMyCompRequests_(email) {
+  try {
+    const sheet = getCompSheet_();
+    const last  = sheet.getLastRow();
+    if (last < 2) return { requests: [] };
+    const data  = sheet.getRange(2, 1, last - 1, 11).getValues();
+    const lc    = email.toLowerCase().trim();
+    const requests = data
+      .filter(function(row) { return row[0] && String(row[2]).toLowerCase().trim() === lc; })
+      .map(function(row) {
+        return {
+          id:          String(row[0]),
+          amount:      parseFloat(row[4]) || 0,
+          description: String(row[5]),
+          payMethod:   String(row[6]),
+          payHandle:   String(row[7]),
+          imageUrl:    String(row[8]),
+          status:      String(row[9]),
+          submittedAt: row[10] instanceof Date
+            ? Utilities.formatDate(row[10], Session.getScriptTimeZone(), 'MM/dd/yyyy')
+            : String(row[10])
+        };
+      });
+    return { requests };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+function approveCompRequest_(id) {
+  try {
+    const sheet = getCompSheet_();
+    const data  = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === String(id)) {
+        sheet.getRange(i + 1, 10).setValue('Approved');
+        const volEmail = String(data[i][2]);
+        const amount   = parseFloat(data[i][4]) || 0;
+        const method   = String(data[i][6]);
+        try {
+          const token = getFcmToken_(volEmail);
+          if (token) sendPush_(token, 'Reimbursement Approved!',
+            'Your $' + amount.toFixed(2) + ' expense request has been approved. Payment via ' + method + '.');
+        } catch(e) { console.warn('Push failed (approveComp):', e.message); }
+        return { success: true };
+      }
+    }
+    return { error: 'Request not found' };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+function denyCompRequest_(id) {
+  try {
+    const sheet = getCompSheet_();
+    const data  = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === String(id)) {
+        sheet.getRange(i + 1, 10).setValue('Denied');
+        const volEmail = String(data[i][2]);
+        const amount   = parseFloat(data[i][4]) || 0;
+        try {
+          const token = getFcmToken_(volEmail);
+          if (token) sendPush_(token, 'Reimbursement Update',
+            'Your $' + amount.toFixed(2) + ' expense request was not approved. Contact your branch officer for details.');
+        } catch(e) { console.warn('Push failed (denyComp):', e.message); }
+        return { success: true };
+      }
+    }
+    return { error: 'Request not found' };
+  } catch (err) {
+    return { error: err.message };
+  }
 }
 

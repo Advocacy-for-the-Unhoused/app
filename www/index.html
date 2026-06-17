@@ -818,6 +818,55 @@
     .pv-btn-deny { background: white; color: rgba(26,19,17,0.45); border-left: 1.5px solid var(--border); }
     .pv-branch-hdr { font-size: 0.6rem; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; padding: 4px 0 8px; }
 
+    /* ── Compensation / Reimbursement Requests — admin ── */
+    .cr-list { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+    .cr-card { background: white; border: 2px solid var(--border); overflow: hidden; }
+    .cr-card-hdr { display: flex; align-items: flex-start; gap: 10px; padding: 12px; }
+    .cr-card-meta { flex: 1; min-width: 0; }
+    .cr-card-name { font-size: 0.82rem; font-weight: 800; color: var(--dark); }
+    .cr-card-sub { font-size: 0.62rem; font-weight: 600; color: rgba(26,19,17,0.45); margin-top: 2px; }
+    .cr-card-desc { font-size: 0.72rem; color: rgba(26,19,17,0.7); margin-top: 5px; line-height: 1.4; }
+    .cr-amount { font-size: 1.1rem; font-weight: 800; color: var(--dark); white-space: nowrap; }
+    .cr-pay-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.5px; padding: 2px 7px; border: 1.5px solid; margin-top: 6px; }
+    .cr-pay-tag.venmo { border-color: #008CFF; color: #008CFF; }
+    .cr-pay-tag.zelle { border-color: #6D1ED4; color: #6D1ED4; }
+    .cr-pay-tag.cash  { border-color: var(--green); color: var(--green); }
+    .cr-bill-link { display: block; margin: 0 12px 10px; padding: 8px 12px; background: rgba(26,19,17,0.04); border: 1.5px solid var(--border); font-size: 0.62rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: var(--dark); text-decoration: none; text-align: center; }
+    .cr-bill-link:hover { background: rgba(26,19,17,0.08); }
+    .cr-actions { display: flex; border-top: 2px solid var(--border); }
+    .cr-btn { flex: 1; padding: 11px; font-size: 0.62rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; border: none; cursor: pointer; transition: opacity 0.15s; }
+    .cr-btn:active { opacity: 0.75; }
+    .cr-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .cr-btn-approve { background: var(--green); color: white; }
+    .cr-btn-deny { background: white; color: rgba(26,19,17,0.45); border-left: 1.5px solid var(--border); }
+    .cr-status-badge { font-size: 0.58rem; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; padding: 2px 7px; }
+    .cr-status-badge.approved { background: var(--green); color: white; }
+    .cr-status-badge.denied { background: rgba(26,19,17,0.12); color: rgba(26,19,17,0.5); }
+    .cr-group-hdr { font-size: 0.6rem; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; padding: 4px 0 8px; }
+    /* ── Expense request form (volunteer, hours tab) ── */
+    .cr-pay-method-group { display: flex; gap: 8px; margin-bottom: 12px; }
+    .cr-pay-method-opt { flex: 1; }
+    .cr-pay-method-opt input[type=radio] { display: none; }
+    .cr-pay-method-opt label { display: block; text-align: center; padding: 9px 4px; border: 2px solid var(--border); font-size: 0.64rem; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; cursor: pointer; transition: all 0.15s; color: rgba(26,19,17,0.5); }
+    .cr-pay-method-opt input[type=radio]:checked + label { border-color: var(--orange); color: var(--dark); background: rgba(247,156,62,0.07); }
+    .cr-photo-area { border: 2px dashed var(--border); padding: 20px 16px; text-align: center; cursor: pointer; margin-bottom: 12px; background: rgba(26,19,17,0.02); transition: border-color 0.15s; }
+    .cr-photo-area:hover { border-color: var(--orange); }
+    .cr-photo-area img { max-width: 100%; max-height: 180px; margin: 0 auto; display: block; }
+    .cr-photo-placeholder { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: rgba(26,19,17,0.4); }
+    .cr-photo-placeholder i { font-size: 1.8rem; display: block; margin-bottom: 6px; }
+    /* ── My expenses history (volunteer view) ── */
+    .my-cr-row { display: flex; align-items: flex-start; gap: 10px; padding: 11px 0; border-bottom: 1.5px solid var(--border); }
+    .my-cr-row:last-child { border-bottom: none; }
+    .my-cr-info { flex: 1; min-width: 0; }
+    .my-cr-desc { font-size: 0.78rem; font-weight: 700; color: var(--dark); }
+    .my-cr-meta { font-size: 0.6rem; font-weight: 600; color: rgba(26,19,17,0.45); margin-top: 2px; }
+    .my-cr-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+    .my-cr-amount { font-size: 0.9rem; font-weight: 800; color: var(--dark); }
+    .my-cr-status { font-size: 0.55rem; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; padding: 2px 6px; }
+    .my-cr-status.pending  { background: rgba(247,156,62,0.15); color: #c97c1a; }
+    .my-cr-status.approved { background: rgba(29,158,117,0.15); color: var(--green); }
+    .my-cr-status.denied   { background: rgba(26,19,17,0.07);  color: rgba(26,19,17,0.4); }
+
     /* ── Qualified Persons ── */
     .qual-list { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; }
     .qual-row { display: flex; align-items: center; gap: 10px; padding: 9px 12px; background: white; border: 2px solid var(--border); }
@@ -2249,6 +2298,58 @@
       <div id="hoursSubmitMsg" class="hours-msg"></div>
     </div>
 
+    <div class="card" id="expense-form-card">
+      <h3>Request Reimbursement</h3>
+      <p style="font-size:0.85rem;color:#555;line-height:1.6;margin-bottom:12px;">
+        Shopped for HAU? Upload your receipt and we'll reimburse you.
+      </p>
+
+      <label for="cr-desc">What did you purchase?</label>
+      <input type="text" id="cr-desc" placeholder="e.g. Groceries for food pantry">
+
+      <label for="cr-amount">Total Amount ($)</label>
+      <input type="number" id="cr-amount" min="0.01" step="0.01" placeholder="e.g. 24.99">
+
+      <label>Receipt / Bill Photo</label>
+      <div class="cr-photo-area" id="cr-photo-area" onclick="document.getElementById('cr-photo-input').click()">
+        <div class="cr-photo-placeholder" id="cr-photo-placeholder">
+          <i class="bi bi-camera"></i>
+          Tap to take a photo or upload
+        </div>
+        <img id="cr-photo-preview" src="" style="display:none;" alt="Receipt preview">
+      </div>
+      <input type="file" id="cr-photo-input" accept="image/*" capture="environment" style="display:none;" onchange="crHandlePhoto(this)">
+
+      <label>Preferred Payment Method</label>
+      <div class="cr-pay-method-group">
+        <div class="cr-pay-method-opt">
+          <input type="radio" name="cr-pay" id="cr-pay-venmo" value="Venmo" onchange="crUpdateHandle()">
+          <label for="cr-pay-venmo">Venmo</label>
+        </div>
+        <div class="cr-pay-method-opt">
+          <input type="radio" name="cr-pay" id="cr-pay-zelle" value="Zelle" onchange="crUpdateHandle()">
+          <label for="cr-pay-zelle">Zelle</label>
+        </div>
+        <div class="cr-pay-method-opt">
+          <input type="radio" name="cr-pay" id="cr-pay-cash" value="Cash" checked onchange="crUpdateHandle()">
+          <label for="cr-pay-cash">Cash</label>
+        </div>
+      </div>
+
+      <div id="cr-handle-wrap" style="display:none;">
+        <label for="cr-handle">Venmo / Zelle Handle</label>
+        <input type="text" id="cr-handle" placeholder="@username or phone number">
+      </div>
+
+      <button id="cr-submit-btn" onclick="window.submitExpenseRequest()">Submit Request</button>
+      <div id="cr-submit-msg" class="hours-msg"></div>
+    </div>
+
+    <div class="card" id="my-expenses-card" style="display:none;">
+      <h3>My Expense Requests</h3>
+      <div id="my-cr-list"></div>
+    </div>
+
   </div>
   <!-- ── End Hours Tab ── -->
 
@@ -2442,6 +2543,25 @@
       </div>
       <div class="admin-section-body">
         <div id="pending-vol-body">
+          <div style="padding:20px;text-align:center;font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(26,19,17,0.3);">Open section to load</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reimbursement Requests (collapsible) -->
+    <div class="admin-section" id="comp-section">
+      <div class="admin-section-hdr" onclick="toggleAdminSection('comp-section'); if(this.parentElement.classList.contains('open')) loadCompRequests()">
+        <div>
+          <div class="admin-eyebrow">Finance</div>
+          <div class="admin-title">Reimbursement <span>Requests</span></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="reg-pill" id="comp-count-pill" style="display:none;background:var(--orange);color:white;"></span>
+          <i class="bi bi-chevron-down admin-section-chev"></i>
+        </div>
+      </div>
+      <div class="admin-section-body">
+        <div id="comp-requests-body">
           <div style="padding:20px;text-align:center;font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(26,19,17,0.3);">Open section to load</div>
         </div>
       </div>
@@ -2803,6 +2923,7 @@
       document.getElementById('tabHours').classList.remove('hidden');
       document.getElementById('navHours').classList.add('active');
       if (typeof loadMyHours === 'function') loadMyHours();
+      if (typeof loadMyCompRequests === 'function') loadMyCompRequests();
 
     } else if (tab === 'boston') {
       document.getElementById('tabBoston').classList.remove('hidden');
@@ -3192,6 +3313,245 @@
       });
   }
   window.pendingDeny = pendingDeny;
+
+  /* ─────────────────────────────────────────
+     Compensation / Reimbursement Requests
+  ───────────────────────────────────────── */
+  var crSU = window.SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbwM8DrClchV9B5bfKYMaDURSRzTqlHA3mIVfKLe5HNO85zQYys2rL55WXSDEz89_PxS/exec';
+  var crPhotoBase64 = '';
+  var crPhotoMime   = '';
+
+  function crEsc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function crUpdateHandle() {
+    var pay  = document.querySelector('input[name="cr-pay"]:checked');
+    var wrap = document.getElementById('cr-handle-wrap');
+    if (wrap) wrap.style.display = (pay && pay.value !== 'Cash') ? '' : 'none';
+  }
+  window.crUpdateHandle = crUpdateHandle;
+
+  function crHandlePhoto(input) {
+    var file = input.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      crPhotoMime   = file.type;
+      crPhotoBase64 = e.target.result.split(',')[1];
+      var preview     = document.getElementById('cr-photo-preview');
+      var placeholder = document.getElementById('cr-photo-placeholder');
+      if (preview)     { preview.src = e.target.result; preview.style.display = 'block'; }
+      if (placeholder) placeholder.style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+  }
+  window.crHandlePhoto = crHandlePhoto;
+
+  function submitExpenseRequest() {
+    var desc      = (document.getElementById('cr-desc')   || {}).value || '';
+    var amount    = (document.getElementById('cr-amount') || {}).value || '';
+    var payEl     = document.querySelector('input[name="cr-pay"]:checked');
+    var payMethod = payEl ? payEl.value : 'Cash';
+    var handle    = (document.getElementById('cr-handle') || {}).value || '';
+    var msg       = document.getElementById('cr-submit-msg');
+    var btn       = document.getElementById('cr-submit-btn');
+
+    function showErr(text) { if (msg) { msg.textContent = text; msg.className = 'hours-msg error'; } }
+
+    if (!desc.trim())                              { showErr('Please describe what you purchased.'); return; }
+    if (!amount || parseFloat(amount) <= 0)        { showErr('Please enter a valid amount.'); return; }
+    if (!crPhotoBase64)                            { showErr('Please attach a photo of your receipt.'); return; }
+    if (payMethod !== 'Cash' && !handle.trim())    { showErr('Please enter your ' + payMethod + ' handle.'); return; }
+    if (!window.volunteerProfile)                  { showErr('Not signed in.'); return; }
+
+    if (btn) { btn.disabled = true; btn.textContent = 'Submitting…'; }
+    if (msg) { msg.textContent = ''; msg.className = 'hours-msg'; }
+
+    var body = 'action=submitCompRequest'
+      + '&email='       + encodeURIComponent(window.volunteerProfile.email)
+      + '&amount='      + encodeURIComponent(parseFloat(amount).toFixed(2))
+      + '&description=' + encodeURIComponent(desc.trim())
+      + '&payMethod='   + encodeURIComponent(payMethod)
+      + '&payHandle='   + encodeURIComponent(handle.trim())
+      + '&imageBase64=' + encodeURIComponent(crPhotoBase64)
+      + '&imageMime='   + encodeURIComponent(crPhotoMime);
+
+    fetch(crSU, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: body })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (btn) { btn.disabled = false; btn.textContent = 'Submit Request'; }
+        if (d.success) {
+          if (msg) { msg.textContent = "Request submitted! We'll be in touch."; msg.className = 'hours-msg success'; }
+          document.getElementById('cr-desc').value   = '';
+          document.getElementById('cr-amount').value = '';
+          document.getElementById('cr-handle').value = '';
+          crPhotoBase64 = ''; crPhotoMime = '';
+          var preview     = document.getElementById('cr-photo-preview');
+          var placeholder = document.getElementById('cr-photo-placeholder');
+          if (preview)     { preview.src = ''; preview.style.display = 'none'; }
+          if (placeholder) placeholder.style.display = '';
+          document.getElementById('cr-photo-input').value = '';
+          document.getElementById('cr-pay-cash').checked  = true;
+          crUpdateHandle();
+          loadMyCompRequests();
+        } else {
+          if (msg) { msg.textContent = 'Error: ' + (d.error || 'Unknown error'); msg.className = 'hours-msg error'; }
+        }
+      })
+      .catch(function() {
+        if (btn) { btn.disabled = false; btn.textContent = 'Submit Request'; }
+        if (msg) { msg.textContent = 'Network error — please try again.'; msg.className = 'hours-msg error'; }
+      });
+  }
+  window.submitExpenseRequest = submitExpenseRequest;
+
+  function loadMyCompRequests() {
+    if (!window.volunteerProfile) return;
+    fetch(crSU, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'action=getMyCompRequests&email=' + encodeURIComponent(window.volunteerProfile.email) })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        var card = document.getElementById('my-expenses-card');
+        var list = document.getElementById('my-cr-list');
+        if (!list) return;
+        var reqs = (d.requests || []).slice().reverse();
+        if (!reqs.length) { if (card) card.style.display = 'none'; return; }
+        if (card) card.style.display = '';
+        list.innerHTML = reqs.map(function(r) {
+          var statusCls = r.status.toLowerCase();
+          var handleStr = (r.payHandle && r.payMethod !== 'Cash') ? ' · ' + r.payHandle : '';
+          return '<div class="my-cr-row">'
+            + '<div class="my-cr-info">'
+            +   '<div class="my-cr-desc">'  + crEsc(r.description) + '</div>'
+            +   '<div class="my-cr-meta">'  + crEsc(r.payMethod) + crEsc(handleStr) + ' · ' + crEsc(r.submittedAt) + '</div>'
+            + '</div>'
+            + '<div class="my-cr-right">'
+            +   '<div class="my-cr-amount">$' + r.amount.toFixed(2) + '</div>'
+            +   '<div class="my-cr-status ' + statusCls + '">' + crEsc(r.status) + '</div>'
+            + '</div>'
+            + '</div>';
+        }).join('');
+      })
+      .catch(function() {});
+  }
+  window.loadMyCompRequests = loadMyCompRequests;
+
+  // Admin helpers
+  function compCanApprove() {
+    var pos = ((window.volunteerProfile || {}).position || '').toUpperCase();
+    return pos.includes('A') || pos.includes('Z') || pos.includes('FO');
+  }
+
+  function loadCompRequests() {
+    var body = document.getElementById('comp-requests-body');
+    if (!body) return;
+    if (!compCanApprove()) {
+      body.innerHTML = '<div style="padding:20px;text-align:center;font-size:0.65rem;font-weight:700;color:rgba(26,19,17,0.3);">Access restricted to A, Z, and FO officers.</div>';
+      return;
+    }
+    body.innerHTML = '<div style="padding:20px;text-align:center;font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(26,19,17,0.3);"><i class="bi bi-hourglass-split spinner"></i> Loading&hellip;</div>';
+    fetch(crSU, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'action=getCompRequests' })
+      .then(function(r) { return r.json(); })
+      .then(function(d) { renderCompRequests(d.requests || [], body); })
+      .catch(function() { body.innerHTML = '<div style="padding:20px;text-align:center;color:rgba(26,19,17,0.4);">Failed to load.</div>'; });
+  }
+  window.loadCompRequests = loadCompRequests;
+
+  function renderCompRequests(requests, body) {
+    var pill    = document.getElementById('comp-count-pill');
+    var pending = requests.filter(function(r) { return r.status === 'Pending'; });
+    if (pill) {
+      if (pending.length) { pill.textContent = pending.length; pill.style.display = ''; }
+      else pill.style.display = 'none';
+    }
+
+    if (!requests.length) {
+      body.innerHTML = '<div style="padding:24px;text-align:center;font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(26,19,17,0.3);">No requests yet</div>';
+      return;
+    }
+
+    var grouped = { Pending: [], Approved: [], Denied: [] };
+    requests.forEach(function(r) { (grouped[r.status] || grouped['Denied']).push(r); });
+
+    var html = '<div class="cr-list">';
+    ['Pending', 'Approved', 'Denied'].forEach(function(status) {
+      var items = grouped[status];
+      if (!items || !items.length) return;
+      html += '<div class="cr-group-hdr">' + status + ' (' + items.length + ')</div>';
+      items.forEach(function(r) {
+        var payClass  = r.payMethod.toLowerCase();
+        var handleStr = (r.payHandle && r.payMethod !== 'Cash') ? ' · ' + crEsc(r.payHandle) : '';
+        var isPending = r.status === 'Pending';
+        html += '<div class="cr-card" id="cr-card-' + crEsc(r.id) + '">'
+          + '<div class="cr-card-hdr">'
+          +   '<div class="cr-card-meta">'
+          +     '<div class="cr-card-name">'  + crEsc(r.name)        + '</div>'
+          +     '<div class="cr-card-sub">'   + crEsc(r.branch)      + ' branch · ' + crEsc(r.submittedAt) + '</div>'
+          +     '<div class="cr-card-desc">'  + crEsc(r.description) + '</div>'
+          +     '<div class="cr-pay-tag ' + payClass + '">' + crEsc(r.payMethod) + handleStr + '</div>'
+          +   '</div>'
+          +   '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">'
+          +     '<div class="cr-amount">$' + r.amount.toFixed(2) + '</div>'
+          +     (!isPending ? '<div class="cr-status-badge ' + r.status.toLowerCase() + '">' + crEsc(r.status) + '</div>' : '')
+          +   '</div>'
+          + '</div>';
+        if (r.imageUrl) {
+          html += '<a href="' + crEsc(r.imageUrl) + '" target="_blank" rel="noopener" class="cr-bill-link"><i class="bi bi-receipt"></i> View Receipt</a>';
+        }
+        if (isPending) {
+          html += '<div class="cr-actions">'
+            + '<button class="cr-btn cr-btn-approve" onclick="approveCompRequest(\'' + crEsc(r.id) + '\')"><i class="bi bi-check-lg"></i> Approve</button>'
+            + '<button class="cr-btn cr-btn-deny"    onclick="denyCompRequest(\''    + crEsc(r.id) + '\')">Deny</button>'
+            + '</div>';
+        }
+        html += '</div>';
+      });
+    });
+    html += '</div>';
+    body.innerHTML = html;
+  }
+
+  function approveCompRequest(id) {
+    var card = document.getElementById('cr-card-' + id);
+    if (card) { card.style.opacity = '0.5'; card.querySelectorAll('button').forEach(function(b){b.disabled=true;}); }
+    fetch(crSU, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'action=approveCompRequest&id=' + encodeURIComponent(id) })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.success) { loadCompRequests(); }
+        else {
+          if (card) { card.style.opacity='1'; card.querySelectorAll('button').forEach(function(b){b.disabled=false;}); }
+          alert('Failed: ' + (d.error || 'Unknown error'));
+        }
+      })
+      .catch(function() {
+        if (card) { card.style.opacity='1'; card.querySelectorAll('button').forEach(function(b){b.disabled=false;}); }
+        alert('Network error — please try again.');
+      });
+  }
+  window.approveCompRequest = approveCompRequest;
+
+  function denyCompRequest(id) {
+    if (!confirm('Deny this reimbursement request?')) return;
+    var card = document.getElementById('cr-card-' + id);
+    if (card) { card.style.opacity = '0.5'; card.querySelectorAll('button').forEach(function(b){b.disabled=true;}); }
+    fetch(crSU, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'action=denyCompRequest&id=' + encodeURIComponent(id) })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.success) { loadCompRequests(); }
+        else {
+          if (card) { card.style.opacity='1'; card.querySelectorAll('button').forEach(function(b){b.disabled=false;}); }
+          alert('Failed: ' + (d.error || 'Unknown error'));
+        }
+      })
+      .catch(function() {
+        if (card) { card.style.opacity='1'; card.querySelectorAll('button').forEach(function(b){b.disabled=false;}); }
+        alert('Network error — please try again.');
+      });
+  }
+  window.denyCompRequest = denyCompRequest;
 
   window.loadDashboard = function() {
     if (window.volunteerProfile) {
