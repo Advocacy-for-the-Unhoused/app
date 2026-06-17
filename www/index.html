@@ -49,7 +49,7 @@
       box-sizing: border-box;
     }
 
-    #tabHome h1 {
+    #tabHome h1, body > h1 {
       font-family: 'Abril Fatface', serif;
       font-size: clamp(2rem, 8vw, 3.5rem);
       color: var(--page-text, var(--camp-cream));
@@ -57,9 +57,9 @@
       margin: 0 0 10px 0;
     }
 
-    #tabHome h1 span { color: var(--camp-orange); font-style: italic; }
+    #tabHome h1 span, body > h1 span { color: var(--camp-orange); font-style: italic; }
 
-    #tabHome .subtitle {
+    #tabHome .subtitle, body > .subtitle {
       font-family: 'Abril Fatface', serif;
       font-size: clamp(0.9rem, 2.5vw, 1.2rem);
       color: var(--camp-orange);
@@ -2168,6 +2168,8 @@
 
 
 <!-- ═══════════════ Sign-in Card ═══════════════ -->
+<h1>AFU</h1>
+<div class="subtitle">Advocacy for the Unhoused</div>
 <div id="authCard" class="card" style="max-width:500px;">
   <h3 class="center">Sign in to continue</h3>
   <!-- Web GSI button — shown in browser/PWA, hidden in Capacitor -->
