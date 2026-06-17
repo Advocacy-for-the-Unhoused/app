@@ -49,7 +49,7 @@
       box-sizing: border-box;
     }
 
-    h1 {
+    #tabHome h1 {
       font-family: 'Abril Fatface', serif;
       font-size: clamp(2rem, 8vw, 3.5rem);
       color: var(--page-text, var(--camp-cream));
@@ -57,9 +57,9 @@
       margin: 0 0 10px 0;
     }
 
-    h1 span { color: var(--camp-orange); font-style: italic; }
+    #tabHome h1 span { color: var(--camp-orange); font-style: italic; }
 
-    .subtitle {
+    #tabHome .subtitle {
       font-family: 'Abril Fatface', serif;
       font-size: clamp(0.9rem, 2.5vw, 1.2rem);
       color: var(--camp-orange);
@@ -2290,6 +2290,9 @@
        TAB 0 — HOME DASHBOARD
   ──────────────────────────────────────────────── -->
   <div id="tabHome" class="tab-view">
+
+    <h1>AFU</h1>
+    <div class="subtitle">Advocacy for the Unhoused</div>
 
     <!-- Profile header -->
     <div class="dash-profile-card">
