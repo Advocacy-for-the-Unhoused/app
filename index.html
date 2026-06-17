@@ -20,17 +20,18 @@
       --nav-inactive: rgba(249,246,240,0.3);
       --nav-hover: rgba(249,246,240,0.65);
       --nav-border: rgba(249,246,240,0.1);
-      --stat-bg: rgba(249,246,240,0.04);
-      --stat-border: rgba(249,246,240,0.1);
-      --stat-label: rgba(249,246,240,0.35);
-      --section-label: rgba(249,246,240,0.25);
+      --stat-bg: rgba(249,246,240,0.06);
+      --stat-border: rgba(249,246,240,0.14);
+      --stat-label: rgba(249,246,240,0.5);
+      --section-label: rgba(249,246,240,0.4);
       --divider-line: rgba(249,246,240,0.15);
-      --divider-text: rgba(249,246,240,0.3);
-      --udi-toggle-col: rgba(249,246,240,0.45);
-      --udi-toggle-border: rgba(249,246,240,0.2);
-      --delete-section-border: rgba(249,246,240,0.08);
-      --delete-label: rgba(249,246,240,0.25);
-      --privacy-link-col: rgba(249,246,240,0.4);
+      --divider-text: rgba(249,246,240,0.4);
+      --udi-toggle-col: rgba(249,246,240,0.6);
+      --udi-toggle-border: rgba(249,246,240,0.3);
+      --delete-section-border: rgba(249,246,240,0.12);
+      --delete-label: rgba(249,246,240,0.4);
+      --privacy-link-col: rgba(26,19,17,0.5);
+      --card-border: rgba(249,246,240,0.22);
     }
 
     body {
@@ -69,7 +70,7 @@
 
     .card {
       background: white;
-      border: 4px solid var(--camp-dark);
+      border: 4px solid var(--card-border);
       padding: 40px;
       width: 100%;
       box-sizing: border-box;
@@ -204,7 +205,7 @@
 
     #scannerContainer {
       background: white;
-      border: 4px solid var(--camp-dark);
+      border: 4px solid var(--card-border);
       padding: 30px;
       max-width: 500px;
       width: 100%;
@@ -939,7 +940,7 @@
     /* Profile header card */
     .dash-profile-card {
       background: white;
-      border: 4px solid var(--camp-dark);
+      border: 4px solid var(--card-border);
       box-shadow: 10px 10px 0 var(--camp-orange);
       padding: 20px 22px;
       margin-bottom: 16px;
@@ -1012,7 +1013,7 @@
     /* Fundraising goal */
     .dash-goal {
       background: white;
-      border: 3px solid var(--camp-dark);
+      border: 3px solid var(--card-border);
       box-shadow: 8px 8px 0 var(--camp-orange);
       padding: 18px 22px 20px;
       margin-bottom: 16px;
@@ -1079,7 +1080,7 @@
 
     .dash-tile {
       background: white;
-      border: 3px solid var(--camp-dark);
+      border: 3px solid var(--card-border);
       box-shadow: 6px 6px 0 var(--camp-orange);
       padding: 20px 18px 18px;
       cursor: pointer;
@@ -1153,7 +1154,7 @@
     /* Activity feed */
     .dash-activity {
       background: white;
-      border: 3px solid var(--camp-dark);
+      border: 3px solid var(--card-border);
       box-shadow: 8px 8px 0 var(--camp-orange);
       padding: 20px 22px 14px;
       margin-bottom: 16px;
@@ -1318,20 +1319,21 @@
         --page-bg: #F9F6F0;
         --page-text: #1A1311;
         --nav-bg: #ffffff;
-        --nav-inactive: rgba(26,19,17,0.35);
-        --nav-hover: rgba(26,19,17,0.6);
+        --nav-inactive: rgba(26,19,17,0.4);
+        --nav-hover: rgba(26,19,17,0.65);
         --nav-border: rgba(26,19,17,0.1);
-        --stat-bg: rgba(26,19,17,0.04);
-        --stat-border: rgba(26,19,17,0.1);
-        --stat-label: rgba(26,19,17,0.45);
-        --section-label: rgba(26,19,17,0.4);
-        --divider-line: rgba(26,19,17,0.12);
-        --divider-text: rgba(26,19,17,0.35);
-        --udi-toggle-col: rgba(26,19,17,0.45);
-        --udi-toggle-border: rgba(26,19,17,0.2);
-        --delete-section-border: rgba(26,19,17,0.08);
-        --delete-label: rgba(26,19,17,0.3);
-        --privacy-link-col: rgba(26,19,17,0.4);
+        --stat-bg: rgba(26,19,17,0.05);
+        --stat-border: rgba(26,19,17,0.12);
+        --stat-label: rgba(26,19,17,0.5);
+        --section-label: rgba(26,19,17,0.45);
+        --divider-line: rgba(26,19,17,0.14);
+        --divider-text: rgba(26,19,17,0.4);
+        --udi-toggle-col: rgba(26,19,17,0.5);
+        --udi-toggle-border: rgba(26,19,17,0.25);
+        --delete-section-border: rgba(26,19,17,0.1);
+        --delete-label: rgba(26,19,17,0.4);
+        --privacy-link-col: rgba(26,19,17,0.5);
+        --card-border: #1A1311;
       }
       /* hours badge stays dark — it's a branded design element */
       .hours-total-badge { background: var(--camp-dark); }
