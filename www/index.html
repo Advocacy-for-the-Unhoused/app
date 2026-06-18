@@ -19,6 +19,11 @@
       --camp-orange: #C8522D;
       --camp-cream: #F9F6F0;
       --camp-dark: #1A1311;
+      /* theme toggle — dark mode defaults */
+      --toggle-pill-bg: rgba(249,246,240,0.15);
+      --toggle-pill-border: rgba(249,246,240,0.3);
+      --toggle-knob-bg: rgba(249,246,240,0.85);
+      --toggle-knob-x: 0px;
       /* adaptive tokens — dark mode defaults */
       --page-bg: #1A1311;
       --page-text: #F9F6F0;
@@ -1340,6 +1345,10 @@
         --delete-label: rgba(26,19,17,0.4);
         --privacy-link-col: rgba(26,19,17,0.5);
         --card-border: #1A1311;
+        --toggle-pill-bg: var(--camp-orange);
+        --toggle-pill-border: transparent;
+        --toggle-knob-bg: white;
+        --toggle-knob-x: 24px;
       }
       html:not([data-theme="dark"]) .hours-total-badge { background: var(--camp-dark); }
       html:not([data-theme="dark"]) .boston-banner { background: var(--camp-dark); }
@@ -1351,8 +1360,6 @@
       html:not([data-theme="dark"]) .admin-title { color: var(--dark); }
       html:not([data-theme="dark"]) .admin-stat-val { color: var(--orange); }
       html:not([data-theme="dark"]) .admin-stat-lbl { color: rgba(26,19,17,0.4); }
-      html:not([data-theme="dark"]) .theme-toggle-pill { background: var(--camp-orange); }
-      html:not([data-theme="dark"]) .theme-toggle-knob { transform: translateX(24px); }
     }
 
     /* ── User forced light ── */
@@ -1375,6 +1382,10 @@
       --delete-label: rgba(26,19,17,0.4);
       --privacy-link-col: rgba(26,19,17,0.5);
       --card-border: #1A1311;
+      --toggle-pill-bg: var(--camp-orange);
+      --toggle-pill-border: transparent;
+      --toggle-knob-bg: white;
+      --toggle-knob-x: 24px;
     }
     html[data-theme="light"] .hours-total-badge { background: var(--camp-dark); }
     html[data-theme="light"] .boston-banner { background: var(--camp-dark); }
@@ -1386,8 +1397,6 @@
     html[data-theme="light"] .admin-title { color: var(--dark); }
     html[data-theme="light"] .admin-stat-val { color: var(--orange); }
     html[data-theme="light"] .admin-stat-lbl { color: rgba(26,19,17,0.4); }
-    html[data-theme="light"] .theme-toggle-pill { background: var(--camp-orange); }
-    html[data-theme="light"] .theme-toggle-knob { transform: translateX(24px); }
 
     /* ── User forced dark (overrides system light) ── */
     html[data-theme="dark"] {
@@ -1422,12 +1431,14 @@
     }
     .theme-toggle-pill {
       position: relative; width: 52px; height: 28px; cursor: pointer;
-      background: var(--camp-dark); border-radius: 14px;
-      transition: background 0.25s; border: none; padding: 0; flex-shrink: 0;
+      background: var(--toggle-pill-bg); border-radius: 14px; padding: 0; flex-shrink: 0;
+      border: 1.5px solid var(--toggle-pill-border);
+      transition: background 0.25s, border-color 0.25s;
     }
     .theme-toggle-knob {
-      position: absolute; top: 3px; left: 3px; width: 22px; height: 22px;
-      border-radius: 50%; background: white;
+      position: absolute; top: 2px; left: 2px; width: 20px; height: 20px;
+      border-radius: 50%; background: var(--toggle-knob-bg);
+      transform: translateX(var(--toggle-knob-x));
       transition: transform 0.25s; pointer-events: none;
     }
     .theme-toggle-icons { display: flex; gap: 4px; align-items: center; }
