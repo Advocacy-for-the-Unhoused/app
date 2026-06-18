@@ -25,6 +25,11 @@ workflows:
           xcode-project use-profiles
       - name: Build IPA
         script: |
+          echo "=== Listing ios/App ==="
+          ls ios/App/
+          echo "=== Raw xcodebuild showBuildSettings ==="
+          xcodebuild -project "$XCODE_PROJECT" -scheme "$XCODE_SCHEME" -showBuildSettings 2>&1 || true
+          echo "=== Building IPA ==="
           xcode-project build-ipa \
             --project "$XCODE_PROJECT" \
             --scheme "$XCODE_SCHEME"
