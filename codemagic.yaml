@@ -16,52 +16,26 @@ workflows:
         script: npm install --legacy-peer-deps
       - name: Sync Capacitor to iOS
         script: npx cap sync ios
-      - name: Delete stale provisioning profiles
+      - name: Enable Sign In with Apple on App ID
         script: |
-          set +e
-          echo "Listing iOS App Store profiles via app-store-connect CLI..."
-          PROFILES_JSON=$(app-store-connect profiles list \
-            --profile-type IOS_APP_STORE \
-            --json 2>/dev/null)
-          echo "Raw response: $PROFILES_JSON"
-          echo "$PROFILES_JSON" | python3 << 'PYEOF'
-          import sys, json, subprocess
-          raw = sys.stdin.read().strip()
-          try:
-              data = json.loads(raw) if raw else []
-          except Exception as e:
-              print(f"Parse error: {e}, raw={raw[:200]}")
-              sys.exit(0)
-          profiles = data if isinstance(data, list) else data.get('data', [])
-          print(f"Found {len(profiles)} profile(s)")
-          for p in profiles:
-              rid = p.get('id') or p.get('resourceId') or ''
-              name = (p.get('attributes') or {}).get('name', '?')
-              if not rid:
-                  continue
-              print(f"Deleting {rid} ({name})")
-              r = subprocess.run(
-                  ['app-store-connect', 'profiles', 'delete', rid],
-                  capture_output=True, text=True
-              )
-              print(r.stdout or r.stderr or 'OK')
-          PYEOF
-          echo "Profile cleanup done"
-          exit 0
+          BUNDLE_RESOURCE_ID=$(app-store-connect bundle-ids list \
+            --bundle-id-identifier "$BUNDLE_ID" \
+            --strict-match-identifier \
+            --json | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0]['id'])")
+          echo "Bundle ID resource: $BUNDLE_RESOURCE_ID"
+          app-store-connect bundle-ids enable-capabilities \
+            "$BUNDLE_RESOURCE_ID" \
+            --capability APPLE_ID_AUTH
       - name: Set up code signing
         script: |
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
-            --create
+            --create \
+            --delete-stale-profiles
           keychain add-certificates
           xcode-project use-profiles
       - name: Build IPA
         script: |
-          echo "=== Listing ios/App ==="
-          ls ios/App/
-          echo "=== Raw xcodebuild showBuildSettings ==="
-          xcodebuild -project "$XCODE_PROJECT" -scheme "$XCODE_SCHEME" -showBuildSettings 2>&1 || true
-          echo "=== Building IPA ==="
           xcode-project build-ipa \
             --project "$XCODE_PROJECT" \
             --scheme "$XCODE_SCHEME"
