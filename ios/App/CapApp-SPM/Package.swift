@@ -12,13 +12,13 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", exact: "8.4.0"),
-        .package(name: "AparajitaCapacitorBiometricAuth", path: "..\..\..\node_modules\@aparajita\capacitor-biometric-auth"),
-        .package(name: "CapacitorCommunityAppleSignIn", path: "..\..\..\node_modules\@capacitor-community\apple-sign-in"),
-        .package(name: "CapacitorHaptics", path: "..\..\..\node_modules\@capacitor\haptics"),
-        .package(name: "CapacitorNetwork", path: "..\..\..\node_modules\@capacitor\network"),
-        .package(name: "CapacitorPreferences", path: "..\..\..\node_modules\@capacitor\preferences"),
-        .package(name: "CapacitorPushNotifications", path: "..\..\..\node_modules\@capacitor\push-notifications"),
-        .package(name: "CapacitorStatusBar", path: "..\..\..\node_modules\@capacitor\status-bar")
+        .package(name: "AparajitaCapacitorBiometricAuth", path: "../../../node_modules/@aparajita/capacitor-biometric-auth"),
+        .package(name: "CapacitorCommunityAppleSignIn", path: "../../../node_modules/@capacitor-community/apple-sign-in"),
+        .package(name: "CapacitorHaptics", path: "../../../node_modules/@capacitor/haptics"),
+        .package(name: "CapacitorNetwork", path: "../../../node_modules/@capacitor/network"),
+        .package(name: "CapacitorPreferences", path: "../../../node_modules/@capacitor/preferences"),
+        .package(name: "CapacitorPushNotifications", path: "../../../node_modules/@capacitor/push-notifications"),
+        .package(name: "CapacitorStatusBar", path: "../../../node_modules/@capacitor/status-bar")
     ],
     targets: [
         .target(
