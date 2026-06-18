@@ -19,18 +19,12 @@ workflows:
       - name: Set up code signing
         script: |
           python3 << 'PYEOF'
-          import os
+          import os, base64
           key = os.environ.get('APP_STORE_CONNECT_PRIVATE_KEY', '')
-          print('KEY length:', len(key))
-          print('KEY first 80:', repr(key[:80]))
-          print('Is file path:', os.path.isfile(key.strip()))
-          if os.path.isfile(key.strip()):
-              key = open(key.strip()).read()
-          else:
-              key = key.replace('\\n', '\n')
+          decoded = base64.b64decode(key).decode('utf-8')
           with open('/tmp/asc_key.p8', 'w') as f:
-              f.write(key)
-          print('FILE first 80:', repr(open('/tmp/asc_key.p8').read()[:80]))
+              f.write(decoded)
+          print('Wrote', len(decoded), 'chars to /tmp/asc_key.p8')
           PYEOF
           export APP_STORE_CONNECT_PRIVATE_KEY="@file:/tmp/asc_key.p8"
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
