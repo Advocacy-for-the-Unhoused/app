@@ -18,6 +18,7 @@ workflows:
         script: npx cap sync ios
       - name: Set up code signing
         script: |
+          keychain initialize
           python3 << 'PYEOF'
           import os, base64
           key = os.environ.get('APP_STORE_CONNECT_PRIVATE_KEY', '')
