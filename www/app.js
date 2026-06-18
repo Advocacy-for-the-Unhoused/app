@@ -193,9 +193,14 @@ window.onAppleSignedIn = async function(sub, email, givenName, familyName) {
     const info = JSON.parse(await res.text());
 
     if (info.error || !info.firstName || info.firstName === 'User' || !info.branchCode || info.branchCode === 'X') {
+      volunteerEmail = email || '';
+      window._pendingAppleSub = sub;
       document.getElementById('regFname').value = givenName  || '';
       document.getElementById('regLname').value = familyName || '';
-      document.getElementById('regEmail').value = email || '';
+      const emailInput = document.getElementById('regEmail');
+      emailInput.value = email || '';
+      emailInput.readOnly = !!email; // editable only if Apple didn't return an email
+      document.getElementById('regDesc').textContent = "Your account isn't on the roster yet. Fill in your details — your Branch President will approve your profile.";
       document.getElementById('authScreen').classList.add('hidden');
       document.getElementById('registerCard').classList.remove('hidden');
       return;
@@ -978,16 +983,23 @@ async function submitRegistration() {
   btn.textContent = 'Submitting…';
   msgEl.style.display = 'none';
 
+  const emailToSubmit = volunteerEmail || document.getElementById('regEmail').value.trim();
+  if (!emailToSubmit) {
+    alert('Please enter your email address.');
+    return;
+  }
+
   try {
     const body = [
       `action=registerVolunteer`,
       `fname=${encodeURIComponent(fname)}`,
       `lname=${encodeURIComponent(lname)}`,
-      `email=${encodeURIComponent(volunteerEmail)}`,
+      `email=${encodeURIComponent(emailToSubmit)}`,
       `phone=${encodeURIComponent(phone)}`,
       `branch=${encodeURIComponent(branch)}`,
       `photoBase64=${encodeURIComponent(regPhotoBase64)}`,
-      `photoMime=${encodeURIComponent(regPhotoMime)}`
+      `photoMime=${encodeURIComponent(regPhotoMime)}`,
+      `appleSub=${encodeURIComponent(window._pendingAppleSub || '')}`
     ].join('&');
 
     const res  = await fetch(SCRIPT_URL, {
@@ -998,6 +1010,7 @@ async function submitRegistration() {
     const data = await res.json();
 
     if (data.success) {
+      window._pendingAppleSub = null;
       document.getElementById('registerCard').classList.add('hidden');
       document.getElementById('registerSuccess').classList.remove('hidden');
     } else {

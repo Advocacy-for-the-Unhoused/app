@@ -70,7 +70,8 @@ function doPost(e) {
       result = handleVolunteerRegistration({
         fname: p.fname, lname: p.lname, email: p.email,
         phone: p.phone, branch: p.branch,
-        photoBase64: p.photoBase64, photoMime: p.photoMime
+        photoBase64: p.photoBase64, photoMime: p.photoMime,
+        appleSub: p.appleSub || ''
       });
 
     } else if (p.action === "generateSlips") {
@@ -450,7 +451,7 @@ function handleDonation(data) {
 }
 
 // ── Volunteer Registration Handler ────────────────────────────────────────────
-// Pending Volunteers layout: A=Name | B=Phone | C=Email | D=Photo URL | E=Branch Code | F=Status
+// Pending Volunteers layout: A=Name | B=Phone | C=Email | D=Photo URL | E=Branch Code | F=Status | G=Apple Sub
 function handleVolunteerRegistration(formData) {
   const ss     = SpreadsheetApp.openById(SHEET_ID);
   const sheet  = ss.getSheetByName(PENDING_SHEET) || ss.insertSheet(PENDING_SHEET);
@@ -459,8 +460,8 @@ function handleVolunteerRegistration(formData) {
   if (!config) return { error: "Invalid branch: " + formData.branch };
 
   if (sheet.getLastRow() === 0) {
-    sheet.appendRow(["Name", "Phone", "Email", "Photo URL", "Branch Code", "Status"]);
-    sheet.getRange(1, 1, 1, 6).setFontWeight("bold");
+    sheet.appendRow(["Name", "Phone", "Email", "Photo URL", "Branch Code", "Status", "Apple Sub"]);
+    sheet.getRange(1, 1, 1, 7).setFontWeight("bold");
     sheet.setFrozenRows(1);
   }
 
@@ -485,7 +486,8 @@ function handleVolunteerRegistration(formData) {
     formData.email,
     photoUrl,
     branchCode,
-    "Pending"
+    "Pending",
+    formData.appleSub || ''
   ]);
 
   const sheetLink = "https://docs.google.com/spreadsheets/d/" + SHEET_ID;
@@ -554,16 +556,17 @@ function approveVolunteer(rowIndex) {
   const pending = ss.getSheetByName(PENDING_SHEET);
   if (!pending) return { error: 'Pending Volunteers sheet not found' };
 
-  const row        = pending.getRange(rowIndex, 1, 1, 6).getValues()[0];
+  const row        = pending.getRange(rowIndex, 1, 1, 7).getValues()[0];
   const name       = (row[0] || '').toString().trim();
   const phone      = (row[1] || '').toString().trim();
   const email      = (row[2] || '').toString().trim();
   const photoUrl   = (row[3] || '').toString().trim();
   const branchCode = (row[4] || '').toString().trim().toUpperCase();
+  const appleSub   = (row[6] || '').toString().trim();
 
   pending.getRange(rowIndex, 6).setValue('Approved');
 
-  // Add to Roster: A=blank, B=name, C=phone, D=email, E=position, F=branchCode, G=photoUrl, H=Active, I=DoB
+  // Add to Roster: A=blank, B=name, C=phone, D=email, E=position, F=branchCode, G=photoUrl, H=Active, I=DoB, J=Apple Sub
   // Insert after the last row whose branch code matches, so the roster stays grouped by branch.
   const roster = ss.getSheetByName('Roster') || ss.insertSheet('Roster');
   const allRows   = roster.getDataRange().getValues();
@@ -574,8 +577,8 @@ function approveVolunteer(rowIndex) {
     }
   }
   roster.insertRowAfter(insertAfter);
-  roster.getRange(insertAfter + 1, 1, 1, 9)
-        .setValues([['', name, phone, email, '', branchCode, photoUrl, 'Yes', '']]);
+  roster.getRange(insertAfter + 1, 1, 1, 10)
+        .setValues([['', name, phone, email, '', branchCode, photoUrl, 'Yes', '', appleSub]]);
 
   // Notify the volunteer
   try {
