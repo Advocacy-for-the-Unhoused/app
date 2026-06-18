@@ -5,9 +5,6 @@ workflows:
     environment:
       groups:
         - ios_credentials
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.afu.volunteerportal
       vars:
         BUNDLE_ID: "com.afu.volunteerportal"
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
