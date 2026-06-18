@@ -9,7 +9,7 @@ workflows:
         BUNDLE_ID: "com.afu.volunteerportal"
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
-      node: "20"
+      node: "22"
       xcode: latest
       cocoapods: default
     scripts:
