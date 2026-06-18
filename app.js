@@ -8,6 +8,23 @@ let volunteerName  = null;
 let branchLetter   = null;
 let branchName     = null;
 
+// ===== THEME TOGGLE =====
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.dataset.theme;
+  // If explicitly dark → go light; if explicitly light or system → go dark
+  // We detect "effective" mode by checking the computed bg
+  const systemLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+  const effectivelyLight = current === 'light' || (!current && systemLight);
+  if (effectivelyLight) {
+    html.dataset.theme = 'dark';
+    localStorage.setItem('afu-theme', 'dark');
+  } else {
+    html.dataset.theme = 'light';
+    localStorage.setItem('afu-theme', 'light');
+  }
+}
+
 // ===== HAPTICS =====
 function haptic(type = 'medium') {
   if (!window.Capacitor?.isNativePlatform()) return;
@@ -35,33 +52,6 @@ function parseJwt(token) {
 }
 
 // ===== SIGN-IN HANDLER =====
-window.demoSignIn = function () {
-  const pw = prompt('Enter demo password:');
-  if (pw !== 'APPLEDEMO12!@') { alert('Incorrect password.'); return; }
-
-  volunteerEmail = 'demo@afu.app';
-  volunteerName  = 'Demo User';
-  branchLetter   = 'A';
-  branchName     = 'Hopkinton';
-
-  window.volunteerProfile = {
-    firstName: 'Demo',
-    branchName: 'Hopkinton',
-    branchCode: 'A',
-    email: 'demo@afu.app',
-    photoUrl: null,
-    position: 'A',
-  };
-
-  document.getElementById('authScreen').classList.add('hidden');
-  document.getElementById('appContent').classList.remove('hidden');
-  document.getElementById('mainNav').classList.remove('hidden');
-  document.getElementById('udiBranchDisplay').value = 'A — Hopkinton';
-
-  switchTab('home');
-  loadEventTypes();
-};
-
 window.onSignedIn = async function (preloadedPayload = null) {
   console.log("onSignedIn called!");
 

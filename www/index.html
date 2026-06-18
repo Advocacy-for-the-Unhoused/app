@@ -8,6 +8,12 @@
   <meta name="theme-color" content="#C8522D">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Montserrat:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <script>
+    (function() {
+      var t = localStorage.getItem('afu-theme');
+      if (t === 'dark' || t === 'light') document.documentElement.dataset.theme = t;
+    })();
+  </script>
   <style>
     :root {
       --camp-orange: #C8522D;
@@ -608,9 +614,9 @@
       flex-direction: column;
     }
     .admin-section { border-bottom: 2.5px solid var(--dark); }
-    .admin-section-hdr { background: white; padding: 14px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; transition: opacity 0.15s; border-left: 4px solid var(--orange); }
+    .admin-section-hdr { background: var(--dark); padding: 14px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; transition: opacity 0.15s; }
     .admin-section-hdr:active { opacity: 0.8; }
-    .admin-section-chev { color: rgba(26,19,17,0.4); font-size: 14px; transition: transform 0.25s; flex-shrink: 0; }
+    .admin-section-chev { color: rgba(249,246,240,0.45); font-size: 14px; transition: transform 0.25s; flex-shrink: 0; }
     .admin-section.open .admin-section-chev { transform: rotate(180deg); }
     .admin-section-body { display: none; }
     .admin-section.open .admin-section-body { display: block; }
@@ -1313,9 +1319,9 @@
       transform: none; box-shadow: none;
     }
 
-    /* ── Light Mode ── */
+    /* ── System light — only when user hasn't forced dark ── */
     @media (prefers-color-scheme: light) {
-      :root {
+      html:not([data-theme="dark"]) {
         --page-bg: #F9F6F0;
         --page-text: #1A1311;
         --nav-bg: #ffffff;
@@ -1335,15 +1341,97 @@
         --privacy-link-col: rgba(26,19,17,0.5);
         --card-border: #1A1311;
       }
-      /* hours badge stays dark — it's a branded design element */
-      .hours-total-badge { background: var(--camp-dark); }
-      /* Boston banner stays dark */
-      .boston-banner { background: var(--camp-dark); }
-      /* notification toast stays dark */
-      .native-push-toast { background: rgba(26,19,17,0.97); }
-      /* dash chip stays dark */
-      .dash-chip { background: var(--camp-dark); }
+      html:not([data-theme="dark"]) .hours-total-badge { background: var(--camp-dark); }
+      html:not([data-theme="dark"]) .boston-banner { background: var(--camp-dark); }
+      html:not([data-theme="dark"]) .native-push-toast { background: rgba(26,19,17,0.97); }
+      html:not([data-theme="dark"]) .dash-chip { background: var(--camp-dark); }
+      html:not([data-theme="dark"]) .admin-section-hdr { background: white; border-left: 4px solid var(--orange); }
+      html:not([data-theme="dark"]) .admin-section-chev { color: rgba(26,19,17,0.4); }
+      html:not([data-theme="dark"]) .admin-eyebrow { color: rgba(26,19,17,0.4); }
+      html:not([data-theme="dark"]) .admin-title { color: var(--dark); }
+      html:not([data-theme="dark"]) .admin-stat-val { color: var(--orange); }
+      html:not([data-theme="dark"]) .admin-stat-lbl { color: rgba(26,19,17,0.4); }
+      html:not([data-theme="dark"]) .theme-toggle-pill { background: var(--camp-orange); }
+      html:not([data-theme="dark"]) .theme-toggle-knob { transform: translateX(24px); }
     }
+
+    /* ── User forced light ── */
+    html[data-theme="light"] {
+      --page-bg: #F9F6F0;
+      --page-text: #1A1311;
+      --nav-bg: #ffffff;
+      --nav-inactive: rgba(26,19,17,0.4);
+      --nav-hover: rgba(26,19,17,0.65);
+      --nav-border: rgba(26,19,17,0.1);
+      --stat-bg: rgba(26,19,17,0.05);
+      --stat-border: rgba(26,19,17,0.12);
+      --stat-label: rgba(26,19,17,0.5);
+      --section-label: rgba(26,19,17,0.45);
+      --divider-line: rgba(26,19,17,0.14);
+      --divider-text: rgba(26,19,17,0.4);
+      --udi-toggle-col: rgba(26,19,17,0.5);
+      --udi-toggle-border: rgba(26,19,17,0.25);
+      --delete-section-border: rgba(26,19,17,0.1);
+      --delete-label: rgba(26,19,17,0.4);
+      --privacy-link-col: rgba(26,19,17,0.5);
+      --card-border: #1A1311;
+    }
+    html[data-theme="light"] .hours-total-badge { background: var(--camp-dark); }
+    html[data-theme="light"] .boston-banner { background: var(--camp-dark); }
+    html[data-theme="light"] .native-push-toast { background: rgba(26,19,17,0.97); }
+    html[data-theme="light"] .dash-chip { background: var(--camp-dark); }
+    html[data-theme="light"] .admin-section-hdr { background: white; border-left: 4px solid var(--orange); }
+    html[data-theme="light"] .admin-section-chev { color: rgba(26,19,17,0.4); }
+    html[data-theme="light"] .admin-eyebrow { color: rgba(26,19,17,0.4); }
+    html[data-theme="light"] .admin-title { color: var(--dark); }
+    html[data-theme="light"] .admin-stat-val { color: var(--orange); }
+    html[data-theme="light"] .admin-stat-lbl { color: rgba(26,19,17,0.4); }
+    html[data-theme="light"] .theme-toggle-pill { background: var(--camp-orange); }
+    html[data-theme="light"] .theme-toggle-knob { transform: translateX(24px); }
+
+    /* ── User forced dark (overrides system light) ── */
+    html[data-theme="dark"] {
+      --page-bg: #1A1311;
+      --page-text: #F9F6F0;
+      --nav-bg: #1A1311;
+      --nav-inactive: rgba(249,246,240,0.3);
+      --nav-hover: rgba(249,246,240,0.65);
+      --nav-border: rgba(249,246,240,0.1);
+      --stat-bg: rgba(249,246,240,0.06);
+      --stat-border: rgba(249,246,240,0.14);
+      --stat-label: rgba(249,246,240,0.5);
+      --section-label: rgba(249,246,240,0.4);
+      --divider-line: rgba(249,246,240,0.15);
+      --divider-text: rgba(249,246,240,0.4);
+      --udi-toggle-col: rgba(249,246,240,0.6);
+      --udi-toggle-border: rgba(249,246,240,0.3);
+      --delete-section-border: rgba(249,246,240,0.12);
+      --delete-label: rgba(249,246,240,0.4);
+      --privacy-link-col: rgba(26,19,17,0.5);
+      --card-border: rgba(249,246,240,0.22);
+    }
+
+    /* ── Theme Toggle UI ── */
+    .theme-toggle-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 0; border-top: 1px solid var(--delete-section-border);
+    }
+    .theme-toggle-label {
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase; color: var(--delete-label);
+    }
+    .theme-toggle-pill {
+      position: relative; width: 52px; height: 28px; cursor: pointer;
+      background: var(--camp-dark); border-radius: 14px;
+      transition: background 0.25s; border: none; padding: 0; flex-shrink: 0;
+    }
+    .theme-toggle-knob {
+      position: absolute; top: 3px; left: 3px; width: 22px; height: 22px;
+      border-radius: 50%; background: white;
+      transition: transform 0.25s; pointer-events: none;
+    }
+    .theme-toggle-icons { display: flex; gap: 4px; align-items: center; }
+    .theme-toggle-icon { font-size: 0.85rem; }
   </style>
 <style>
   /* ── Boston Trip styles ── */
@@ -1644,13 +1732,13 @@
 
     .admin-header-bar { background: var(--dark); padding: 14px; display: flex; align-items: center; justify-content: space-between; border: 2.5px solid var(--dark); box-shadow: 6px 6px 0 var(--orange); }
     .admin-header-bar-left { display: flex; flex-direction: column; gap: 2px; }
-    .admin-eyebrow { font-size: 0.52rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: rgba(26,19,17,0.4); }
-    .admin-title   { font-family: 'Abril Fatface', serif; font-size: 1.4rem; color: var(--dark); }
+    .admin-eyebrow { font-size: 0.52rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: rgba(249,246,240,0.35); }
+    .admin-title   { font-family: 'Abril Fatface', serif; font-size: 1.4rem; color: var(--cream); }
     .admin-title span { color: var(--orange); font-style: italic; }
     .admin-stats   { display: flex; gap: 20px; }
     .admin-stat    { text-align: right; }
-    .admin-stat-val { font-family: 'Abril Fatface', serif; font-size: 1.2rem; color: var(--orange); line-height: 1; }
-    .admin-stat-lbl { font-size: 0.48rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(26,19,17,0.4); }
+    .admin-stat-val { font-family: 'Abril Fatface', serif; font-size: 1.2rem; color: var(--cream); line-height: 1; }
+    .admin-stat-lbl { font-size: 0.48rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(249,246,240,0.3); }
 
     .filter-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     .filter-btn { background: white; border: 2px solid var(--dark); color: var(--dark); font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 0.62rem; letter-spacing: 0.5px; text-transform: uppercase; padding: 0 12px; height: 36px; cursor: pointer; display: flex; align-items: center; gap: 5px; border-radius: 0; -webkit-appearance: none; box-shadow: 2px 2px 0 var(--dark); }
@@ -2204,10 +2292,6 @@
     </svg>
     Sign in with Apple
   </button>
-  <!-- Demo account button for App Store review -->
-  <div style="text-align:center;margin-top:18px;">
-    <button onclick="demoSignIn()" style="background:none;border:none;color:#aaa;font-size:12px;cursor:pointer;text-decoration:underline;padding:4px;">Demo Account</button>
-  </div>
   <!-- Biometric button — shown on native only if a previous session is stored -->
   <div id="biometricSignInOr" class="hidden" style="text-align:center;color:#888;font-size:13px;margin:10px 0 4px;">— or —</div>
   <button class="privacy-link" onclick="document.getElementById('privacyModal').classList.remove('hidden')">Privacy Policy</button>
@@ -2380,8 +2464,18 @@
       </div>
     </div>
 
-    <!-- Delete account -->
+    <!-- Theme toggle + Delete account -->
     <div class="delete-account-section">
+      <div class="theme-toggle-row">
+        <div class="theme-toggle-icons">
+          <span class="theme-toggle-icon">🌙</span>
+          <span class="theme-toggle-label">Appearance</span>
+          <span class="theme-toggle-icon">☀️</span>
+        </div>
+        <button class="theme-toggle-pill" onclick="toggleTheme()" aria-label="Toggle dark/light mode">
+          <span class="theme-toggle-knob"></span>
+        </button>
+      </div>
       <div class="delete-account-label">Account</div>
       <button class="delete-account-btn" onclick="deleteAccount()">Delete My Account</button>
     </div>
