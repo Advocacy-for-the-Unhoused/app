@@ -14,7 +14,7 @@ workflows:
       cocoapods: default
     scripts:
       - name: Install npm dependencies
-        script: npm install
+        script: npm install --legacy-peer-deps
       - name: Sync Capacitor to iOS
         script: npx cap sync ios
       - name: Install CocoaPods
