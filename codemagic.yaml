@@ -21,11 +21,17 @@ workflows:
           BUNDLE_RESOURCE_ID=$(app-store-connect bundle-ids list \
             --bundle-id-identifier "$BUNDLE_ID" \
             --strict-match-identifier \
+            --private-key "@env:APP_STORE_CONNECT_PRIVATE_KEY" \
+            --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
+            --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
             --json | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0]['id'])")
           echo "Bundle ID resource: $BUNDLE_RESOURCE_ID"
           app-store-connect bundle-ids enable-capabilities \
             "$BUNDLE_RESOURCE_ID" \
-            --capability APPLE_ID_AUTH
+            --private-key "@env:APP_STORE_CONNECT_PRIVATE_KEY" \
+            --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
+            --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
+            --capability "Sign In with Apple"
       - name: Set up code signing
         script: |
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
