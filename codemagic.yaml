@@ -18,12 +18,24 @@ workflows:
         script: npx cap sync ios
       - name: Set up code signing
         script: |
+          # APP_STORE_CONNECT_PRIVATE_KEY may have escaped \n — normalize to a real file
+          python3 -c "
+          import os
+          key = os.environ.get('APP_STORE_CONNECT_PRIVATE_KEY', '')
+          if os.path.isfile(key.strip()):
+              key = open(key.strip()).read()
+          else:
+              key = key.replace('\\\\n', '\\n')
+          open('/tmp/asc_key.p8', 'w').write(key)
+          "
+          export APP_STORE_CONNECT_PRIVATE_KEY="@file:/tmp/asc_key.p8"
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
             --create \
             --delete-stale-profiles
           keychain add-certificates
           xcode-project use-profiles
+          rm -f /tmp/asc_key.p8
       - name: Build IPA
         script: |
           xcode-project build-ipa \
