@@ -7,18 +7,15 @@ workflows:
         - ios_credentials
       vars:
         BUNDLE_ID: "com.afu.volunteerportal"
-        XCODE_WORKSPACE: "ios/App/App.xcworkspace"
+        XCODE_PROJECT: "ios/App/App.xcodeproj"
         XCODE_SCHEME: "App"
       node: "22"
       xcode: latest
-      cocoapods: default
     scripts:
       - name: Install npm dependencies
         script: npm install --legacy-peer-deps
       - name: Sync Capacitor to iOS
         script: npx cap sync ios
-      - name: Install CocoaPods
-        script: cd ios/App && pod install
       - name: Set up code signing
         script: |
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
@@ -29,7 +26,7 @@ workflows:
       - name: Build IPA
         script: |
           xcode-project build-ipa \
-            --workspace "$XCODE_WORKSPACE" \
+            --project "$XCODE_PROJECT" \
             --scheme "$XCODE_SCHEME"
     artifacts:
       - build/ios/ipa/*.ipa
