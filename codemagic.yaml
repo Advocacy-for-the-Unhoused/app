@@ -18,22 +18,26 @@ workflows:
         script: npx cap sync ios
       - name: Delete stale provisioning profiles
         script: |
+          pip3 install PyJWT cryptography --quiet
           python3 << 'PYEOF'
-          import os, time, json, urllib.request
-          try:
-              import jwt
-          except ImportError:
-              import subprocess; subprocess.run(['pip3','install','PyJWT','cryptography'],check=True); import jwt
+          import os, time, json, urllib.request, jwt
+          from cryptography.hazmat.primitives.serialization import load_pem_private_key
 
-          key_id   = os.environ['APP_STORE_CONNECT_KEY_IDENTIFIER']
-          issuer   = os.environ['APP_STORE_CONNECT_ISSUER_ID']
-          priv_key = os.environ['APP_STORE_CONNECT_PRIVATE_KEY']
+          key_id  = os.environ['APP_STORE_CONNECT_KEY_IDENTIFIER']
+          issuer  = os.environ['APP_STORE_CONNECT_ISSUER_ID']
+          raw_key = os.environ['APP_STORE_CONNECT_PRIVATE_KEY']
+
+          # Normalize escaped newlines (env vars sometimes store \n as literal backslash-n)
+          raw_key = raw_key.replace('\\n', '\n')
+
+          # Load EC key via cryptography for robust PEM parsing
+          private_key = load_pem_private_key(raw_key.encode(), password=None)
 
           token = jwt.encode(
-              {'iss': issuer, 'exp': int(time.time())+1200, 'aud': 'appstoreconnect-v1'},
-              priv_key, algorithm='ES256', headers={'kid': key_id}
+              {'iss': issuer, 'exp': int(time.time()) + 1200, 'aud': 'appstoreconnect-v1'},
+              private_key, algorithm='ES256', headers={'kid': key_id}
           )
-          hdrs = {'Authorization': f'Bearer {token}'}
+          hdrs = {'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'}
 
           req = urllib.request.Request(
               'https://api.appstoreconnect.apple.com/v1/profiles?filter[profileType]=IOS_APP_STORE&limit=50',
@@ -42,17 +46,19 @@ workflows:
           with urllib.request.urlopen(req) as r:
               data = json.loads(r.read())
 
-          for p in data.get('data', []):
-              pid = p['id']
+          profiles = data.get('data', [])
+          print(f'Found {len(profiles)} profile(s) to delete')
+          for p in profiles:
+              pid  = p['id']
               name = p.get('attributes', {}).get('name', '?')
-              print(f'Deleting profile {pid} ({name})')
+              print(f'Deleting {pid} ({name})')
               del_req = urllib.request.Request(
                   f'https://api.appstoreconnect.apple.com/v1/profiles/{pid}',
                   headers=hdrs, method='DELETE'
               )
               try:
                   urllib.request.urlopen(del_req)
-                  print(f'  Deleted OK')
+                  print('  OK')
               except Exception as e:
                   print(f'  Error: {e}')
           PYEOF
