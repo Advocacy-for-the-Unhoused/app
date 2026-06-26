@@ -116,34 +116,37 @@ function submitForm(data) {
       sheet.autoResizeColumns(1, headers.length);
     }
 
-    // Resolve the target row by email first (stable even if rows are moved or
-    // inserted after the page loaded), then fall back to the captured rowIndex,
-    // then to a name search. This makes the sheet safe to reorder / insert rows.
+    // Resolve the target row using the volunteer's ORIGINAL name/email (the
+    // values in the sheet when the page loaded) — not the edited Name/Email the
+    // user may have just typed in. Match by original email first (stable even if
+    // rows were moved or inserted), then the captured rowIndex (name-verified),
+    // then a unique name search. (origEmail/origName fall back to the submitted
+    // fields for backward compatibility with older clients.)
     const lastRow = sheet.getLastRow();
     const lookup  = lastRow >= 2 ? sheet.getRange(2, 1, lastRow - 1, 2).getValues() : [];
-    const wantEmail = String(data.email || '').toLowerCase().trim();
-    const wantName  = String(data.fullName || '').toLowerCase().trim();
+    const origEmail = String(data.origEmail || data.email || '').toLowerCase().trim();
+    const origName  = String(data.origName  || data.fullName || '').toLowerCase().trim();
 
     let row = 0;
 
-    // 1) Match by email (col B) — the reliable key.
-    if (wantEmail) {
+    // 1) Match by original email (col B) — the reliable key.
+    if (origEmail) {
       for (let i = 0; i < lookup.length; i++) {
-        if (String(lookup[i][1] || '').toLowerCase().trim() === wantEmail) { row = i + 2; break; }
+        if (String(lookup[i][1] || '').toLowerCase().trim() === origEmail) { row = i + 2; break; }
       }
     }
 
     // 2) Fall back to the captured rowIndex, but only if the name still matches.
     if (!row && data.rowIndex) {
       const nameAtRow = sheet.getRange(data.rowIndex, 1).getValue().toString().toLowerCase().trim();
-      if (nameAtRow && nameAtRow === wantName) row = data.rowIndex;
+      if (nameAtRow && nameAtRow === origName) row = data.rowIndex;
     }
 
-    // 3) Last resort: find a unique name match anywhere in the sheet.
-    if (!row && wantName) {
+    // 3) Last resort: find a unique original-name match anywhere in the sheet.
+    if (!row && origName) {
       const matches = [];
       for (let i = 0; i < lookup.length; i++) {
-        if (String(lookup[i][0] || '').toLowerCase().trim() === wantName) matches.push(i + 2);
+        if (String(lookup[i][0] || '').toLowerCase().trim() === origName) matches.push(i + 2);
       }
       if (matches.length === 1) row = matches[0];
     }
@@ -152,6 +155,10 @@ function submitForm(data) {
       return { success: false, error: 'Could not find your record. Please refresh and try again.' };
     }
 
+    // Save the (possibly edited) name + email back to cols A and B. For
+    // volunteers we only had a name for, this fills in their email/phone.
+    if (data.fullName) sheet.getRange(row, 1).setValue(data.fullName);
+    if (data.email)    sheet.getRange(row, 2).setValue(data.email);
     sheet.getRange(row, COL_PHONE).setValue(data.phone || '');
     sheet.getRange(row, COL_TIMESTAMP, 1, 9).setValues([[
       new Date(),

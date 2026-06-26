@@ -496,11 +496,11 @@
           <div class="field-group">
             <div class="field span-2">
               <label for="reg-fullName">Full Name</label>
-              <input type="text" id="reg-fullName" readonly />
+              <input type="text" id="reg-fullName" placeholder="Your full name" autocomplete="name" />
             </div>
             <div class="field">
               <label for="reg-email">Email</label>
-              <input type="email" id="reg-email" readonly />
+              <input type="email" id="reg-email" placeholder="your@email.com" autocomplete="email" />
             </div>
             <div class="field">
               <label for="reg-phone">Phone Number</label>
@@ -847,6 +847,8 @@
       const m = selectedPerson.isMinor;
 
       const required = [
+        { id: 'reg-fullName',  label: 'Full Name' },
+        { id: 'reg-email',     label: 'Email' },
         { id: 'reg-phone',     label: 'Volunteer Phone' },
         { id: 'reg-shirtSize', label: 'T-Shirt Size' },
         { id: 'reg-signature', label: m ? 'Parent / Guardian Signature' : 'Typed Signature' },
@@ -860,15 +862,21 @@
       for (const f of required) {
         if (!get(f.id)) { showRegStatus('error', 'Please fill in: ' + f.label); document.getElementById(f.id).focus(); return; }
       }
-      if (!checked('reg-infoAck'))    { showRegStatus('error', 'Please confirm the pre-filled volunteer information is correct.'); return; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(get('reg-email'))) {
+        showRegStatus('error', 'Please enter a valid email address.');
+        document.getElementById('reg-email').focus(); return;
+      }
+      if (!checked('reg-infoAck'))    { showRegStatus('error', 'Please confirm the volunteer information above is correct.'); return; }
       if (!checked('reg-feeAck'))     { showRegStatus('error', 'Please acknowledge the reimbursement obligation.'); return; }
       if (!checked('reg-permission')) { showRegStatus('error', 'Please acknowledge the participation permission.'); return; }
 
       const data = {
         rowIndex:      selectedPerson.rowIndex,
         isMinor:       m,
-        email:         selectedPerson.email || get('reg-email'),
-        fullName:      get('reg-fullName'),
+        origName:      selectedPerson.name  || '',   // for locating the row
+        origEmail:     selectedPerson.email || '',   // for locating the row
+        fullName:      get('reg-fullName'),          // value to save (col A)
+        email:         get('reg-email'),             // value to save (col B)
         phone:         get('reg-phone'),
         shirtSize:     get('reg-shirtSize'),
         infoConfirmed: checked('reg-infoAck'),
@@ -890,6 +898,8 @@
           btn.innerHTML = '<i class="bi bi-check-lg"></i> Submit Form';
           if (result.success) {
             selectedPerson.isRegistered = true;
+            selectedPerson.name  = data.fullName;   // reflect any edits
+            selectedPerson.email = data.email;       // so the bill lookup uses it
             showPaymentView(selectedPerson);
           } else {
             showRegStatus('error', 'Submission failed: ' + (result.error || 'Unknown error.'));
