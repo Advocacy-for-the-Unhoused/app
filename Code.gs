@@ -504,8 +504,14 @@ function handleVolunteerRegistration(formData) {
     <p style="font-family:sans-serif;font-size:14px;">To approve or deny: open the <b>AFU Volunteer Portal app</b>, go to <b>Admin → Volunteer Approvals</b>.</p>
   `;
 
-  GmailApp.sendEmail(config.presidentEmail, `New volunteer registration — ${formData.branch}`, "", { htmlBody: emailHtml });
-  GmailApp.sendEmail(NOTIFY_ALL, `[All branches] New volunteer — ${formData.fname} ${formData.lname} (${formData.branch})`, "", { htmlBody: emailHtml });
+  // Notification emails are best-effort: the volunteer is already saved above,
+  // so a Gmail permission/quota error must NOT abort registration.
+  try {
+    GmailApp.sendEmail(config.presidentEmail, `New volunteer registration — ${formData.branch}`, "", { htmlBody: emailHtml });
+    GmailApp.sendEmail(NOTIFY_ALL, `[All branches] New volunteer — ${formData.fname} ${formData.lname} (${formData.branch})`, "", { htmlBody: emailHtml });
+  } catch (mailErr) {
+    console.warn('Notification email failed (registerVolunteer):', mailErr.message);
+  }
 
   // Push to branch P (role code) + fallback to hardcoded president email + all Z
   try {
