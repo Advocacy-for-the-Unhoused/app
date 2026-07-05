@@ -624,7 +624,10 @@
     .admin-section-chev { color: rgba(249,246,240,0.45); font-size: 14px; transition: transform 0.25s; flex-shrink: 0; }
     .admin-section.open .admin-section-chev { transform: rotate(180deg); }
     .admin-section-body { display: none; }
-    .admin-section.open .admin-section-body { display: block; }
+    .admin-section.open > .admin-section-body { display: block; }
+    /* Nested sections (inside the Boston Trip parent panel) — indented with accent */
+    .admin-section .admin-section { border-bottom: none; border-left: 3px solid var(--orange); margin: 0 0 0 12px; }
+    .admin-section .admin-section .admin-section-hdr { padding: 12px 14px; }
     .reg-list-section { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
     .reg-list-header  { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
     .reg-list-title   { font-family: 'Abril Fatface', serif; font-size: 1.1rem; color: var(--dark); }
@@ -2224,6 +2227,45 @@
   }
   #tabTasks .btn-ghost:active { border-color: var(--dark); color: var(--dark); }
   #tabTasks .btn-primary.full { flex: 2; justify-content: center; }
+  /* VIEW TEAM MODAL */
+  #tabTasks #tb-team-modal-body { margin-bottom: 18px; max-height: 55vh; overflow-y: auto; }
+  #tabTasks .tb-member-row {
+    display: flex; align-items: center; gap: 10px; padding: 10px 0;
+    border-bottom: 1px solid rgba(26,19,17,0.1);
+  }
+  #tabTasks .tb-member-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  #tabTasks .tb-member-name {
+    font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 0.85rem; color: var(--dark);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  #tabTasks .tb-member-badge {
+    font-family: 'Montserrat', sans-serif; font-size: 0.55rem; font-weight: 800;
+    letter-spacing: 1px; text-transform: uppercase; color: #fff; padding: 3px 8px; flex-shrink: 0;
+  }
+  #tabTasks .tb-oversees-select {
+    font-family: 'Montserrat', sans-serif; font-size: 0.72rem; font-weight: 600;
+    border: 1.5px solid var(--dark); background: white; color: var(--dark);
+    padding: 5px 6px; border-radius: 0; -webkit-appearance: none; max-width: 160px;
+  }
+  #tabTasks .tb-oversees-chip {
+    font-family: 'Montserrat', sans-serif; font-size: 0.62rem; font-weight: 700;
+    color: rgba(26,19,17,0.55); border: 1.5px solid rgba(26,19,17,0.25); padding: 3px 8px;
+  }
+  #tabTasks .tb-member-remove, #tabTasks .tb-member-edit {
+    background: none; border: none; cursor: pointer; font-size: 0.85rem;
+    padding: 6px; flex-shrink: 0; touch-action: manipulation;
+    width: auto; margin: 0;
+  }
+  #tabTasks .tb-member-remove { color: #b83232; }
+  #tabTasks .tb-member-edit { color: rgba(26,19,17,0.5); }
+  #tabTasks .tb-member-empty {
+    font-family: 'Montserrat', sans-serif; font-size: 0.72rem; color: rgba(26,19,17,0.45);
+    padding: 12px 0; border-bottom: 1px solid rgba(26,19,17,0.1);
+  }
+  #tabTasks .tb-add-member-row { display: flex; gap: 8px; margin-top: 14px; align-items: stretch; }
+  #tabTasks .tb-add-member-row input[type="text"] { flex: 1; min-width: 0; margin-bottom: 0; }
+  #tabTasks .tb-add-member-row .btn-primary { flex-shrink: 0; width: auto; margin: 0; padding: 0 18px; }
+  #tabTasks .tb-oversees-select { width: auto; margin: 0; }
   /* COMPLETED TASK HIDING */
   #tabTasks .task-row.tb-task-done { display: none; }
   #tabTasks .team-card.show-done .task-row.tb-task-done { display: flex; }
@@ -2685,8 +2727,19 @@
       <div style="font-size:0.75rem;font-weight:600;color:rgba(26,19,17,0.45);line-height:1.5;">Contact your branch coordinator<br>to request access.</div>
     </div>
 
-    <!-- Admin content (shown only for A / Z / P) -->
+    <!-- Admin content (shown only for A / Z / P / C) -->
     <div id="admin-content">
+
+    <!-- ── Boston Trip parent panel — contains all trip-related sections ── -->
+    <div class="admin-section" id="boston-section">
+      <div class="admin-section-hdr" onclick="toggleAdminSection('boston-section')">
+        <div>
+          <div class="admin-eyebrow">July 2026</div>
+          <div class="admin-title">Boston <span>Trip</span></div>
+        </div>
+        <i class="bi bi-chevron-down admin-section-chev"></i>
+      </div>
+      <div class="admin-section-body">
 
     <!-- Finance Panel (collapsible, collapsed by default) -->
     <div class="admin-section" id="finance-section">
@@ -2763,6 +2816,53 @@
       </div>
     </div>
 
+    <!-- Qualified Persons (collapsible) -->
+    <div class="admin-section" id="qual-section">
+      <div class="admin-section-hdr" onclick="toggleAdminSection('qual-section'); if(this.parentElement.classList.contains('open')) loadQualifiedPersons()">
+        <div>
+          <div class="admin-eyebrow">Boston Trip 2026</div>
+          <div class="admin-title">Qualified <span>Persons</span></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="reg-pill" id="qual-count-pill">--</span>
+          <i class="bi bi-chevron-down admin-section-chev"></i>
+        </div>
+      </div>
+      <div class="admin-section-body">
+        <div id="qual-list-body">
+          <div style="padding:20px;text-align:center;font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(26,19,17,0.3);">
+            Open section to load
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- App Settings (banner toggle) -->
+    <div class="admin-section" id="settings-section">
+      <div class="admin-section-hdr" onclick="toggleAdminSection('settings-section')">
+        <div>
+          <div class="admin-eyebrow">Dashboard</div>
+          <div class="admin-title">Trip <span>Banner</span></div>
+        </div>
+        <i class="bi bi-chevron-down admin-section-chev"></i>
+      </div>
+      <div class="admin-section-body">
+        <div class="admin-toggle-row">
+          <div class="admin-toggle-label">
+            Boston Trip Banner
+            <small>Show banner on Home dashboard</small>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="bostonBannerToggle" checked onchange="adminSetBostonBanner(this.checked)">
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+      </div><!-- /boston-section body -->
+    </div><!-- /boston-section -->
+
     <!-- Volunteer Hours Editor (collapsible, collapsed by default) -->
     <div class="admin-section" id="hours-section">
       <div class="admin-section-hdr" onclick="toggleAdminSection('hours-section')">
@@ -2825,29 +2925,6 @@
       </div>
     </div>
 
-    <!-- App Settings (collapsible) -->
-    <div class="admin-section" id="settings-section">
-      <div class="admin-section-hdr" onclick="toggleAdminSection('settings-section')">
-        <div>
-          <div class="admin-eyebrow">Dashboard</div>
-          <div class="admin-title">App <span>Settings</span></div>
-        </div>
-        <i class="bi bi-chevron-down admin-section-chev"></i>
-      </div>
-      <div class="admin-section-body">
-        <div class="admin-toggle-row">
-          <div class="admin-toggle-label">
-            Boston Trip Banner
-            <small>Show banner on Home dashboard</small>
-          </div>
-          <label class="toggle-switch">
-            <input type="checkbox" id="bostonBannerToggle" checked onchange="adminSetBostonBanner(this.checked)">
-            <span class="toggle-track"></span>
-          </label>
-        </div>
-      </div>
-    </div>
-
     <!-- Volunteer Approvals (collapsible) -->
     <div class="admin-section" id="pending-section">
       <div class="admin-section-hdr" onclick="toggleAdminSection('pending-section'); if(this.parentElement.classList.contains('open')) loadPendingVolunteers()">
@@ -2882,27 +2959,6 @@
       <div class="admin-section-body">
         <div id="comp-requests-body">
           <div style="padding:20px;text-align:center;font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(26,19,17,0.3);">Open section to load</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Qualified Persons (collapsible) -->
-    <div class="admin-section" id="qual-section">
-      <div class="admin-section-hdr" onclick="toggleAdminSection('qual-section'); if(this.parentElement.classList.contains('open')) loadQualifiedPersons()">
-        <div>
-          <div class="admin-eyebrow">Boston Trip 2026</div>
-          <div class="admin-title">Qualified <span>Persons</span></div>
-        </div>
-        <div style="display:flex;align-items:center;gap:10px;">
-          <span class="reg-pill" id="qual-count-pill">--</span>
-          <i class="bi bi-chevron-down admin-section-chev"></i>
-        </div>
-      </div>
-      <div class="admin-section-body">
-        <div id="qual-list-body">
-          <div style="padding:20px;text-align:center;font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(26,19,17,0.3);">
-            Open section to load
-          </div>
         </div>
       </div>
     </div>
@@ -3159,6 +3215,16 @@
       </div>
     </div>
 
+    <div class="modal-bg" id="tb-team-modal-bg">
+      <div class="modal-box">
+        <h3 id="tb-team-modal-title">Team</h3>
+        <div id="tb-team-modal-body"></div>
+        <div class="modal-btns">
+          <button class="btn-ghost" onclick="tbCloseTeamView()">Close</button>
+        </div>
+      </div>
+    </div>
+
     <div class="modal-bg" id="tb-hours-prompt-bg">
       <div class="modal-box">
         <h3>Log hours?</h3>
@@ -3252,7 +3318,7 @@
       document.getElementById('tabAdmin').classList.remove('hidden');
       document.getElementById('navAdmin').classList.add('active');
       var pos = (window.volunteerProfile && window.volunteerProfile.position) || '';
-      var isAdmin = /[AZP]/.test(pos);
+      var isAdmin = /[AZPC]/.test(pos);
       document.getElementById('admin-lock').classList.toggle('hidden', isAdmin);
       document.getElementById('admin-content').classList.toggle('hidden', !isAdmin);
       if (isAdmin && typeof window.loadAdmin === 'function') window.loadAdmin();
@@ -3270,10 +3336,14 @@
      the volunteer profile & stats are fetched.
   ───────────────────────────────────────── */
   function toggleAdminSection(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    // Collapse other sections, but never an ancestor of the one being toggled
+    // (nested sections live inside the Boston Trip parent panel).
     document.querySelectorAll('#tabAdmin .admin-section').forEach(function(s) {
-      if (s.id !== id) s.classList.remove('open');
+      if (s !== el && !s.contains(el) && !el.contains(s)) s.classList.remove('open');
     });
-    document.getElementById(id).classList.toggle('open');
+    el.classList.toggle('open');
   }
   window.toggleAdminSection = toggleAdminSection;
 
@@ -5344,7 +5414,9 @@
 
     const HARDCODED_TEAMS = [
       {
-        name: 'Web Dev', officer: 'Sanya Bhagat', color: '#378ADD', meetingDate: '2026-06-09', meetingTime: '15:30', tasks: [
+        name: 'Web Dev', officer: 'Sanya Bhagat', color: '#378ADD', meetingDate: '2026-06-09', meetingTime: '15:30',
+        members: [ { name:'Pranav Warrier', oversees:'' }, { name:'Dharshna Karthick', oversees:'' } ],
+        tasks: [
           { id:'wd-1', text:'Web Dev team meeting 3:30pm tues (remember the tutorial idea)', assignee:'Sanya Bhagat',    done:true  },
           { id:'wd-2', text:'fix camp blog on site',                                          assignee:'Pranav Warrier',  done:false },
           { id:'wd-3', text:'get footer on every page',                                       assignee:'Pranav Warrier',  done:false },
@@ -5357,7 +5429,9 @@
         ]
       },
       {
-        name: 'Social Media', officer: 'Sreenidhi Rajesh', color: '#7F77DD', meetingDate: '2026-06-09', meetingTime: '17:00', tasks: [
+        name: 'Social Media', officer: 'Sreenidhi Rajesh', color: '#7F77DD', meetingDate: '2026-06-09', meetingTime: '17:00',
+        members: [ { name:'Priyanka Jagannath', oversees:'' }, { name:'Evalynn Ashley', oversees:'' }, { name:'Maanya Shettigar', oversees:'' }, { name:'Sreenisha Rajesh', oversees:'' }, { name:'Akshaya Mavalur', oversees:'' } ],
+        tasks: [
           { id:'sm-1', text:'Make media packet for BT: insta, linkedin, tiktok',           assignee:'Priyanka Jagannath', done:false },
           { id:'sm-2', text:'Send media packet to local newspapers to get published again', assignee:'Evalynn Ashley',     done:false },
           { id:'sm-3', text:'Launch Camp details — need flyer for repeaters w/discount',   assignee:'Evalynn Ashley',     done:false },
@@ -5368,20 +5442,26 @@
         ]
       },
       {
-        name: 'Finance', officer: 'Yaashwanth Narendran', color: '#1D9E75', meetingDate: '', meetingTime: '', tasks: [
+        name: 'Finance', officer: 'Yaashwanth Narendran', color: '#1D9E75', meetingDate: '', meetingTime: '',
+        members: [ { name:'Madhav Warrier', oversees:'' } ],
+        tasks: [
           { id:'fi-1', text:'Finance team meeting for IPS asap',                   assignee:'Yaashwanth Narendran', done:false },
           { id:'fi-2', text:'Send impact report day of Boston trip — all donors',  assignee:'Madhav Warrier',       done:false },
         ]
       },
       {
-        name: 'Branch Coord', officer: 'Maanya Shettigar', color: '#C8522D', meetingDate: '2026-06-09', meetingTime: '16:30', tasks: [
+        name: 'Branch Coord', officer: 'Maanya Shettigar', color: '#C8522D', meetingDate: '2026-06-09', meetingTime: '16:30',
+        members: [ { name:'Lakshya Chauhan', oversees:'' } ],
+        tasks: [
           { id:'bc-2', text:'Go D2D @ all branches this week',                assignee:'Maanya Shettigar',  done:true  },
           { id:'bc-3', text:'Incorporate branch members into departments',    assignee:'Lakshya Chauhan',   done:false },
           { id:'bc-4', text:'Find new branch prez on LinkedIn',               assignee:'Maanya Shettigar',  done:false },
         ]
       },
       {
-        name: 'Admin Tasks', officer: 'Madhav Saxena', color: '#888780', meetingDate: '', meetingTime: '', tasks: [
+        name: 'Admin Tasks', officer: 'Madhav Saxena', color: '#888780', meetingDate: '', meetingTime: '',
+        members: [ { name:'Yaashwanth Narendran', oversees:'' }, { name:'Sreenidhi Rajesh', oversees:'' }, { name:'Maanya Shettigar', oversees:'' }, { name:'Dilpreet Gill', oversees:'' } ],
+        tasks: [
           { id:'at-1',        text:'Send leadership transfer email',                            assignee:'Madhav Saxena',        done:false },
           { id:'at-2',        text:"Schedule OM @ Yaash's",                                    assignee:'Yaashwanth Narendran', done:false },
           { id:'at-3',        text:'Email Theis for 5k tentative',                             assignee:'Sreenidhi Rajesh',     done:false },
@@ -5460,7 +5540,8 @@
 
     const TB_DEDUP_TYPES = new Set([
       'taskDone', 'taskAssignee', 'taskText', 'taskDueDate',
-      'teamRename', 'teamColor', 'teamMeetingDate', 'teamMeetingTime'
+      'teamRename', 'teamColor', 'teamMeetingDate', 'teamMeetingTime',
+      'memberOversees', 'teamOfficer'
     ]);
 
     function tbDeduplicateChanges(changes) {
@@ -5481,7 +5562,7 @@
         switch (c.type) {
           case 'newTeam':
             if (!tbTeams.find(tm => tm.name === c.key))
-              tbTeams.push({ name: c.key, officer: '', color: c.value || '#888780', meetingDate: '', meetingTime: '', tasks: [] });
+              tbTeams.push({ name: c.key, officer: '', color: c.value || '#888780', meetingDate: '', meetingTime: '', members: [], tasks: [] });
             break;
           case 'deleteTeam':
             tbTeams = tbTeams.filter(tm => tm.name !== c.key);
@@ -5536,8 +5617,45 @@
             if (tk) tk.dueDate = c.value || '';
             break;
           }
+          case 'teamOfficer': {
+            const tm = tbTeams.find(tm => tm.name === c.key);
+            if (tm) tm.officer = c.value || '';
+            break;
+          }
+          case 'teamMemberAdd': {
+            const [tn, mn] = tbSplitMemberKey(c.key);
+            const tm = tbTeams.find(tm => tm.name === tn);
+            if (tm && mn) {
+              tm.members = tm.members || [];
+              if (!tm.members.find(m => m.name.toLowerCase() === mn.toLowerCase()))
+                tm.members.push({ name: mn, oversees: c.value || '' });
+            }
+            break;
+          }
+          case 'teamMemberRemove': {
+            const [tn, mn] = tbSplitMemberKey(c.key);
+            const tm = tbTeams.find(tm => tm.name === tn);
+            if (tm && mn && tm.members)
+              tm.members = tm.members.filter(m => m.name.toLowerCase() !== mn.toLowerCase());
+            break;
+          }
+          case 'memberOversees': {
+            const [tn, mn] = tbSplitMemberKey(c.key);
+            const tm = tbTeams.find(tm => tm.name === tn);
+            const mem = tm && mn && (tm.members || []).find(m => m.name.toLowerCase() === mn.toLowerCase());
+            if (mem) mem.oversees = c.value || '';
+            break;
+          }
         }
       });
+    }
+
+    // Member change keys are "teamName||memberName"
+    function tbMemberKey(teamName, memberName) { return teamName + '||' + memberName; }
+    function tbSplitMemberKey(key) {
+      const i = String(key || '').indexOf('||');
+      if (i < 0) return [key, ''];
+      return [key.slice(0, i), key.slice(i + 2)];
     }
 
     function tbFindTask(id) {
@@ -5596,6 +5714,9 @@
           <div class="team-header-bottom">
             <button class="meeting-pill${meetingDisplay ? ' set' : ''}" onclick="tbEditMeeting('${tbEsc(team.name)}')">
               <i class="bi bi-calendar3"></i>${meetingDisplay || 'Meet'}
+            </button>
+            <button class="meeting-pill" onclick="tbOpenTeamView('${tbEsc(team.name)}')">
+              <i class="bi bi-people"></i>View Team
             </button>
           </div>
         </div>
@@ -5729,7 +5850,19 @@
       let committed = false;
       const save = async () => {
         if (committed) return; committed = true;
-        const val = inp.value.trim();
+        let val = inp.value.trim();
+        if (val) {
+          const roster = await tbLoadRosterNames();
+          if (roster.length) {
+            const match = roster.find(n => n.toLowerCase() === val.toLowerCase());
+            if (!match) {
+              tbToastError('⚠ "' + val + '" is not on the roster — pick a name from the list.');
+              tbRender();
+              return;
+            }
+            val = match;
+          }
+        }
         task.assignee = val; tbRender();
         await tbSaveChange('taskAssignee', id, val, task.text);
       };
@@ -5931,6 +6064,166 @@
       await tbSaveChange('newTeam', name, tbSelectedColor);
     }
 
+    /* ── View Team modal ─────────────────────── */
+    let tbTeamViewName = null;
+    let tbBranchList = null;
+
+    async function tbLoadBranchList() {
+      if (tbBranchList) return tbBranchList;
+      try {
+        const r = await tbRun('getBranches');
+        const names = (r && Array.isArray(r.branches)) ? r.branches.map(b => b.name).filter(Boolean) : [];
+        if (names.length) tbBranchList = names;
+      } catch(e) {}
+      if (!tbBranchList) tbBranchList = ['Hopkinton','Holliston','Westford','Shrewsbury','Medway'];
+      return tbBranchList;
+    }
+
+    function tbCanManageTeam() {
+      const pos = (window.volunteerProfile && window.volunteerProfile.position) || '';
+      return /[AZPVW]/.test(pos);
+    }
+
+    function tbIsBranchCoord(team) {
+      return /branch\s*coord/i.test(team.name);
+    }
+
+    function tbOpenTeamView(teamName) {
+      tbTeamViewName = teamName;
+      document.getElementById('tb-team-modal-bg').classList.add('open');
+      tbRenderTeamView();
+      tbLoadRosterNames();
+      const team = tbTeams.find(tm => tm.name === teamName);
+      if (team && tbIsBranchCoord(team) && !tbBranchList) {
+        tbLoadBranchList().then(() => { if (tbTeamViewName === teamName) tbRenderTeamView(); });
+      }
+    }
+
+    function tbCloseTeamView() {
+      tbTeamViewName = null;
+      document.getElementById('tb-team-modal-bg').classList.remove('open');
+    }
+
+    function tbRenderTeamView() {
+      const team = tbTeams.find(tm => tm.name === tbTeamViewName);
+      const body = document.getElementById('tb-team-modal-body');
+      if (!team) { body.innerHTML = '<p class="empty-state">Team not found.</p>'; return; }
+      const canEdit = tbCanManageTeam();
+      const isBC    = tbIsBranchCoord(team);
+      document.getElementById('tb-team-modal-title').textContent = team.name;
+
+      let html = '';
+
+      // Officer row — always first
+      html += `<div class="tb-member-row">
+        <div class="tb-member-main">
+          <span class="tb-member-name">${team.officer ? tbEsc(team.officer) : '<em>No officer set</em>'}</span>
+          <span class="tb-member-badge" style="background:${team.color}">Officer</span>
+        </div>
+        ${canEdit ? `<button class="tb-member-edit" title="Change officer" onclick="tbEditOfficer()"><i class="bi bi-pencil"></i></button>` : ''}
+      </div>`;
+
+      const members = (team.members || []).filter(m => m.name.toLowerCase() !== (team.officer || '').toLowerCase());
+      if (!members.length) {
+        html += '<div class="tb-member-empty">No members yet.</div>';
+      } else {
+        members.forEach(m => {
+          const overseesUi = isBC
+            ? (canEdit
+                ? `<select class="tb-oversees-select" onchange="tbSetOversees('${tbEsc(m.name)}', this.value)">
+                     <option value="">— no branch —</option>
+                     ${(tbBranchList || []).map(b => `<option value="${tbEsc(b)}"${b === m.oversees ? ' selected' : ''}>${tbEsc(b)}</option>`).join('')}
+                     ${m.oversees && !(tbBranchList || []).includes(m.oversees) ? `<option value="${tbEsc(m.oversees)}" selected>${tbEsc(m.oversees)}</option>` : ''}
+                   </select>`
+                : (m.oversees ? `<span class="tb-oversees-chip">Oversees ${tbEsc(m.oversees)}</span>` : ''))
+            : '';
+          html += `<div class="tb-member-row">
+            <div class="tb-member-main">
+              <span class="tb-member-name">${tbEsc(m.name)}</span>
+              ${overseesUi}
+            </div>
+            ${canEdit ? `<button class="tb-member-remove" title="Remove from team" onclick="tbRemoveMember('${tbEsc(m.name)}')"><i class="bi bi-x-lg"></i></button>` : ''}
+          </div>`;
+        });
+      }
+
+      if (canEdit) {
+        html += `<div class="tb-add-member-row">
+          <input type="text" id="tb-add-member-input" placeholder="Add member (roster name)…" list="tb-roster-dl"
+            onkeydown="if(event.key==='Enter')tbAddMemberCommit()" />
+          <button class="btn-primary" onclick="tbAddMemberCommit()">Add</button>
+        </div>`;
+      } else {
+        html += '<div class="tb-member-empty" style="border:none;">Only officers (A / P / V / W) can edit the team.</div>';
+      }
+
+      body.innerHTML = html;
+    }
+
+    async function tbAddMemberCommit() {
+      const team = tbTeams.find(tm => tm.name === tbTeamViewName);
+      const inp  = document.getElementById('tb-add-member-input');
+      if (!team || !inp) return;
+      let val = inp.value.trim();
+      if (!val) return;
+      const roster = await tbLoadRosterNames();
+      if (roster.length) {
+        const match = roster.find(n => n.toLowerCase() === val.toLowerCase());
+        if (!match) { tbToastError('⚠ "' + val + '" is not on the roster — pick a name from the list.'); return; }
+        val = match;
+      }
+      team.members = team.members || [];
+      if (val.toLowerCase() === (team.officer || '').toLowerCase() ||
+          team.members.find(m => m.name.toLowerCase() === val.toLowerCase())) {
+        tbToastError('⚠ ' + val + ' is already on this team.');
+        return;
+      }
+      team.members.push({ name: val, oversees: '' });
+      tbRenderTeamView(); tbToast('Member added');
+      await tbSaveChange('teamMemberAdd', tbMemberKey(team.name, val), '');
+    }
+
+    async function tbRemoveMember(name) {
+      const team = tbTeams.find(tm => tm.name === tbTeamViewName);
+      if (!team || !team.members) return;
+      if (!confirm('Remove ' + name + ' from ' + team.name + '?')) return;
+      team.members = team.members.filter(m => m.name.toLowerCase() !== name.toLowerCase());
+      tbRenderTeamView(); tbToast('Member removed');
+      await tbSaveChange('teamMemberRemove', tbMemberKey(team.name, name), '');
+    }
+
+    async function tbSetOversees(name, branch) {
+      const team = tbTeams.find(tm => tm.name === tbTeamViewName);
+      const mem  = team && (team.members || []).find(m => m.name.toLowerCase() === name.toLowerCase());
+      if (!mem) return;
+      mem.oversees = branch;
+      tbToast(branch ? name + ' → ' + branch : 'Branch assignment cleared');
+      await tbSaveChange('memberOversees', tbMemberKey(team.name, name), branch);
+    }
+
+    async function tbEditOfficer() {
+      const team = tbTeams.find(tm => tm.name === tbTeamViewName);
+      if (!team) return;
+      let val = prompt('Team officer (roster name):', team.officer || '');
+      if (val === null) return;
+      val = val.trim();
+      if (val) {
+        const roster = await tbLoadRosterNames();
+        if (roster.length) {
+          const match = roster.find(n => n.toLowerCase() === val.toLowerCase());
+          if (!match) { tbToastError('⚠ "' + val + '" is not on the roster.'); return; }
+          val = match;
+        }
+      }
+      team.officer = val;
+      tbRenderTeamView(); tbRender();
+      await tbSaveChange('teamOfficer', team.name, val);
+    }
+
+    document.getElementById('tb-team-modal-bg').addEventListener('click', e => {
+      if (e.target === document.getElementById('tb-team-modal-bg')) tbCloseTeamView();
+    });
+
     document.getElementById('tb-modal-name').addEventListener('keydown', e => {
       if (e.key==='Enter')  tbConfirmAddTeam();
       if (e.key==='Escape') tbCloseModal();
@@ -5960,6 +6253,12 @@
     window.tbAddTaskKey      = tbAddTaskKey;
     window.tbDeleteTask      = tbDeleteTask;
     window.tbEditDueDate     = tbEditDueDate;
+    window.tbOpenTeamView    = tbOpenTeamView;
+    window.tbCloseTeamView   = tbCloseTeamView;
+    window.tbAddMemberCommit = tbAddMemberCommit;
+    window.tbRemoveMember    = tbRemoveMember;
+    window.tbSetOversees     = tbSetOversees;
+    window.tbEditOfficer     = tbEditOfficer;
   })();
 </script>
 
@@ -5997,13 +6296,14 @@
         var pos     = (window.volunteerProfile && window.volunteerProfile.position) || '';
         var userBc  = (window.volunteerProfile && window.volunteerProfile.branchCode) || '';
         var isAZ    = /[AZ]/.test(pos);
-        var isAdmin = /[AZP]/.test(pos);
+        var isC     = /C/.test(pos);   // Branch Coord team — can view all branches + add branches
+        var isAdmin = /[AZPC]/.test(pos);
 
-        var visibleBranches = isAZ ? data.branches : data.branches.filter(function(b) { return b.code === userBc; });
+        var visibleBranches = (isAZ || isC) ? data.branches : data.branches.filter(function(b) { return b.code === userBc; });
 
         var html = '';
 
-        if (isAZ) {
+        if (isAZ || isC) {
           html +=
             '<div style="margin-bottom:16px;">' +
               '<button onclick="showAddBranchForm()" style="background:var(--dark);color:var(--cream);border:none;padding:9px 18px;font-family:\'Montserrat\',sans-serif;font-size:0.7rem;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:1px;width:fit-content;margin-top:0;">' +
@@ -6028,7 +6328,7 @@
         }
 
         html += visibleBranches.map(function(b) {
-          var canEdit   = isAZ || (isAdmin && b.code === userBc);
+          var canEdit   = isAZ || (/[AZP]/.test(pos) && b.code === userBc);
           var pct       = b.goal > 0 ? Math.min(100, Math.round((b.raised / b.goal) * 100)) : 0;
           var pctColor  = pct >= 100 ? '#1D9E75' : (pct >= 60 ? 'var(--orange)' : 'var(--dark)');
 

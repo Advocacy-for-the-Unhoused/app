@@ -371,7 +371,7 @@ window.volunteerProfile = {
 
 ## 8. Admin Tab
 
-The admin tab (`#tabAdmin`) is only shown to users whose position code matches `/[AZP]/` (A = super admin, Z = org coordinator, P = branch president).
+The admin tab (`#tabAdmin`) is only shown to users whose position code matches `/[AZPC]/` (A = super admin, Z = org coordinator, P = branch president, C = branch coord team).
 
 All sections are collapsible. `toggleAdminSection(id)` collapses others when one is opened.
 
@@ -487,7 +487,7 @@ Position codes live in Roster col E (concatenated, e.g. `"AP"` means super admin
 | `C` | Branch Coordinator | No admin |
 | blank | General volunteer | No admin |
 
-**Admin tab gate:** `switchTab('admin')` checks `/[AZP]/.test(position)`.
+**Admin tab gate:** `switchTab('admin')` checks `/[AZPC]/.test(position)`.
 
 **Branch-scoped gates:** P users can only see/edit their own `branchCode`. A/Z see all branches.
 

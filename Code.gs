@@ -316,6 +316,9 @@ function doPost(e) {
     } else if (p.action === "addBranch") {
       result = addBranch_(p.code || '', p.name || '');
 
+    } else if (p.action === "getBranches") {
+      result = { branches: getBranches_() };
+
     } else if (p.action === "saveBranchGoal") {
       setMeetingConfigKey_('goal_' + (p.branchCode || '').toUpperCase(), p.goal || '0');
       result = { ok: true };
