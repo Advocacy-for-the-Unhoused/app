@@ -964,7 +964,7 @@ async function submitRegistration() {
   const msgEl  = document.getElementById('regMsg');
   const btn    = document.getElementById('regSubmitBtn');
 
-  if (!fname || !lname || !phone || !branch) {
+  if (!fname || !lname || !branch) {
     alert('Please fill in all required fields.');
     return;
   }

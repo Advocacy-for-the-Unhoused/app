@@ -2344,7 +2344,7 @@
   <label>Email</label>
   <input type="email" id="regEmail" readonly />
 
-  <label>Phone Number</label>
+  <label>Phone Number (Optional)</label>
   <input type="tel" id="regPhone" placeholder="(508) 555-0100" />
 
   <label>Branch</label>
@@ -3899,12 +3899,29 @@
     checkAndCall();
   }
 
+  let socialLoginReady = false;
+  async function ensureSocialLoginInit() {
+    if (socialLoginReady) return;
+    await window.Capacitor.Plugins.SocialLogin.initialize({
+      google: {
+        iOSClientId: '1016131808942-vckq48aah23fmk42vdmknpe8il1tfn3n.apps.googleusercontent.com',
+        webClientId: '1016131808942-6m77i0gq14t71g01q8o8qkaon29ilsv6.apps.googleusercontent.com'
+      }
+    });
+    socialLoginReady = true;
+  }
+
   async function capacitorGoogleSignIn() {
     const btn = document.getElementById('nativeSignInBtn');
     btn.disabled = true;
     btn.textContent = 'Signing in…';
     try {
-      const user = await window.Capacitor.Plugins.GoogleAuth.signIn();
+      await ensureSocialLoginInit();
+      const { result } = await window.Capacitor.Plugins.SocialLogin.login({
+        provider: 'google',
+        options: { scopes: ['profile', 'email'] }
+      });
+      const user = result.profile || {};
       const payload = {
         email: user.email,
         given_name: user.givenName,
