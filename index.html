@@ -14,6 +14,44 @@
       if (t === 'dark' || t === 'light') document.documentElement.dataset.theme = t;
     })();
   </script>
+  <script>
+    /* Shared Google Apps Script request helper.
+       GAS intermittently 404s its googleusercontent.com/macros/echo redirect
+       when several POSTs hit the same /exec at once (e.g. the admin panel
+       loading every section in parallel). The browser then parses that 404
+       HTML page as JSON -> "Unexpected token '<'". This helper checks res.ok,
+       rejects HTML error pages, and retries read actions (get*/tbGet*) with
+       backoff so a single flaky 404 self-heals. Write actions are NOT retried
+       (they may already have committed server-side) — they just fail cleanly.
+       Returns a promise of the parsed JSON. */
+    window.gasFetch = function (body, opts) {
+      opts = opts || {};
+      var su = window.SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbwM8DrClchV9B5bfKYMaDURSRzTqlHA3mIVfKLe5HNO85zQYys2rL55WXSDEz89_PxS/exec';
+      var action = decodeURIComponent((String(body).match(/(?:^|&)action=([^&]*)/) || [])[1] || '');
+      var idempotent = /^(get|tbGet)/i.test(action);
+      var retries = (opts.retries != null) ? opts.retries : (idempotent ? 3 : 0);
+      function attempt(n) {
+        return fetch(su, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: body
+        }).then(function (res) {
+          return res.text().then(function (text) {
+            if (!res.ok) throw new Error('HTTP ' + res.status + ' from Apps Script');
+            if (/^\s*<(?:!doctype|html)/i.test(text)) throw new Error('Apps Script returned HTML (echo 404)');
+            return JSON.parse(text);
+          });
+        }).catch(function (err) {
+          if (n < retries) {
+            return new Promise(function (resolve) { setTimeout(resolve, 500 * (n + 1)); })
+              .then(function () { return attempt(n + 1); });
+          }
+          throw err;
+        });
+      }
+      return attempt(0);
+    };
+  </script>
   <style>
     :root {
       --camp-orange: #C8522D;
@@ -2182,15 +2220,39 @@
   #tabTasks .del-task-btn:active { color: var(--orange); }
   #tabTasks .add-task-row {
     background: rgba(249,246,240,0.8); padding: 0 0 0 48px;
-    border-top: 1px dashed rgba(26,19,17,0.12); min-height: 48px;
-    display: flex; align-items: center;
+    border-top: 1px dashed rgba(26,19,17,0.12);
+    display: flex; flex-direction: column;
   }
+  #tabTasks .add-task-main { display: flex; align-items: center; min-height: 48px; }
   #tabTasks .add-task-input {
     font-family: 'Montserrat', sans-serif; font-size: 16px; color: var(--dark);
-    background: none; border: none; outline: none; width: 100%;
+    background: none; border: none; outline: none; flex: 1 1 auto; min-width: 0;
     padding: 12px 12px 12px 0; -webkit-appearance: none;
   }
   #tabTasks .add-task-input::placeholder { color: rgba(26,19,17,0.3); }
+  #tabTasks .add-task-instr-btn {
+    flex: 0 0 auto; width: 34px; height: 34px; margin: 0 10px 0 0; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: none; border: none; box-shadow: none; cursor: pointer;
+    color: rgba(26,19,17,0.35); font-size: 1rem; -webkit-appearance: none;
+    touch-action: manipulation;
+  }
+  #tabTasks .add-task-instr-btn:active { transform: translateY(1px); box-shadow: none; }
+  #tabTasks .add-task-row.instr-open .add-task-instr-btn { color: var(--orange); }
+  #tabTasks .add-task-instr-wrap { display: none; flex-direction: column; padding: 0 14px 14px 0; }
+  #tabTasks .add-task-row.instr-open .add-task-instr-wrap { display: flex; }
+  #tabTasks .add-task-instr-input {
+    width: 100%; min-height: 70px; box-sizing: border-box;
+    font-family: 'Montserrat', sans-serif; font-size: 15px;
+    border: 2px solid var(--dark); background: white; color: var(--dark);
+    padding: 10px; outline: none; border-radius: 0; -webkit-appearance: none;
+    resize: vertical; line-height: 1.5; display: block;
+  }
+  #tabTasks .add-task-instr-input:focus { border-color: var(--orange); }
+  #tabTasks .add-task-instr-input::placeholder { color: rgba(26,19,17,0.3); }
+  #tabTasks .add-task-submit {
+    width: auto; align-self: flex-end; margin: 10px 0 0; padding: 0 20px;
+  }
   /* MODAL */
   #tabTasks .modal-bg {
     position: fixed; inset: 0; background: rgba(26,19,17,0.65);
@@ -3472,10 +3534,9 @@
     if (!body) return;
     body.innerHTML = '<div style="padding:20px;text-align:center;font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(26,19,17,0.3);"><i class="bi bi-hourglass-split spinner"></i> Loading&hellip;</div>';
 
-    var su = window.SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbwM8DrClchV9B5bfKYMaDURSRzTqlHA3mIVfKLe5HNO85zQYys2rL55WXSDEz89_PxS/exec';
     Promise.all([
-      fetch(su, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'action=getRosterMembers' }).then(function(r){return r.json();}),
-      fetch(su, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'action=getQualifiedNames' }).then(function(r){return r.json();})
+      window.gasFetch('action=getRosterMembers'),
+      window.gasFetch('action=getQualifiedNames')
     ]).then(function(results) {
       var members  = (results[0] && results[0].members) || [];
       var qualified = Array.isArray(results[1]) ? results[1] : [];
@@ -3662,8 +3723,7 @@
     var body = document.getElementById('pending-vol-body');
     if (!body) return;
     body.innerHTML = '<div style="padding:20px;text-align:center;font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(26,19,17,0.3);"><i class="bi bi-hourglass-split spinner"></i> Loading&hellip;</div>';
-    fetch(pendingSU, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'action=getPendingVolunteers' })
-      .then(function(r) { return r.json(); })
+    window.gasFetch('action=getPendingVolunteers')
       .then(function(data) {
         var all = (data && data.volunteers) || [];
         pendingVolsCache = all.filter(function(v) { return pendingCanSeeBranch(v.branchCode); });
@@ -3915,8 +3975,7 @@
       return;
     }
     body.innerHTML = '<div style="padding:20px;text-align:center;font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(26,19,17,0.3);"><i class="bi bi-hourglass-split spinner"></i> Loading&hellip;</div>';
-    fetch(crSU, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'action=getCompRequests' })
-      .then(function(r) { return r.json(); })
+    window.gasFetch('action=getCompRequests')
       .then(function(d) { renderCompRequests(d.requests || [], body); })
       .catch(function() { body.innerHTML = '<div style="padding:20px;text-align:center;color:rgba(26,19,17,0.4);">Failed to load.</div>'; });
   }
@@ -4180,15 +4239,9 @@
           body += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(String(params[k]));
         });
       }
-      var _su = window.SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbwM8DrClchV9B5bfKYMaDURSRzTqlHA3mIVfKLe5HNO85zQYys2rL55WXSDEz89_PxS/exec';
-      fetch(_su, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: body
-      })
-      .then(function(res) { return res.json(); })
-      .then(function(data) { if (onSuccess) onSuccess(data); })
-      .catch(function(err) { if (onFailure) onFailure(err); });
+      window.gasFetch(body)
+        .then(function(data) { if (onSuccess) onSuccess(data); })
+        .catch(function(err) { if (onFailure) onFailure(err); });
     }
 
     window.initBostonTrip = function() {
@@ -5579,12 +5632,7 @@
           if (args[i] !== undefined) body += '&' + name + '=' + encodeURIComponent(String(args[i]));
         });
       }
-      var _su2 = window.SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbwM8DrClchV9B5bfKYMaDURSRzTqlHA3mIVfKLe5HNO85zQYys2rL55WXSDEz89_PxS/exec';
-      return fetch(_su2, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body
-      }).then(r => r.json());
+      return window.gasFetch(body);
     }
 
     function tbSetStatus(state, msg) {
@@ -5813,8 +5861,18 @@
         </div>
         ${done > 0 ? `<button class="show-done-btn" onclick="tbToggleShowDone(this)">Show ${done} completed</button>` : ''}
         <div class="add-task-row">
-          <input class="add-task-input" placeholder="Add a task…"
-            onkeydown="tbAddTaskKey(event, '${tbEsc(team.name)}', this)" />
+          <div class="add-task-main">
+            <input class="add-task-input" placeholder="Add a task…"
+              onkeydown="tbAddTaskKey(event, '${tbEsc(team.name)}', this)" />
+            <button type="button" class="add-task-instr-btn" title="Add instructions"
+              onclick="tbToggleAddInstr(this)"><i class="bi bi-journal-text"></i></button>
+          </div>
+          <div class="add-task-instr-wrap">
+            <textarea class="add-task-instr-input"
+              placeholder="Instructions (optional) — details, steps, or links for whoever picks this up…"></textarea>
+            <button type="button" class="btn-primary add-task-submit"
+              onclick="tbAddTaskBtn(this, '${tbEsc(team.name)}')">Add task</button>
+          </div>
         </div>
       `;
       container.appendChild(card);
@@ -6026,14 +6084,37 @@
     }
 
     async function tbAddTaskKey(e, teamName, input) {
-      if (e.key !== 'Enter' || !input.value.trim()) return;
-      const text = input.value.trim(); input.value = '';
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      await tbCommitAddTask(input.closest('.add-task-row'), teamName);
+    }
+
+    async function tbAddTaskBtn(btn, teamName) {
+      await tbCommitAddTask(btn.closest('.add-task-row'), teamName);
+    }
+
+    function tbToggleAddInstr(btn) {
+      const row = btn.closest('.add-task-row');
+      if (!row) return;
+      const open = row.classList.toggle('instr-open');
+      if (open) { const ta = row.querySelector('.add-task-instr-input'); if (ta) ta.focus(); }
+    }
+
+    async function tbCommitAddTask(row, teamName) {
+      if (!row) return;
+      const input = row.querySelector('.add-task-input');
+      const text = (input && input.value.trim()) || '';
+      if (!text) { if (input) input.focus(); return; }
+      const instrTa = row.querySelector('.add-task-instr-input');
+      const instructions = (instrTa && instrTa.value.trim()) || '';
       const team = tbTeams.find(tm => tm.name === teamName);
       if (!team) return;
       const id = tbMkid();
-      team.tasks.push({ id, text, assignee: '', dueDate: '', done: false });
-      tbRender(); tbToast('Task added');
-      await tbSaveChange('newTask', id, text, JSON.stringify({ team: teamName, assignee: '' }));
+      team.tasks.push({ id, text, assignee: '', dueDate: '', instructions, done: false });
+      tbRender(); tbToast(instructions ? 'Task added with instructions' : 'Task added');
+      const extra = { team: teamName, assignee: '' };
+      if (instructions) extra.instructions = instructions;
+      await tbSaveChange('newTask', id, text, JSON.stringify(extra));
     }
 
     async function tbDeleteTask(id) {
@@ -6390,6 +6471,8 @@
     window.tbTaskViewSave    = tbTaskViewSave;
     window.tbEditAssignee    = tbEditAssignee;
     window.tbAddTaskKey      = tbAddTaskKey;
+    window.tbAddTaskBtn      = tbAddTaskBtn;
+    window.tbToggleAddInstr  = tbToggleAddInstr;
     window.tbDeleteTask      = tbDeleteTask;
     window.tbEditDueDate     = tbEditDueDate;
     window.tbOpenTeamView    = tbOpenTeamView;
