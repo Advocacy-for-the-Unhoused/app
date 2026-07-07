@@ -5658,8 +5658,29 @@
     function tbLoadData() {
       tbRender(); tbSetStatus('syncing', 'Syncing…');
       tbRun('tbGetAllChanges')
-        .then(changes => { tbApplyChanges(changes); tbRender(); tbSetStatus('synced', 'Synced'); })
+        .then(changes => { tbApplyChanges(changes); tbRender(); tbSetStatus('synced', 'Synced'); tbSanitizeAssignees(); })
         .catch(err => { console.error(err); tbSetStatus('error', 'Offline'); tbToastError('⚠ Could not load saved state.'); });
+    }
+
+    // Before roster-enforcement, tasks could be assigned to arbitrary free text
+    // (e.g. "haha", "duck") that isn't a real person in the system. On every load,
+    // clear any assignee not on the roster and persist the clear so the bad data is
+    // permanently removed for every client. New assignments are already validated in
+    // tbEditAssignee. Skips entirely if the roster can't be loaded (never wrongly clears).
+    async function tbSanitizeAssignees() {
+      const roster = await tbLoadRosterNames();
+      if (!roster.length) return;
+      const valid = new Set(roster.map(n => n.toLowerCase()));
+      const cleared = [];
+      tbTeams.forEach(tm => tm.tasks.forEach(tk => {
+        if (tk.assignee && !valid.has(tk.assignee.toLowerCase())) {
+          tk.assignee = '';
+          cleared.push(tk.id);
+        }
+      }));
+      if (!cleared.length) return;
+      tbRender();
+      cleared.forEach(id => tbSaveChange('taskAssignee', id, '', ''));
     }
 
     const TB_DEDUP_TYPES = new Set([
