@@ -20,8 +20,9 @@
        when several POSTs hit the same /exec at once (e.g. the admin panel
        loading every section in parallel). The browser then parses that 404
        HTML page as JSON -> "Unexpected token '<'". This helper checks res.ok,
-       rejects HTML error pages, and retries read actions (get*/tbGet*) with
-       backoff so a single flaky 404 self-heals. Write actions are NOT retried
+       rejects HTML error pages, and retries read actions (those named "get"
+       or "tbGet") with backoff so a single flaky 404 self-heals. Write actions
+       are NOT retried
        (they may already have committed server-side) — they just fail cleanly.
        Returns a promise of the parsed JSON. */
     window.gasFetch = function (body, opts) {
