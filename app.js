@@ -892,43 +892,46 @@ function showNativeToast(title, body, tab) {
 // =====================================================
 async function registerPushNotifications() {
   if (!window.Capacitor?.isNativePlatform()) return;
-  const { PushNotifications } = window.Capacitor.Plugins;
-  if (!PushNotifications) return;
+  const { FirebaseMessaging } = window.Capacitor.Plugins;
+  if (!FirebaseMessaging) return;
+
+  // Send the FCM registration token to the backend (upserts the FCM Tokens sheet)
+  const storeToken = async (tok) => {
+    if (!volunteerEmail || !tok) return;
+    try {
+      await fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `action=storeFcmToken&email=${encodeURIComponent(volunteerEmail)}&token=${encodeURIComponent(tok)}`
+      });
+    } catch (e) { console.warn('FCM token store failed:', e); }
+  };
 
   try {
-    let perm = await PushNotifications.checkPermissions();
-    if (perm.receive === 'prompt') perm = await PushNotifications.requestPermissions();
+    let perm = await FirebaseMessaging.checkPermissions();
+    if (perm.receive === 'prompt' || perm.receive === 'prompt-with-rationale') {
+      perm = await FirebaseMessaging.requestPermissions();
+    }
     if (perm.receive !== 'granted') return;
 
-    await PushNotifications.register();
+    // getToken() registers with APNs (via Firebase) and returns the real FCM token
+    const { token } = await FirebaseMessaging.getToken();
+    await storeToken(token);
 
-    PushNotifications.addListener('registration', async (token) => {
-      if (!volunteerEmail || !token?.value) return;
-      try {
-        await fetch(SCRIPT_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: `action=storeFcmToken&email=${encodeURIComponent(volunteerEmail)}&token=${encodeURIComponent(token.value)}`
-        });
-      } catch (e) { console.warn('FCM token store failed:', e); }
-    });
-
-    PushNotifications.addListener('registrationError', (err) => {
-      console.warn('Push registration error:', err);
+    // Re-store whenever Firebase rotates the token
+    FirebaseMessaging.addListener('tokenReceived', (event) => {
+      storeToken(event?.token);
     });
 
     // Show in-app banner when a push arrives while app is open
-    PushNotifications.addListener('pushNotificationReceived', (notification) => {
-      showNativeToast(
-        notification.title,
-        notification.body,
-        notification.data?.tab
-      );
+    FirebaseMessaging.addListener('notificationReceived', (event) => {
+      const n = event?.notification || {};
+      showNativeToast(n.title, n.body, n.data?.tab);
     });
 
     // Route to correct tab when user taps a notification
-    PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
-      const tab = action.notification.data?.tab;
+    FirebaseMessaging.addListener('notificationActionPerformed', (event) => {
+      const tab = event?.notification?.data?.tab;
       if (tab && typeof switchTab === 'function') switchTab(tab);
     });
   } catch (e) {
