@@ -95,14 +95,14 @@ function doPost(e) {
       const lastRow = sheet.getLastRow();
       const records = [];
       if (lastRow >= 2) {
-        const data = sheet.getRange(2, 2, lastRow - 1, 5).getValues();
+        const data = sheet.getRange(2, 2, lastRow - 1, 6).getValues();
         data.forEach(row => {
           if (String(row[0]).trim().toLowerCase() === p.email.trim().toLowerCase()) {
             const rawDate = row[2];
             const formattedDate = rawDate instanceof Date
               ? Utilities.formatDate(rawDate, Session.getScriptTimeZone(), "yyyy-MM-dd")
               : String(rawDate);
-            records.push({ eventName: String(row[1]).trim(), eventDate: formattedDate, hours: row[3], approved: String(row[4]).trim() });
+            records.push({ eventName: String(row[1]).trim(), eventDate: formattedDate, hours: row[3], approved: String(row[4]).trim(), notes: String(row[5] || "").trim() });
           }
         });
       }
@@ -124,6 +124,7 @@ function doPost(e) {
           sheet.getRange(nextRow, 4).setValue(new Date(p.eventDate + "T00:00:00"));
           sheet.getRange(nextRow, 5).setValue(hours);
           sheet.getRange(nextRow, 6).setValue("No");
+          sheet.getRange(nextRow, 7).setValue(p.notes ? String(p.notes).slice(0, 500) : "");
           result = { success: true };
           // Push branch president
           try {
@@ -750,7 +751,7 @@ function getAllHours() {
     const lastRow = hoursSheet.getLastRow();
     const records = [];
     if (lastRow >= 2) {
-      const data = hoursSheet.getRange(2, 2, lastRow - 1, 5).getValues();
+      const data = hoursSheet.getRange(2, 2, lastRow - 1, 6).getValues();
       data.forEach((row, i) => {
         const email = String(row[0]).trim();
         if (!email) return;
@@ -765,7 +766,8 @@ function getAllHours() {
           eventName: String(row[1]).trim(),
           date:      dateStr,
           hours:     (row[3] instanceof Date) ? 0 : (Number(row[3]) || 0),
-          approved:  String(row[4]).trim()
+          approved:  String(row[4]).trim(),
+          notes:     String(row[5] || "").trim()
         });
       });
     }

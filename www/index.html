@@ -179,6 +179,30 @@
       box-shadow: 0 0 0 3px rgba(200, 82, 45, 0.1);
     }
 
+    #hoursNotes {
+      width: 100%;
+      padding: 12px;
+      box-sizing: border-box;
+      border: 2px solid var(--camp-dark);
+      border-radius: 0;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 1rem;
+      background: white;
+      resize: vertical;
+      min-height: 58px;
+    }
+    #hoursNotes:focus {
+      outline: none;
+      border-color: var(--camp-orange);
+      box-shadow: 0 0 0 3px rgba(200, 82, 45, 0.1);
+    }
+    .hours-notes-optional {
+      font-weight: 500;
+      text-transform: none;
+      letter-spacing: 0;
+      color: #888;
+    }
+
     button {
       width: 100%;
       padding: 15px;
@@ -571,6 +595,16 @@
       font-weight: 400;
     }
 
+    .hours-row-note {
+      font-size: 0.78rem;
+      color: #6b6b6b;
+      margin-top: 5px;
+      line-height: 1.4;
+      font-style: italic;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
     .hours-row-right { text-align: right; flex-shrink: 0; margin-left: 12px; }
 
     .hours-row-amt {
@@ -696,6 +730,8 @@
     .hrs-row-name  { font-size: 0.78rem; font-weight: 700; color: var(--dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .hrs-row-meta  { font-size: 0.58rem; font-weight: 600; color: rgba(26,19,17,0.45); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .hrs-row-qty   { font-size: 0.78rem; font-weight: 800; color: var(--orange); flex-shrink: 0; white-space: nowrap; }
+    .hrs-row-note  { margin-top: 8px; padding: 7px 9px; background: var(--cream); border-left: 3px solid var(--orange); font-size: 0.72rem; font-weight: 600; color: var(--dark); line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
+    .hrs-row-note-label { display: block; font-size: 0.5rem; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase; color: var(--orange); margin-bottom: 2px; }
     .hrs-btn { font-size: 0.55rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; border: 2px solid var(--dark); background: transparent; color: var(--dark); padding: 4px 8px; cursor: pointer; flex-shrink: 0; transition: background 0.1s, color 0.1s; }
     .hrs-btn:active { opacity: 0.75; }
     .hrs-btn.approve { background: var(--green); border-color: var(--green); color: white; }
@@ -724,8 +760,10 @@
     .hrs-person-total { font-size: 0.78rem; font-weight: 800; color: var(--orange); flex-shrink: 0; margin-left: 10px; }
     .hrs-breakdown { display: none; background: var(--cream); border: 2px solid var(--border); border-top: none; margin-top: -8px; margin-bottom: 8px; padding: 8px 12px; }
     .hrs-breakdown.open { display: block; }
-    .hrs-breakdown-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 0.68rem; }
-    .hrs-breakdown-row:last-child { border-bottom: none; }
+    .hrs-breakdown-item { border-bottom: 1px solid var(--border); }
+    .hrs-breakdown-item:last-child { border-bottom: none; }
+    .hrs-breakdown-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 0.68rem; }
+    .hrs-breakdown-note { padding: 0 0 6px 0; font-size: 0.62rem; font-weight: 600; color: rgba(26,19,17,0.6); line-height: 1.4; white-space: pre-wrap; word-break: break-word; }
     .hrs-breakdown-event { font-weight: 600; color: var(--dark); flex: 1; margin-right: 8px; }
     .hrs-breakdown-date { color: rgba(26,19,17,0.45); font-weight: 600; flex-shrink: 0; margin-right: 8px; }
     .hrs-breakdown-hrs { font-weight: 800; color: var(--orange); flex-shrink: 0; }
@@ -2786,6 +2824,10 @@
 
       <label for="hoursAmount">Hours</label>
       <input id="hoursAmount" type="number" min="0.5" step="0.5" placeholder="e.g. 2">
+
+      <label for="hoursNotes">Notes <span class="hours-notes-optional">(optional)</span></label>
+      <textarea id="hoursNotes" rows="2" maxlength="500"
+        placeholder="Briefly, what did you do? e.g. Filmed video for Instagram, Made care packages"></textarea>
 
       <button id="hoursSubmitBtn" onclick="submitHoursRequest()">Submit for Approval</button>
 
@@ -5364,6 +5406,7 @@
             '</div>' +
             '<div class="hrs-row-qty">' + r.hours + ' hr' + (r.hours !== 1 ? 's' : '') + '</div>' +
           '</div>' +
+          (r.notes ? '<div class="hrs-row-note"><span class="hrs-row-note-label">Note</span>' + esc(r.notes) + '</div>' : '') +
           '<div class="hrs-row-actions">' +
             '<button class="hrs-btn approve" onclick="approveHour(' + r.rowIndex + ')">Approve</button>' +
             '<button class="hrs-btn deny"    onclick="denyHour(' + r.rowIndex + ')">Deny</button>' +
@@ -5431,7 +5474,7 @@
         var key = r.email || r.name;
         if (!byEmail[key]) byEmail[key] = { name: r.name, email: r.email, total: 0, events: [] };
         byEmail[key].total += Number(r.hours) || 0;
-        byEmail[key].events.push({ eventName: r.eventName, date: r.date, hours: Number(r.hours) || 0, approved: r.approved });
+        byEmail[key].events.push({ eventName: r.eventName, date: r.date, hours: Number(r.hours) || 0, approved: r.approved, notes: r.notes });
       });
       var people = Object.values(byEmail).sort(function(a, b) { return b.total - a.total; });
 
@@ -5439,10 +5482,13 @@
         var safeKey = (p.email || p.name).replace(/[^a-zA-Z0-9]/g, '_');
         var eventsHtml = p.events.sort(function(a,b){ return new Date(b.date) - new Date(a.date); }).map(function(e) {
           var isPending = (e.approved || '').toLowerCase() !== 'yes' && (e.approved || '').toLowerCase() !== 'approved';
-          return '<div class="hrs-breakdown-row">' +
-            '<span class="hrs-breakdown-event">' + esc(e.eventName) + (isPending ? '<span class="hrs-breakdown-pending">pending</span>' : '') + '</span>' +
-            '<span class="hrs-breakdown-date">' + esc(e.date) + '</span>' +
-            '<span class="hrs-breakdown-hrs">' + e.hours + ' hr' + (e.hours !== 1 ? 's' : '') + '</span>' +
+          return '<div class="hrs-breakdown-item">' +
+            '<div class="hrs-breakdown-row">' +
+              '<span class="hrs-breakdown-event">' + esc(e.eventName) + (isPending ? '<span class="hrs-breakdown-pending">pending</span>' : '') + '</span>' +
+              '<span class="hrs-breakdown-date">' + esc(e.date) + '</span>' +
+              '<span class="hrs-breakdown-hrs">' + e.hours + ' hr' + (e.hours !== 1 ? 's' : '') + '</span>' +
+            '</div>' +
+            (e.notes ? '<div class="hrs-breakdown-note">' + esc(e.notes) + '</div>' : '') +
           '</div>';
         }).join('');
 

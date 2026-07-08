@@ -670,6 +670,10 @@ async function loadMyHours() {
       return new Date(b.eventDate) - new Date(a.eventDate);
     });
 
+    const escHours = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+    ));
+
     listEl.innerHTML = sorted.map(r => {
       const approved      = String(r.approved).trim().toLowerCase() === "yes";
       const formattedDate = r.eventDate
@@ -682,6 +686,7 @@ async function loadMyHours() {
           <div class="hours-row-left">
             <div class="hours-row-event">${r.eventName}</div>
             <div class="hours-row-date">${formattedDate}</div>
+            ${r.notes ? `<div class="hours-row-note">${escHours(r.notes)}</div>` : ''}
           </div>
           <div class="hours-row-right">
             <div class="hours-row-amt">${r.hours} hr${Number(r.hours) !== 1 ? 's' : ''}</div>
@@ -705,6 +710,7 @@ async function submitHoursRequest() {
   const eventName = document.getElementById("hoursEvent").value;
   const eventDate = document.getElementById("hoursDate").value;
   const hours     = document.getElementById("hoursAmount").value;
+  const notes     = document.getElementById("hoursNotes").value.trim();
   const msgEl     = document.getElementById("hoursSubmitMsg");
   const btn       = document.getElementById("hoursSubmitBtn");
 
@@ -721,7 +727,8 @@ async function submitHoursRequest() {
     `email=${encodeURIComponent(volunteerEmail)}`,
     `eventName=${encodeURIComponent(eventName)}`,
     `eventDate=${encodeURIComponent(eventDate)}`,
-    `hours=${encodeURIComponent(hours)}`
+    `hours=${encodeURIComponent(hours)}`,
+    `notes=${encodeURIComponent(notes)}`
   ].join("&");
 
   try {
@@ -742,6 +749,7 @@ async function submitHoursRequest() {
       msgEl.style.display = "block";
       document.getElementById("hoursDate").value   = "";
       document.getElementById("hoursAmount").value = "";
+      document.getElementById("hoursNotes").value  = "";
       document.getElementById("hoursEvent").selectedIndex = 0;
       loadMyHours();
     } else {
