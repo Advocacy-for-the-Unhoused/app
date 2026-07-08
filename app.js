@@ -596,19 +596,20 @@ async function loadEventTypes() {
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: "action=getEventTypes"
     });
-    const data   = await res.json();
-    const select = document.getElementById("hoursEvent");
+    const data = await res.json();
+    const list = document.getElementById("hoursEventList");
+    if (!list) return;
+    const escAttr = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+    ));
     if (data.eventTypes && data.eventTypes.length) {
-      select.innerHTML =
-        '<option value="">— Select an event —</option>' +
-        data.eventTypes.map(e => `<option value="${e}">${e}</option>`).join("");
+      list.innerHTML = data.eventTypes.map(e => `<option value="${escAttr(e)}"></option>`).join("");
     } else {
-      select.innerHTML = '<option value="">No events available</option>';
+      list.innerHTML = "";
     }
   } catch (err) {
+    // Non-fatal: volunteers can still type a custom event name.
     console.error("Error loading event types:", err);
-    document.getElementById("hoursEvent").innerHTML =
-      '<option value="">Could not load events</option>';
   }
 }
 
@@ -707,14 +708,14 @@ async function loadMyHours() {
 async function submitHoursRequest() {
   if (!volunteerEmail) { alert("Please sign in first."); return; }
 
-  const eventName = document.getElementById("hoursEvent").value;
+  const eventName = document.getElementById("hoursEvent").value.trim();
   const eventDate = document.getElementById("hoursDate").value;
   const hours     = document.getElementById("hoursAmount").value;
   const notes     = document.getElementById("hoursNotes").value.trim();
   const msgEl     = document.getElementById("hoursSubmitMsg");
   const btn       = document.getElementById("hoursSubmitBtn");
 
-  if (!eventName) { alert("Please select an event."); return; }
+  if (!eventName) { alert("Please choose or type an event."); return; }
   if (!eventDate) { alert("Please enter the event date."); return; }
   if (!hours || Number(hours) <= 0) { alert("Please enter a valid number of hours."); return; }
 
@@ -750,7 +751,7 @@ async function submitHoursRequest() {
       document.getElementById("hoursDate").value   = "";
       document.getElementById("hoursAmount").value = "";
       document.getElementById("hoursNotes").value  = "";
-      document.getElementById("hoursEvent").selectedIndex = 0;
+      document.getElementById("hoursEvent").value  = "";
       loadMyHours();
     } else {
       throw new Error(data.error || "Unknown error");

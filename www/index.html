@@ -202,6 +202,12 @@
       letter-spacing: 0;
       color: #888;
     }
+    .hours-field-hint {
+      font-size: 0.75rem;
+      color: #888;
+      margin-top: 5px;
+      line-height: 1.4;
+    }
 
     button {
       width: 100%;
@@ -2815,9 +2821,10 @@
       </p>
 
       <label for="hoursEvent">Event</label>
-      <select id="hoursEvent">
-        <option value="">Loading events…</option>
-      </select>
+      <input id="hoursEvent" type="text" list="hoursEventList" autocomplete="off"
+        placeholder="Choose from the list or type your own…">
+      <datalist id="hoursEventList"></datalist>
+      <div class="hours-field-hint">Pick a listed event, or just type what you did.</div>
 
       <label for="hoursDate">Event Date</label>
       <input id="hoursDate" type="date">
