@@ -2696,6 +2696,14 @@
 
     <!-- Theme toggle + Delete account -->
     <div class="delete-account-section">
+      <div class="theme-toggle-row" style="margin-bottom:16px;">
+        <div class="theme-toggle-icons">
+          <span class="theme-toggle-icon">🧭</span>
+          <span class="theme-toggle-label">App tour</span>
+        </div>
+        <button onclick="showWelcome(true)" aria-label="Replay welcome tour"
+          style="background:var(--camp-orange);color:#fff;border:none;border-radius:12px;font-family:'Montserrat',sans-serif;font-weight:800;font-size:0.78rem;letter-spacing:0.3px;padding:10px 18px;min-height:40px;width:auto;box-shadow:0 4px 12px rgba(200,82,45,0.3);cursor:pointer;">Replay</button>
+      </div>
       <div class="theme-toggle-row">
         <div class="theme-toggle-icons">
           <span class="theme-toggle-icon">🌙</span>
@@ -4278,7 +4286,7 @@
   });
 </script>
 
-<script src="app.js?v=8"></script>
+<script src="app.js?v=9"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 
 <script>

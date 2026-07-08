@@ -1,5 +1,5 @@
-// app.js v8
-console.log("App.js v8 loaded!");
+// app.js v9
+console.log("App.js v9 loaded!");
 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwM8DrClchV9B5bfKYMaDURSRzTqlHA3mIVfKLe5HNO85zQYys2rL55WXSDEz89_PxS/exec";
 
@@ -160,6 +160,7 @@ window.onSignedIn = async function (preloadedPayload = null) {
       `${branchLetter} — ${branchName}`;
 
     switchTab('home');
+    maybeShowWelcome();
 
     await syncDonations();
     await loadEventTypes();
@@ -252,6 +253,7 @@ window.onAppleSignedIn = async function(sub, email, givenName, familyName) {
     document.getElementById('udiBranchDisplay').value = `${branchLetter} — ${branchName}`;
 
     switchTab('home');
+    maybeShowWelcome();
     await syncDonations();
     await loadEventTypes();
 
@@ -1073,3 +1075,200 @@ function proceedAfterRegistration() {
   const udiSection = document.getElementById('udiSection');
   if (udiSection) udiSection.style.display = 'none';
 }
+
+// =====================================================
+// FIRST-RUN WELCOME TOUR
+// A short, generic swipeable intro shown once per device on first
+// successful sign-in. Re-openable anytime via showWelcome(true).
+// "Seen" state is a localStorage flag — no backend change.
+// =====================================================
+const WELCOME_SEEN_KEY = 'afu-welcome-seen';
+
+const WELCOME_SLIDES = [
+  {
+    icon: '👋',
+    title: 'Welcome to the AFU Portal',
+    body: "Your home base for volunteering with Advocacy for the Unhoused. Here's a quick 15-second tour."
+  },
+  {
+    icon: '🏠',
+    title: 'Start at Home',
+    body: "Your <b>Home</b> tab shows your approved hours, your branch's fundraising progress, and recent activity — all in one place."
+  },
+  {
+    icon: '⏱️',
+    title: 'Log hours & donations',
+    body: 'Use <b>Hours</b> to record volunteer time and <b>Donate</b> to log fundraising. Your coordinator reviews what you submit.'
+  },
+  {
+    icon: '✅',
+    title: "You're all set",
+    body: "Check <b>Tasks</b> to see what your team is working on. Special events like the Boston Trip appear on your Home screen when they're active.<br><br>Replay this tour anytime from the bottom of your Home screen."
+  }
+];
+
+function injectWelcomeStyles() {
+  if (document.getElementById('afu-welcome-style')) return;
+  const style = document.createElement('style');
+  style.id = 'afu-welcome-style';
+  style.textContent = `
+    .afu-welcome-overlay {
+      position: fixed; inset: 0; z-index: 10000;
+      display: flex; align-items: center; justify-content: center; padding: 20px;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+      opacity: 0; transition: opacity 0.25s ease;
+      font-family: 'Montserrat', sans-serif;
+    }
+    .afu-welcome-overlay.visible { opacity: 1; }
+    .afu-welcome-card {
+      position: relative; width: 100%; max-width: 360px;
+      background: var(--page-bg, #1A1311); color: var(--page-text, #F9F6F0);
+      border: 1px solid var(--card-border, rgba(249,246,240,0.22)); border-radius: 22px;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+      padding: 34px 26px calc(24px + env(safe-area-inset-bottom));
+      text-align: center; transform: translateY(14px) scale(0.98);
+      transition: transform 0.25s ease;
+    }
+    .afu-welcome-overlay.visible .afu-welcome-card { transform: translateY(0) scale(1); }
+    .afu-welcome-skip {
+      position: absolute; top: 12px; right: 14px;
+      background: none; border: none; cursor: pointer; font-family: 'Montserrat', sans-serif;
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+      color: var(--page-text, #F9F6F0); opacity: 0.45; padding: 6px 8px;
+      min-height: auto; width: auto; box-shadow: none;
+    }
+    .afu-welcome-skip:hover { opacity: 0.8; }
+    .afu-welcome-track-wrap { overflow: hidden; }
+    .afu-welcome-track { display: flex; transition: transform 0.3s ease; }
+    .afu-welcome-slide {
+      flex: 0 0 100%; padding: 8px 4px;
+      display: flex; flex-direction: column; align-items: center;
+    }
+    .afu-welcome-icon { font-size: 3.4rem; line-height: 1; margin: 6px 0 18px; }
+    .afu-welcome-title {
+      font-size: 1.28rem; font-weight: 800; margin: 0 0 12px; color: var(--page-text, #F9F6F0);
+    }
+    .afu-welcome-body {
+      font-size: 0.92rem; line-height: 1.55; margin: 0; opacity: 0.82; max-width: 280px;
+    }
+    .afu-welcome-body b { color: var(--camp-orange, #C8522D); font-weight: 800; }
+    .afu-welcome-dots { display: flex; gap: 7px; justify-content: center; margin: 22px 0 20px; }
+    .afu-welcome-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--page-text, #F9F6F0); opacity: 0.25;
+      transition: opacity 0.2s, width 0.2s, background 0.2s;
+    }
+    .afu-welcome-dot.active {
+      opacity: 1; width: 20px; border-radius: 4px; background: var(--camp-orange, #C8522D);
+    }
+    .afu-welcome-actions { display: flex; gap: 10px; align-items: center; }
+    .afu-welcome-back {
+      flex: 0 0 auto; background: none; border: none; cursor: pointer;
+      font-family: 'Montserrat', sans-serif; font-size: 0.82rem; font-weight: 700;
+      color: var(--page-text, #F9F6F0); opacity: 0.55;
+      padding: 12px 6px; min-height: 44px; width: auto; box-shadow: none;
+    }
+    .afu-welcome-back:hover { opacity: 0.9; }
+    .afu-welcome-next {
+      flex: 1; min-height: 48px; background: var(--camp-orange, #C8522D); color: #fff;
+      border: none; border-radius: 14px; cursor: pointer; font-family: 'Montserrat', sans-serif;
+      font-size: 0.95rem; font-weight: 800; letter-spacing: 0.3px;
+      box-shadow: 0 6px 18px rgba(200,82,45,0.35); transition: transform 0.12s, box-shadow 0.12s;
+    }
+    .afu-welcome-next:active { transform: translateY(1px); box-shadow: 0 3px 10px rgba(200,82,45,0.3); }
+  `;
+  document.head.appendChild(style);
+}
+
+window.showWelcome = function(force = false) {
+  if (!force && localStorage.getItem(WELCOME_SEEN_KEY)) return;
+  if (document.querySelector('.afu-welcome-overlay')) return; // already open
+  injectWelcomeStyles();
+
+  let idx = 0;
+  const overlay = document.createElement('div');
+  overlay.className = 'afu-welcome-overlay';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-label', 'Welcome tour');
+  overlay.innerHTML = `
+    <div class="afu-welcome-card">
+      <button class="afu-welcome-skip" type="button">Skip</button>
+      <div class="afu-welcome-track-wrap">
+        <div class="afu-welcome-track">
+          ${WELCOME_SLIDES.map(s => `
+            <div class="afu-welcome-slide">
+              <div class="afu-welcome-icon">${s.icon}</div>
+              <h3 class="afu-welcome-title">${s.title}</h3>
+              <p class="afu-welcome-body">${s.body}</p>
+            </div>`).join('')}
+        </div>
+      </div>
+      <div class="afu-welcome-dots">
+        ${WELCOME_SLIDES.map((_, i) => `<span class="afu-welcome-dot${i === 0 ? ' active' : ''}"></span>`).join('')}
+      </div>
+      <div class="afu-welcome-actions">
+        <button class="afu-welcome-back" type="button" style="visibility:hidden;">Back</button>
+        <button class="afu-welcome-next" type="button">Next</button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add('visible'));
+
+  const track   = overlay.querySelector('.afu-welcome-track');
+  const dots    = Array.from(overlay.querySelectorAll('.afu-welcome-dot'));
+  const backBtn = overlay.querySelector('.afu-welcome-back');
+  const nextBtn = overlay.querySelector('.afu-welcome-next');
+  const skipBtn = overlay.querySelector('.afu-welcome-skip');
+
+  function render() {
+    track.style.transform = `translateX(-${idx * 100}%)`;
+    dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+    backBtn.style.visibility = idx === 0 ? 'hidden' : 'visible';
+    const last = idx === WELCOME_SLIDES.length - 1;
+    nextBtn.textContent = last ? 'Get started' : 'Next';
+    skipBtn.style.visibility = last ? 'hidden' : 'visible';
+  }
+  function close() {
+    try { localStorage.setItem(WELCOME_SEEN_KEY, '1'); } catch (e) {}
+    overlay.classList.remove('visible');
+    document.removeEventListener('keydown', onKey);
+    setTimeout(() => overlay.remove(), 250);
+  }
+  function next() {
+    if (idx < WELCOME_SLIDES.length - 1) { idx++; haptic('light'); render(); }
+    else { haptic('success'); close(); }
+  }
+  function back() { if (idx > 0) { idx--; haptic('light'); render(); } }
+  function onKey(e) {
+    if (e.key === 'Escape') close();
+    else if (e.key === 'ArrowRight') next();
+    else if (e.key === 'ArrowLeft') back();
+  }
+
+  document.addEventListener('keydown', onKey);
+  nextBtn.addEventListener('click', next);
+  backBtn.addEventListener('click', back);
+  skipBtn.addEventListener('click', close);
+
+  // Lightweight touch swipe
+  let startX = null;
+  track.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, { passive: true });
+  track.addEventListener('touchend', e => {
+    if (startX === null) return;
+    const dx = e.changedTouches[0].clientX - startX;
+    if (dx < -40) next(); else if (dx > 40) back();
+    startX = null;
+  }, { passive: true });
+
+  render();
+};
+
+// Shown automatically after first successful sign-in (once per device).
+window.maybeShowWelcome = function() {
+  if (localStorage.getItem(WELCOME_SEEN_KEY)) return;
+  // Small delay so the Home tab paints behind the modal first.
+  setTimeout(() => window.showWelcome(false), 550);
+};
