@@ -1855,24 +1855,29 @@
     .food-admin-head { background: rgba(249,246,240,0.7); border-bottom: 1px solid var(--border); padding: 6px 12px; display: flex; align-items: center; justify-content: space-between; }
     .btn-add-food { background: none; border: 1.5px solid var(--dark); color: var(--dark); font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 0.58rem; letter-spacing: 0.5px; text-transform: uppercase; padding: 3px 8px; cursor: pointer; display: flex; align-items: center; gap: 4px; border-radius: 0; -webkit-appearance: none; }
     .btn-add-food:hover { background: var(--dark); color: white; }
-    .food-item-row { display: flex; align-items: center; min-height: 48px; border-bottom: 1px solid var(--border); padding: 6px 12px 6px 44px; gap: 8px; }
+    /* Food rows use a two-line layout so the item NAME always gets a full-width line
+       (single-line packing collapsed the name input to 0px on narrow phone cards). */
+    .food-item-row { display: flex; flex-direction: column; align-items: stretch; gap: 8px; border-bottom: 1px solid var(--border); padding: 10px 12px 12px; }
     .food-item-row:last-child { border-bottom: none; }
-    .food-item-name-input { flex: 1; font-family: 'Montserrat', sans-serif; font-size: 0.82rem; font-weight: 700; color: var(--dark); background: none; border: none; outline: none; border-bottom: 2px dashed transparent; cursor: text; padding: 2px 0; transition: border-color 0.2s; min-width: 0; }
+    .food-item-name-input { width: 100%; box-sizing: border-box; font-family: 'Montserrat', sans-serif; font-size: 0.85rem; font-weight: 700; color: var(--dark); background: none; border: none; outline: none; border-bottom: 2px dashed var(--border); cursor: text; padding: 3px 0; transition: border-color 0.2s; }
     .food-item-name-input:focus { border-bottom-color: var(--orange); }
-    .food-item-cost-input { font-family: 'Abril Fatface', serif; font-size: 0.9rem; color: var(--dark); background: none; border: none; outline: none; text-align: right; width: 64px; cursor: text; padding: 2px 0; border-bottom: 2px dashed transparent; transition: border-color 0.2s; flex-shrink: 0; }
+    .food-line2 { display: flex; align-items: center; gap: 8px; }
+    .food-cost-prefix { font-family: 'Abril Fatface', serif; font-size: 0.95rem; color: rgba(26,19,17,0.4); flex-shrink: 0; }
+    .food-item-cost-input { font-family: 'Abril Fatface', serif; font-size: 0.95rem; color: var(--dark); background: none; border: none; outline: none; text-align: left; width: 84px; cursor: text; padding: 3px 0; border-bottom: 2px dashed var(--border); transition: border-color 0.2s; flex-shrink: 0; }
     .food-item-cost-input:focus { border-bottom-color: var(--orange); }
-    .food-item-save-btn { background: var(--orange); color: white; border: 1.5px solid var(--dark); font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 0.58rem; letter-spacing: 0.5px; text-transform: uppercase; padding: 3px 7px; cursor: pointer; display: none; align-items: center; gap: 3px; border-radius: 0; -webkit-appearance: none; flex-shrink: 0; }
+    .food-line2-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .food-item-save-btn { background: var(--orange); color: white; border: 1.5px solid var(--dark); font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 0.6rem; letter-spacing: 0.5px; text-transform: uppercase; padding: 4px 9px; cursor: pointer; display: none; align-items: center; gap: 3px; border-radius: 0; -webkit-appearance: none; }
     .food-item-save-btn.show { display: inline-flex; }
-    .food-item-delete-btn { background: none; border: none; cursor: pointer; color: rgba(26,19,17,0.2); font-size: 15px; padding: 2px; flex-shrink: 0; transition: color 0.2s; }
+    .food-item-delete-btn { background: none; border: none; cursor: pointer; color: rgba(26,19,17,0.3); font-size: 16px; padding: 2px 4px; flex-shrink: 0; transition: color 0.2s; }
     .food-item-delete-btn:hover { color: #b83232; }
-    .food-empty-state { padding: 14px 44px; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: rgba(26,19,17,0.25); }
-    .new-food-row { display: flex; align-items: center; min-height: 48px; border-top: 1px solid var(--border); padding: 6px 12px 6px 44px; gap: 8px; background: rgba(200,82,45,0.04); }
-    .new-food-name { flex: 1; font-family: 'Montserrat', sans-serif; font-size: 0.82rem; font-weight: 600; color: var(--dark); background: none; border: none; outline: none; min-width: 0; border-bottom: 2px solid var(--orange); padding: 2px 0; }
-    .new-food-name::placeholder { color: rgba(26,19,17,0.25); font-weight: 400; }
-    .new-food-cost { font-family: 'Abril Fatface', serif; font-size: 0.9rem; color: var(--dark); background: none; border: none; outline: none; text-align: right; width: 64px; border-bottom: 2px solid var(--orange); padding: 2px 0; flex-shrink: 0; }
-    .new-food-cost::placeholder { font-family: 'Montserrat', sans-serif; font-size: 0.75rem; font-weight: 600; color: rgba(26,19,17,0.25); }
-    .new-food-add-btn { background: var(--dark); color: white; border: 1.5px solid var(--dark); font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 0.58rem; letter-spacing: 0.5px; text-transform: uppercase; padding: 3px 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; border-radius: 0; flex-shrink: 0; }
-    .new-food-cancel-btn { background: none; border: none; cursor: pointer; color: rgba(26,19,17,0.25); font-size: 15px; padding: 2px; flex-shrink: 0; }
+    .food-empty-state { padding: 14px 12px; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: rgba(26,19,17,0.25); }
+    .new-food-row { display: flex; flex-direction: column; align-items: stretch; gap: 8px; border-top: 1px solid var(--border); padding: 12px; background: rgba(200,82,45,0.06); }
+    .new-food-name { width: 100%; box-sizing: border-box; font-family: 'Montserrat', sans-serif; font-size: 0.85rem; font-weight: 600; color: var(--dark); background: none; border: none; outline: none; border-bottom: 2px solid var(--orange); padding: 4px 0; }
+    .new-food-name::placeholder { color: rgba(26,19,17,0.3); font-weight: 400; }
+    .new-food-cost { font-family: 'Abril Fatface', serif; font-size: 0.95rem; color: var(--dark); background: none; border: none; outline: none; text-align: left; width: 84px; border-bottom: 2px solid var(--orange); padding: 3px 0; flex-shrink: 0; }
+    .new-food-cost::placeholder { font-family: 'Montserrat', sans-serif; font-size: 0.78rem; font-weight: 600; color: rgba(26,19,17,0.3); }
+    .new-food-add-btn { background: var(--dark); color: white; border: 1.5px solid var(--dark); font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 0.62rem; letter-spacing: 0.5px; text-transform: uppercase; padding: 5px 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; border-radius: 0; -webkit-appearance: none; }
+    .new-food-cancel-btn { background: none; border: none; cursor: pointer; color: rgba(26,19,17,0.45); font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 0.62rem; letter-spacing: 0.5px; text-transform: uppercase; padding: 5px 4px; }
 
     .vol-card-subtotals { border-top: 2px solid var(--dark); background: var(--dark); padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; }
     .vol-card-subtotals-lbl { font-size: 0.52rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(249,246,240,0.35); }
@@ -4979,12 +4984,17 @@
 
     function buildFoodItemRow(fi) {
       return `<div class="food-item-row" data-food-id="${esc(fi.id)}">
-        <input type="text" class="food-item-name-input" value="${esc(fi.item)}" data-orig-name="${esc(fi.item)}"
+        <input type="text" class="food-item-name-input" value="${esc(fi.item)}" data-orig-name="${esc(fi.item)}" placeholder="Item name"
           oninput="onFoodItemChange(this)" onblur="saveFoodItemIfChanged(this)" />
-        <input type="number" step="0.01" min="0" class="food-item-cost-input" value="${(fi.cost||0).toFixed(2)}" data-orig-cost="${(fi.cost||0).toFixed(2)}"
-          oninput="onFoodItemChange(this)" onblur="saveFoodItemIfChanged(this)" />
-        <button class="food-item-save-btn" onclick="saveFoodItem(this, '${esc(fi.id)}')"><i class="bi bi-check"></i> Save</button>
-        <button class="food-item-delete-btn" title="Delete" onclick="deleteFoodItem(this, '${esc(fi.id)}')"><i class="bi bi-trash3"></i></button>
+        <div class="food-line2">
+          <span class="food-cost-prefix">$</span>
+          <input type="number" step="0.01" min="0" class="food-item-cost-input" value="${(fi.cost||0).toFixed(2)}" data-orig-cost="${(fi.cost||0).toFixed(2)}"
+            oninput="onFoodItemChange(this)" onblur="saveFoodItemIfChanged(this)" />
+          <span class="food-line2-actions">
+            <button class="food-item-save-btn" onclick="saveFoodItem(this, '${esc(fi.id)}')"><i class="bi bi-check"></i> Save</button>
+            <button class="food-item-delete-btn" title="Delete" onclick="deleteFoodItem(this, '${esc(fi.id)}')"><i class="bi bi-trash3"></i></button>
+          </span>
+        </div>
       </div>`;
     }
 
@@ -5056,10 +5066,16 @@
       const row = document.createElement('div');
       row.className = 'new-food-row';
       row.innerHTML = `
-        <input type="text"   class="new-food-name" placeholder="Item name" />
-        <input type="number" class="new-food-cost" step="0.01" min="0" placeholder="0.00" />
-        <button class="new-food-add-btn"    onclick="commitAddFood(this, '${esc(email)}')"><i class="bi bi-check"></i> Add</button>
-        <button class="new-food-cancel-btn" onclick="this.closest('.new-food-row').remove()"><i class="bi bi-x"></i></button>`;
+        <input type="text" class="new-food-name" placeholder="Item name"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();this.closest('.new-food-row').querySelector('.new-food-add-btn').click();}" />
+        <div class="food-line2">
+          <span class="food-cost-prefix">$</span>
+          <input type="number" class="new-food-cost" step="0.01" min="0" placeholder="0.00" />
+          <span class="food-line2-actions">
+            <button class="new-food-add-btn"    onclick="commitAddFood(this, '${esc(email)}')"><i class="bi bi-check"></i> Add</button>
+            <button class="new-food-cancel-btn" onclick="this.closest('.new-food-row').remove()">Cancel</button>
+          </span>
+        </div>`;
       list.appendChild(row);
       row.querySelector('.new-food-name').focus();
     }
