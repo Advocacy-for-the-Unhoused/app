@@ -6642,7 +6642,8 @@
 
         html += visibleBranches.map(function(b) {
           var canEdit   = isAZ || (/[AZP]/.test(pos) && b.code === userBc);
-          var pct       = b.goal > 0 ? Math.min(100, Math.round((b.raised / b.goal) * 100)) : 0;
+          var pct       = b.goal > 0 ? Math.round((b.raised / b.goal) * 100) : 0;
+          var barPct    = Math.min(100, pct);
           var pctColor  = pct >= 100 ? '#1D9E75' : (pct >= 60 ? 'var(--orange)' : 'var(--dark)');
 
           var dayOpts = DAY_NAMES.map(function(d, i) {
@@ -6662,7 +6663,7 @@
                 '<div style="font-size:1rem;font-weight:800;color:' + pctColor + ';">$' + b.raised.toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2}) + '</div>' +
                 '<div style="font-size:0.65rem;opacity:0.55;margin-bottom:6px;">raised of $' + b.goal.toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2}) + ' goal</div>' +
                 '<div style="background:#e0ddd9;height:7px;border-radius:4px;overflow:hidden;">' +
-                  '<div style="width:' + pct + '%;height:100%;background:' + pctColor + ';border-radius:4px;transition:width 0.4s;"></div>' +
+                  '<div style="width:' + barPct + '%;height:100%;background:' + pctColor + ';border-radius:4px;transition:width 0.4s;"></div>' +
                 '</div>' +
                 '<div style="font-size:0.6rem;opacity:0.45;margin-top:4px;">' + pct + '% of goal</div>' +
               '</div>' +
