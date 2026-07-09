@@ -1134,7 +1134,7 @@ function injectWelcomeStyles() {
     }
     .afu-welcome-overlay.visible .afu-welcome-card { transform: translateY(0) scale(1); }
     .afu-welcome-skip {
-      position: absolute; top: 12px; right: 14px;
+      position: absolute; top: 12px; right: 14px; z-index: 2;
       background: none; border: none; cursor: pointer; font-family: 'Montserrat', sans-serif;
       font-size: 0.72rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
       color: var(--page-text, #F9F6F0); opacity: 0.45; padding: 6px 8px;
