@@ -1158,6 +1158,131 @@
       transition: width 0.6s ease;
     }
 
+    /* Your Tasks card (mirrors the fundraising-goal card shell) */
+    .my-tasks-card {
+      background: white;
+      border: 3px solid var(--card-border);
+      box-shadow: 8px 8px 0 var(--camp-orange);
+      padding: 16px 18px 12px;
+      margin-bottom: 16px;
+      box-sizing: border-box;
+    }
+    .my-tasks-card.hidden { display: none !important; }
+    .my-tasks-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .my-tasks-title {
+      font-family: 'Abril Fatface', serif;
+      font-size: 1rem;
+      color: var(--camp-dark);
+    }
+    .my-tasks-count {
+      font-size: 0.68rem;
+      font-weight: 800;
+      color: #fff;
+      background: var(--camp-orange);
+      border-radius: 999px;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 7px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      box-sizing: border-box;
+    }
+    /* Inner rows sit on the WHITE card, so colors are hardcoded dark-on-light.
+       Do NOT use the adaptive stat/cream vars here: they turn cream in dark mode
+       and vanish against white. */
+    .my-task-row {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-align: left;
+      background: rgba(26,19,17,0.04);
+      border: 1px solid rgba(26,19,17,0.10);
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin: 0 0 8px 0;              /* override global button margin-top:20px */
+      cursor: pointer;
+      box-sizing: border-box;
+      font-family: inherit;
+      transition: transform 0.12s, background 0.12s;
+    }
+    /* Neutralize the global button:hover / :active (dark fill + jump), which
+       otherwise wins on these <button> rows and hides the dark text. */
+    .my-task-row:hover {
+      background: rgba(26,19,17,0.07);
+      transform: none;
+      box-shadow: none;
+    }
+    .my-task-row:active { transform: translateY(1px); box-shadow: none; }
+    .my-task-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .my-task-main {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .my-task-text {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #1a1311;
+      text-transform: none;          /* override inherited global button uppercase */
+      line-height: 1.25;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      overflow-wrap: anywhere;
+    }
+    .my-task-team {
+      font-size: 0.62rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #8a8378;
+    }
+    .my-task-due {
+      flex-shrink: 0;
+      font-size: 0.62rem;
+      font-weight: 800;
+      padding: 3px 7px;
+      border-radius: 999px;
+      border: 1.5px solid rgba(26,19,17,0.14);
+      color: #8a8378;
+      white-space: nowrap;
+    }
+    .my-task-due.overdue { border-color: #e53935; color: #e53935; }
+    .my-task-due.soon { border-color: var(--camp-orange); color: var(--camp-orange); }
+    .my-tasks-viewall {
+      width: 100%;
+      background: transparent;
+      border: none;
+      color: var(--camp-orange);
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 800;
+      font-size: 0.72rem;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      padding: 8px 0 2px;
+      cursor: pointer;
+      margin-top: 2px;
+    }
+    .my-tasks-viewall:hover { background: transparent; transform: none; box-shadow: none; opacity: 0.75; }
+    .my-tasks-viewall:active { transform: translateY(1px); box-shadow: none; }
+    .my-tasks-viewall i { font-size: 0.8rem; vertical-align: middle; }
+
     /* Feature tiles */
     .dash-section-label {
       font-size: 0.72rem;
@@ -2656,6 +2781,16 @@
       <span class="boston-banner-arrow"><i class="bi bi-chevron-right"></i></span>
     </div>
 
+    <!-- Your Tasks (personal, pulled live from the Task Board) -->
+    <div class="my-tasks-card hidden" id="myTasksCard">
+      <div class="my-tasks-head">
+        <span class="my-tasks-title">📋 Your Tasks</span>
+        <span class="my-tasks-count" id="myTasksCount">0</span>
+      </div>
+      <div id="myTasksList"></div>
+      <button class="my-tasks-viewall" onclick="switchTab('tasks')">Open Task Board <i class="bi bi-chevron-right"></i></button>
+    </div>
+
     <!-- Feature tiles -->
     <p class="dash-section-label">Quick Actions</p>
     <div class="dash-grid">
@@ -3487,6 +3622,44 @@
 
 <script>
   /* ─────────────────────────────────────────
+     "Your Tasks" card on the Home dashboard —
+     the signed-in user's incomplete tasks from
+     the Task Board, tapped through to the board.
+  ───────────────────────────────────────── */
+  window.renderMyTasksCard = async function() {
+    const card = document.getElementById('myTasksCard');
+    if (!card) return;
+    const p = window.volunteerProfile;
+    if (!p || typeof window.tbGetMyTasks !== 'function') { card.classList.add('hidden'); return; }
+    const fullName = p.fullName || p.firstName || '';
+
+    let tasks = [];
+    try { tasks = await window.tbGetMyTasks(fullName); } catch (e) { tasks = []; }
+    if (!tasks.length) { card.classList.add('hidden'); return; }
+
+    const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g,
+      c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+
+    const MAX = 5;
+    const shown = tasks.slice(0, MAX);
+    document.getElementById('myTasksList').innerHTML = shown.map(t => `
+      <button class="my-task-row" onclick="switchTab('tasks')">
+        <span class="my-task-dot" style="background:${esc(t.teamColor)}"></span>
+        <span class="my-task-main">
+          <span class="my-task-text">${esc(t.text)}</span>
+          <span class="my-task-team">${esc(t.teamName)}</span>
+        </span>
+        ${t.dueLabel ? `<span class="my-task-due ${esc(t.dueClass)}">${esc(t.dueLabel)}</span>` : ''}
+      </button>`).join('');
+
+    document.getElementById('myTasksCount').textContent = tasks.length;
+    const btn = card.querySelector('.my-tasks-viewall');
+    if (btn) btn.innerHTML = (tasks.length > MAX ? 'View all ' + tasks.length : 'Open Task Board')
+      + ' <i class="bi bi-chevron-right"></i>';
+    card.classList.remove('hidden');
+  };
+
+  /* ─────────────────────────────────────────
      Tab switching
   ───────────────────────────────────────── */
   function switchTab(tab) {
@@ -3498,6 +3671,7 @@
       document.getElementById('tabHome').classList.remove('hidden');
       document.getElementById('navHome').classList.add('active');
       if (typeof window.loadDashboard === 'function') window.loadDashboard();
+      if (typeof window.renderMyTasksCard === 'function') window.renderMyTasksCard();
       initBostonBanner();
 
     } else if (tab === 'donations') {
@@ -4286,7 +4460,7 @@
   });
 </script>
 
-<script src="app.js?v=9"></script>
+<script src="app.js?v=10"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 
 <script>
@@ -5894,6 +6068,42 @@
       return null;
     }
 
+    // Personal task list for the Home dashboard's "Your Tasks" card.
+    // Re-fetches the change log and rebuilds tbTeams (deterministic — same result
+    // as the board itself), then returns this person's INCOMPLETE tasks. Safe to
+    // call before the board tab has ever been opened: it never touches the board
+    // DOM and never flips tbInitialized, so the board still lazy-loads normally.
+    // Junk free-text assignees can't collide with a real full name, so no need to
+    // wait on tbSanitizeAssignees here.
+    async function tbGetMyTasks(fullName) {
+      const target = String(fullName || '').trim().toLowerCase();
+      if (!target) return [];
+      try {
+        const changes = await tbRun('tbGetAllChanges');
+        tbApplyChanges(changes);
+      } catch (e) { /* fall back to whatever tbTeams already holds */ }
+      const out = [];
+      tbTeams.forEach(team => {
+        (team.tasks || []).forEach(t => {
+          if (!t.done && String(t.assignee || '').trim().toLowerCase() === target) {
+            out.push({
+              id: t.id, text: t.text || '', dueDate: t.dueDate || '',
+              teamName: team.name, teamColor: team.color,
+              dueClass: tbDueClass(t.dueDate), dueLabel: t.dueDate ? tbFmtDue(t.dueDate) : ''
+            });
+          }
+        });
+      });
+      // Soonest due date first; undated tasks last.
+      out.sort((a, b) => {
+        if (!a.dueDate && !b.dueDate) return 0;
+        if (!a.dueDate) return 1;
+        if (!b.dueDate) return -1;
+        return a.dueDate < b.dueDate ? -1 : (a.dueDate > b.dueDate ? 1 : 0);
+      });
+      return out;
+    }
+
     function tbRender() {
       const canvas = document.getElementById('tb-canvas');
       canvas.innerHTML = '';
@@ -6552,6 +6762,7 @@
 
     /* Expose to window for onclick handlers and switchTab */
     window.initTaskBoard   = function() { if (!tbInitialized) { tbInitialized = true; tbLoadData(); } };
+    window.tbGetMyTasks    = tbGetMyTasks;
     window.tbOpenModal     = tbOpenModal;
     window.tbCloseModal    = tbCloseModal;
     window.tbPickColor     = tbPickColor;

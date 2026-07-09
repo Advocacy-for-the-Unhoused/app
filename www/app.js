@@ -101,6 +101,7 @@ window.onSignedIn = async function (preloadedPayload = null) {
     // Expose profile so the dashboard stub can read it
     window.volunteerProfile = {
       firstName: volunteerName,
+      fullName: info.fullName || volunteerName,
       branchName,
       branchCode: branchLetter,
       email: volunteerEmail,
@@ -204,6 +205,7 @@ window.onAppleSignedIn = async function(sub, email, givenName, familyName) {
 
     window.volunteerProfile = {
       firstName: volunteerName,
+      fullName: info.fullName || volunteerName,
       branchName,
       branchCode: branchLetter,
       email: volunteerEmail,

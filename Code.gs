@@ -385,7 +385,7 @@ function getMemberInfo(email) {
       const photoId   = (rawPhoto.match(/\/d\/([A-Za-z0-9_-]+)/) || rawPhoto.match(/[?&]id=([A-Za-z0-9_-]+)/) || [])[1] || "";
       const photoUrl  = photoId ? "https://drive.google.com/thumbnail?id=" + photoId + "&sz=w200" : "";
       Logger.log("Match at row " + (i + 1) + " | " + fullName + " | " + branchCode);
-      return { firstName, branchCode, branchName: BRANCH_NAMES[branchCode] || branchCode || "Unknown", position, photoUrl };
+      return { firstName, fullName, branchCode, branchName: BRANCH_NAMES[branchCode] || branchCode || "Unknown", position, photoUrl };
     }
   }
 
@@ -433,7 +433,7 @@ function buildMemberResult_(row) {
   const photoId    = (rawPhoto.match(/\/d\/([A-Za-z0-9_-]+)/) || rawPhoto.match(/[?&]id=([A-Za-z0-9_-]+)/) || [])[1] || '';
   const photoUrl   = photoId ? 'https://drive.google.com/thumbnail?id=' + photoId + '&sz=w200' : '';
   const email      = (row[3] || '').toString().trim();
-  return { firstName, branchCode, branchName: BRANCH_NAMES[branchCode] || branchCode || 'Unknown', position, photoUrl, email };
+  return { firstName, fullName, branchCode, branchName: BRANCH_NAMES[branchCode] || branchCode || 'Unknown', position, photoUrl, email };
 }
 
 // ── Donation handler ──────────────────────────────────────────────────────────
