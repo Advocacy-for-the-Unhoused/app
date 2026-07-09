@@ -51,6 +51,16 @@ function parseJwt(token) {
   }
 }
 
+// ===== HTML ESCAPE (sanitize untrusted strings before innerHTML) =====
+// Turns HTML-significant chars into entities so spreadsheet/user-supplied
+// values (event names, task titles, push text) render as literal text and
+// can never inject markup or scripts.
+function escHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+}
+
 // ===== SIGN-IN HANDLER =====
 window.onSignedIn = async function (preloadedPayload = null) {
   console.log("onSignedIn called!");
@@ -143,8 +153,8 @@ window.onSignedIn = async function (preloadedPayload = null) {
           feed.innerHTML = stats.recentActivity.map(item => `
             <div class="activity-row">
               <div class="activity-dot"></div>
-              <div class="activity-text">${item.text}</div>
-              ${item.time ? `<div class="activity-time">${item.time}</div>` : ''}
+              <div class="activity-text">${escHtml(item.text)}</div>
+              ${item.time ? `<div class="activity-time">${escHtml(item.time)}</div>` : ''}
             </div>
           `).join('');
         }
@@ -241,8 +251,8 @@ window.onAppleSignedIn = async function(sub, email, givenName, familyName) {
           feed.innerHTML = stats.recentActivity.map(item => `
             <div class="activity-row">
               <div class="activity-dot"></div>
-              <div class="activity-text">${item.text}</div>
-              ${item.time ? `<div class="activity-time">${item.time}</div>` : ''}
+              <div class="activity-text">${escHtml(item.text)}</div>
+              ${item.time ? `<div class="activity-time">${escHtml(item.time)}</div>` : ''}
             </div>
           `).join('');
         }
@@ -890,7 +900,7 @@ function showNativeToast(title, body, tab) {
   haptic('light');
   const toast = document.createElement('div');
   toast.className = 'native-push-toast';
-  toast.innerHTML = `<div class="native-toast-title">${title || 'AFU'}</div>${body ? `<div class="native-toast-body">${body}</div>` : ''}`;
+  toast.innerHTML = `<div class="native-toast-title">${escHtml(title || 'AFU')}</div>${body ? `<div class="native-toast-body">${escHtml(body)}</div>` : ''}`;
   if (tab) toast.addEventListener('click', () => { if (typeof switchTab === 'function') switchTab(tab); });
   document.body.appendChild(toast);
   requestAnimationFrame(() => toast.classList.add('visible'));
