@@ -576,7 +576,9 @@ function approveVolunteer(rowIndex) {
 
   pending.getRange(rowIndex, 6).setValue('Approved');
 
-  // Add to Roster: A=blank, B=name, C=phone, D=email, E=position, F=branchCode, G=photoUrl, H=Active, I=DoB, J=Apple Sub
+  // Add to Roster: A=role code, B=name, C=phone, D=email, E=position, F=branchCode, G=photoUrl, H=Active, I=DoB, J=Apple Sub
+  // Col A must be 'V' (active general volunteer) — a blank col A reads as INACTIVE and would
+  // hide the new member from getRosterMembers (Assign Hours + Qualified Persons).
   // Insert after the last row whose branch code matches, so the roster stays grouped by branch.
   const roster = ss.getSheetByName('Roster') || ss.insertSheet('Roster');
   const allRows   = roster.getDataRange().getValues();
@@ -588,7 +590,7 @@ function approveVolunteer(rowIndex) {
   }
   roster.insertRowAfter(insertAfter);
   roster.getRange(insertAfter + 1, 1, 1, 10)
-        .setValues([['', name, phone, email, '', branchCode, photoUrl, 'Yes', '', appleSub]]);
+        .setValues([['V', name, phone, email, '', branchCode, photoUrl, 'Yes', '', appleSub]]);
 
   // Notify the volunteer
   try {

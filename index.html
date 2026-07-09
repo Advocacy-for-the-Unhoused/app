@@ -630,6 +630,7 @@
 
     .status-approved { color: #2a7d4e; }
     .status-pending  { color: var(--camp-orange); }
+    .status-denied   { color: #b83232; }
 
     .hours-msg {
       display: none;
@@ -773,7 +774,7 @@
     .hrs-breakdown-event { font-weight: 600; color: var(--dark); flex: 1; margin-right: 8px; }
     .hrs-breakdown-date { color: rgba(26,19,17,0.45); font-weight: 600; flex-shrink: 0; margin-right: 8px; }
     .hrs-breakdown-hrs { font-weight: 800; color: var(--orange); flex-shrink: 0; }
-    .hrs-breakdown-pending { font-size: 0.5rem; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; color: #b83232; margin-left: 5px; vertical-align: middle; }
+    .hrs-breakdown-pending, .hrs-breakdown-denied { font-size: 0.5rem; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; color: #b83232; margin-left: 5px; vertical-align: middle; }
 
     /* ── Registration ── */
     .reg-name-row { display: flex; gap: 12px; }
@@ -1448,7 +1449,7 @@
     html { -webkit-text-size-adjust: auto; text-size-adjust: auto; }
 
     /* ── Minimum text sizes ── */
-    .reg-row-badge, .reg-row-minor, .hrs-breakdown-pending,
+    .reg-row-badge, .reg-row-minor, .hrs-breakdown-pending, .hrs-breakdown-denied,
     .pv-branch-tag, .cr-status-badge, .my-cr-status { font-size: 0.72rem; }
     .hrs-row-meta, .hrs-assign-form label, .hrs-empty, .reg-row-email,
     .qual-row-email, .pv-meta, .hours-row-status, .hrs-tab,
@@ -3848,8 +3849,8 @@
         html += '<div class="qual-row' + (isQual ? ' qualified' : '') + '" id="qual-row-' + encodeURIComponent(m.email) + '">' +
           '<input type="checkbox"' + (isQual ? ' checked' : '') + (editable ? ' onchange="qualCheckboxChanged(' + JSON.stringify(m.email).replace(/"/g,'&quot;') + ',' + JSON.stringify(m.name).replace(/"/g,'&quot;') + ',this)"' : ' disabled style="opacity:0.35;cursor:not-allowed;"') + '>' +
           '<div style="flex:1;min-width:0;">' +
-            '<div class="qual-row-name">' + m.name + '<span style="font-size:0.55rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(26,19,17,0.35);margin-left:6px;">' + minorLabel + '</span></div>' +
-            '<div class="qual-row-email">' + m.email + '</div>' +
+            '<div class="qual-row-name">' + crEsc(m.name) + '<span style="font-size:0.55rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(26,19,17,0.35);margin-left:6px;">' + minorLabel + '</span></div>' +
+            '<div class="qual-row-email">' + crEsc(m.email) + '</div>' +
           '</div>' +
           (isQual ? '<span style="font-size:0.55rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:2px 6px;background:var(--green);color:white;">✓</span>' : '') +
           '</div>';
@@ -4005,7 +4006,7 @@
       html += '<div class="pv-branch-hdr" style="color:' + bColor + ';border-bottom:2px solid ' + bColor + ';">' + bName + ' · ' + group.length + ' pending</div>';
       group.forEach(function(v) {
         var imgHtml = v.photoUrl
-          ? '<img class="pv-avatar" src="' + v.photoUrl + '" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">' +
+          ? '<img class="pv-avatar" src="' + crEsc(v.photoUrl) + '" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">' +
             '<div class="pv-avatar-ph" style="display:none;">👤</div>'
           : '<div class="pv-avatar-ph">👤</div>';
         html += '<div class="pv-card" id="pv-card-' + v.rowIndex + '">' +
@@ -4013,11 +4014,11 @@
             imgHtml +
             '<div style="flex:1;min-width:0;">' +
               '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">' +
-                '<span class="pv-name">' + v.name + '</span>' +
+                '<span class="pv-name">' + crEsc(v.name) + '</span>' +
                 '<span class="pv-branch-tag" style="background:' + bColor + ';">' + bName + '</span>' +
               '</div>' +
-              '<div class="pv-meta">' + v.email + '</div>' +
-              (v.phone ? '<div class="pv-meta">📞 ' + v.phone + '</div>' : '') +
+              '<div class="pv-meta">' + crEsc(v.email) + '</div>' +
+              (v.phone ? '<div class="pv-meta">📞 ' + crEsc(v.phone) + '</div>' : '') +
             '</div>' +
           '</div>' +
           '<div class="pv-actions">' +
@@ -4460,7 +4461,7 @@
   });
 </script>
 
-<script src="app.js?v=12"></script>
+<script src="app.js?v=13"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 
 <script>
@@ -5509,6 +5510,7 @@
     /* ── Volunteer Hours Editor ── */
     var hrsAllRecords  = [];
     var hrsRoster      = [];   // [{name, email}]
+    var hrsNameMatches = [];   // current dropdown matches (index-based selection)
     var hrsAssignEmail = '';   // email resolved from selected name
 
     function loadHoursSection() {
@@ -5537,12 +5539,17 @@
         return m.name.toLowerCase().indexOf(query) !== -1;
       }).slice(0, 8);
       if (!matches.length) { dd.style.display = 'none'; return; }
-      dd.innerHTML = matches.map(function(m) {
-        return '<div class="hrs-dropdown-item" onmousedown="hrsSelectMember(\'' +
-          m.name.replace(/'/g, "\\'") + '\',\'' + m.email.replace(/'/g, "\\'") + '\')">' +
+      hrsNameMatches = matches;
+      dd.innerHTML = matches.map(function(m, i) {
+        return '<div class="hrs-dropdown-item" onmousedown="hrsSelectMatch(' + i + ')">' +
           esc(m.name) + '<small>' + esc(m.email) + '</small></div>';
       }).join('');
       dd.style.display = 'block';
+    }
+
+    function hrsSelectMatch(i) {
+      var m = hrsNameMatches[i];
+      if (m) hrsSelectMember(m.name, m.email);
     }
 
     function hrsSelectMember(name, email) {
@@ -5662,7 +5669,8 @@
       hrsAllRecords.forEach(function(r) {
         var key = r.email || r.name;
         if (!byEmail[key]) byEmail[key] = { name: r.name, email: r.email, total: 0, events: [] };
-        byEmail[key].total += Number(r.hours) || 0;
+        // Denied hours don't count toward a person's total (rows are kept, not deleted).
+        if ((r.approved || '').toString().toLowerCase() !== 'denied') byEmail[key].total += Number(r.hours) || 0;
         byEmail[key].events.push({ eventName: r.eventName, date: r.date, hours: Number(r.hours) || 0, approved: r.approved, notes: r.notes });
       });
       var people = Object.values(byEmail).sort(function(a, b) { return b.total - a.total; });
@@ -5670,10 +5678,13 @@
       container.innerHTML = people.map(function(p) {
         var safeKey = (p.email || p.name).replace(/[^a-zA-Z0-9]/g, '_');
         var eventsHtml = p.events.sort(function(a,b){ return new Date(b.date) - new Date(a.date); }).map(function(e) {
-          var isPending = (e.approved || '').toLowerCase() !== 'yes' && (e.approved || '').toLowerCase() !== 'approved';
+          var st = (e.approved || '').toLowerCase();
+          var stTag = (st === 'yes' || st === 'approved') ? ''
+            : (st === 'denied' ? '<span class="hrs-breakdown-denied">denied</span>'
+                               : '<span class="hrs-breakdown-pending">pending</span>');
           return '<div class="hrs-breakdown-item">' +
             '<div class="hrs-breakdown-row">' +
-              '<span class="hrs-breakdown-event">' + esc(e.eventName) + (isPending ? '<span class="hrs-breakdown-pending">pending</span>' : '') + '</span>' +
+              '<span class="hrs-breakdown-event">' + esc(e.eventName) + stTag + '</span>' +
               '<span class="hrs-breakdown-date">' + esc(e.date) + '</span>' +
               '<span class="hrs-breakdown-hrs">' + e.hours + ' hr' + (e.hours !== 1 ? 's' : '') + '</span>' +
             '</div>' +
@@ -5768,6 +5779,7 @@
     window.denyHour               = denyHour;
     window.adminSubmitAssignHours = adminSubmitAssignHours;
     window.hrsFilterNames         = hrsFilterNames;
+    window.hrsSelectMatch         = hrsSelectMatch;
     window.hrsSelectMember        = hrsSelectMember;
     window.hrsHideDropdown        = hrsHideDropdown;
     window.togglePaid             = togglePaid;
@@ -6206,7 +6218,7 @@
 
     function tbTaskHTML(team, task) {
       const tagClass = task.assignee ? '' : ' unset';
-      const tagText  = task.assignee || '+ assign';
+      const tagText  = task.assignee ? tbEsc(task.assignee) : '+ assign';
       const tagColor = task.assignee ? `border-color:${team.color};color:${team.color}` : '';
       const dueClass = tbDueClass(task.dueDate);
       const dueText  = tbFmtDue(task.dueDate);

@@ -660,12 +660,21 @@ async function loadMyHours() {
       return;
     }
 
+    // Three-state status: approved / denied / pending (default). Backend writes
+    // "Yes" (approved), "Denied", or "No" (pending) into the approval column.
+    const hoursState = (v) => {
+      const s = String(v == null ? '' : v).trim().toLowerCase();
+      if (s === 'yes' || s === 'approved') return 'approved';
+      if (s === 'denied') return 'denied';
+      return 'pending';
+    };
+
     const approvedTotal = records
-      .filter(r => String(r.approved).trim().toLowerCase() === "yes")
+      .filter(r => hoursState(r.approved) === 'approved')
       .reduce((sum, r) => sum + Number(r.hours || 0), 0);
 
     const pendingCount = records.filter(
-      r => String(r.approved).trim().toLowerCase() !== "yes"
+      r => hoursState(r.approved) === 'pending'
     ).length;
 
     totalEl.innerHTML = `
@@ -679,8 +688,8 @@ async function loadMyHours() {
     `;
 
     const sorted = [...records].sort((a, b) => {
-      const aApproved = String(a.approved).trim().toLowerCase() === "yes";
-      const bApproved = String(b.approved).trim().toLowerCase() === "yes";
+      const aApproved = hoursState(a.approved) === "approved";
+      const bApproved = hoursState(b.approved) === "approved";
       if (aApproved !== bApproved) return bApproved ? 1 : -1;
       return new Date(b.eventDate) - new Date(a.eventDate);
     });
@@ -689,8 +698,14 @@ async function loadMyHours() {
       { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
     ));
 
+    const STATUS_META = {
+      approved: { cls: 'status-approved', label: '✓ Approved' },
+      denied:   { cls: 'status-denied',   label: '✕ Denied' },
+      pending:  { cls: 'status-pending',  label: '⏳ Pending' }
+    };
+
     listEl.innerHTML = sorted.map(r => {
-      const approved      = String(r.approved).trim().toLowerCase() === "yes";
+      const meta          = STATUS_META[hoursState(r.approved)];
       const formattedDate = r.eventDate
         ? new Date(r.eventDate + 'T00:00:00').toLocaleDateString('en-US', {
             month: 'short', day: 'numeric', year: 'numeric'
@@ -699,14 +714,14 @@ async function loadMyHours() {
       return `
         <div class="hours-row">
           <div class="hours-row-left">
-            <div class="hours-row-event">${r.eventName}</div>
+            <div class="hours-row-event">${escHours(r.eventName)}</div>
             <div class="hours-row-date">${formattedDate}</div>
             ${r.notes ? `<div class="hours-row-note">${escHours(r.notes)}</div>` : ''}
           </div>
           <div class="hours-row-right">
             <div class="hours-row-amt">${r.hours} hr${Number(r.hours) !== 1 ? 's' : ''}</div>
-            <div class="hours-row-status ${approved ? 'status-approved' : 'status-pending'}">
-              ${approved ? '✓ Approved' : '⏳ Pending'}
+            <div class="hours-row-status ${meta.cls}">
+              ${meta.label}
             </div>
           </div>
         </div>
@@ -995,15 +1010,15 @@ async function submitRegistration() {
     return;
   }
 
-  btn.disabled    = true;
-  btn.textContent = 'Submitting…';
-  msgEl.style.display = 'none';
-
   const emailToSubmit = volunteerEmail || document.getElementById('regEmail').value.trim();
   if (!emailToSubmit) {
     alert('Please enter your email address.');
     return;
   }
+
+  btn.disabled    = true;
+  btn.textContent = 'Submitting…';
+  msgEl.style.display = 'none';
 
   try {
     const body = [
@@ -1058,9 +1073,9 @@ async function deleteAccount() {
     const data = await res.json();
     if (data.error) { alert('Error: ' + data.error); return; }
     haptic('success');
-    // Clear local auth and reload to login screen
-    const { Preferences } = window.Capacitor?.Plugins || {};
-    if (Preferences) await Preferences.remove({ key: 'biometricAuth' });
+    // Clear the stored biometric credential (key BIOMETRIC_AUTH_KEY = 'afu_stored_auth')
+    // so Face ID / Touch ID can't sign the deleted account back in.
+    await clearStoredAuth();
     volunteerEmail = null;
     volunteerName  = null;
     branchLetter   = null;
