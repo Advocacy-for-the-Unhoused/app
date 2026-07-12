@@ -2675,7 +2675,11 @@
     Your account isn't on the roster yet. Fill in your details — your Branch President will approve your profile.
   </p>
 
-  <div class="reg-name-row">
+  <!-- Identity summary — shown instead of the name/email inputs when the
+       sign-in provider (Apple / Google) already supplied them (Guideline 4) -->
+  <div id="regIdentity" class="hidden" style="background:rgba(200,82,45,0.08);border:1px solid rgba(200,82,45,0.25);border-radius:12px;padding:12px 14px;margin:10px 0 14px;"></div>
+
+  <div class="reg-name-row" id="regNameRow">
     <div>
       <label>First Name</label>
       <input type="text" id="regFname" />
@@ -2686,8 +2690,10 @@
     </div>
   </div>
 
-  <label>Email</label>
-  <input type="email" id="regEmail" readonly />
+  <div id="regEmailGroup">
+    <label>Email</label>
+    <input type="email" id="regEmail" readonly />
+  </div>
 
   <label>Phone Number (Optional)</label>
   <input type="tel" id="regPhone" placeholder="(508) 555-0100" />
@@ -2798,8 +2804,8 @@
 
       <button class="dash-tile" onclick="switchTab('donations')">
         <span class="dash-tile-icon">🤝</span>
-        <div class="dash-tile-title">Log Donation</div>
-        <div class="dash-tile-desc">Enter UDI & amount for a donor</div>
+        <div class="dash-tile-title">Record Donation</div>
+        <div class="dash-tile-desc">Log a donation you collected in person</div>
       </button>
 
       <button class="dash-tile" onclick="switchTab('hours')">
@@ -2866,7 +2872,11 @@
     <div id="welcomeMessage" class="welcome"></div>
 
     <div id="step2" class="card">
-      <h3>Log Donation</h3>
+      <h3>Record a Donation</h3>
+      <p style="font-size:0.85rem;color:#555;line-height:1.6;margin-bottom:6px;">
+        Volunteer record-keeping only: log a cash donation you collected in person
+        at an AFU fundraiser. No money is collected, processed, or transferred in this app.
+      </p>
 
       <label>UDI Number (1-999)</label>
       <div class="input-group">
@@ -2884,13 +2894,13 @@
         <option value="School Sale">School Sale</option>
       </select>
 
-      <button onclick="submitDonation()">Submit Donation</button>
+      <button onclick="submitDonation()">Save Record</button>
     </div>
 
     <div id="step3" class="card hidden">
-      <h3>✓ Submission Successful!</h3>
+      <h3>✓ Donation Recorded!</h3>
       <p>Your UDI: <span id="finalUDI"></span></p>
-      <button onclick="restart()">Submit Another</button>
+      <button onclick="restart()">Record Another</button>
       <button onclick="switchTab('home')" style="background:transparent;border:2px solid var(--camp-dark);color:var(--camp-dark);margin-top:10px;">← Back to Dashboard</button>
     </div>
 
@@ -3587,9 +3597,9 @@
       <span>Tasks</span>
       <span class="nav-dot"></span>
     </button>
-    <button class="nav-item" id="navDonations" onclick="switchTab('donations')" aria-label="Donations">
+    <button class="nav-item" id="navDonations" onclick="switchTab('donations')" aria-label="Record donations">
       <span class="nav-icon">🤝</span>
-      <span>Donate</span>
+      <span>Record</span>
       <span class="nav-dot"></span>
     </button>
     <button class="nav-item active" id="navHome" onclick="switchTab('home')" aria-label="Home">
@@ -4390,8 +4400,20 @@
       const { AppleSignIn } = window.Capacitor.Plugins;
       const result = await AppleSignIn.signIn({ scopes: ['EMAIL', 'FULL_NAME'] });
       const { user, email, givenName, familyName } = result;
+      // Apple returns email + name only on the FIRST authorization for this
+      // Apple ID. Cache them per user id so later sign-ins (e.g. before roster
+      // approval) can still auto-fill instead of asking the user again.
+      const idKey = 'afu_apple_identity_' + user;
+      let cached = {};
+      try { cached = JSON.parse(localStorage.getItem(idKey) || '{}'); } catch (e) {}
+      const identity = {
+        email:      email      || cached.email      || '',
+        givenName:  givenName  || cached.givenName  || '',
+        familyName: familyName || cached.familyName || ''
+      };
+      try { localStorage.setItem(idKey, JSON.stringify(identity)); } catch (e) {}
       if (typeof window.onAppleSignedIn === 'function') {
-        await window.onAppleSignedIn(user, email, givenName, familyName);
+        await window.onAppleSignedIn(user, identity.email, identity.givenName, identity.familyName);
       }
     } catch (err) {
       console.error('Apple sign-in failed:', err);
@@ -4461,7 +4483,7 @@
   });
 </script>
 
-<script src="app.js?v=13"></script>
+<script src="app.js?v=14"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 
 <script>

@@ -61,6 +61,44 @@ function escHtml(s) {
   ));
 }
 
+// ===== REGISTRATION IDENTITY PREFILL =====
+// App Review Guideline 4: when the sign-in provider (Apple / Google) already
+// supplied the user's name and email, the registration form must not ask for
+// them again. Fill the inputs, hide the covered fields, and show a read-only
+// identity summary instead. Fields the provider did NOT supply stay visible.
+function prefillRegistrationIdentity(fname, lname, email) {
+  fname = (fname || '').trim();
+  lname = (lname || '').trim();
+  email = (email || '').trim();
+
+  document.getElementById('regFname').value = fname;
+  document.getElementById('regLname').value = lname;
+  const emailInput = document.getElementById('regEmail');
+  emailInput.value = email;
+  emailInput.readOnly = !!email; // editable only if the provider didn't return one
+
+  const haveName  = !!(fname && lname);
+  const haveEmail = !!email;
+
+  document.getElementById('regNameRow').classList.toggle('hidden', haveName);
+  document.getElementById('regEmailGroup').classList.toggle('hidden', haveEmail);
+
+  const idEl = document.getElementById('regIdentity');
+  if (haveName || haveEmail) {
+    idEl.innerHTML =
+      (haveName ? `<div style="font-weight:800;font-size:0.95rem;">${escHtml(fname + ' ' + lname)}</div>` : '') +
+      (haveEmail ? `<div style="font-size:0.82rem;color:#777;overflow-wrap:anywhere;">${escHtml(email)}</div>` : '');
+    idEl.classList.remove('hidden');
+  } else {
+    idEl.innerHTML = '';
+    idEl.classList.add('hidden');
+  }
+
+  document.getElementById('regDesc').textContent = (haveName && haveEmail)
+    ? "Your account isn't on the roster yet. Choose your branch to finish — your Branch President will approve your profile."
+    : "Your account isn't on the roster yet. Fill in your details — your Branch President will approve your profile.";
+}
+
 // ===== SIGN-IN HANDLER =====
 window.onSignedIn = async function (preloadedPayload = null) {
   console.log("onSignedIn called!");
@@ -93,10 +131,9 @@ window.onSignedIn = async function (preloadedPayload = null) {
 
     if (!info.firstName || info.firstName === "User" || !info.branchCode || info.branchCode === "X") {
       console.log("User not found — showing registration form");
-      // Pre-fill from the JWT we already have
-      document.getElementById("regFname").value = payload.given_name  || "";
-      document.getElementById("regLname").value = payload.family_name || "";
-      document.getElementById("regEmail").value = volunteerEmail;
+      // Pre-fill from the JWT we already have; hides name/email fields
+      // the provider already supplied (Guideline 4)
+      prefillRegistrationIdentity(payload.given_name, payload.family_name, volunteerEmail);
       document.getElementById("authScreen").classList.add("hidden");
       document.getElementById("registerCard").classList.remove("hidden");
       return;
@@ -197,12 +234,9 @@ window.onAppleSignedIn = async function(sub, email, givenName, familyName) {
     if (info.error || !info.firstName || info.firstName === 'User' || !info.branchCode || info.branchCode === 'X') {
       volunteerEmail = email || '';
       window._pendingAppleSub = sub;
-      document.getElementById('regFname').value = givenName  || '';
-      document.getElementById('regLname').value = familyName || '';
-      const emailInput = document.getElementById('regEmail');
-      emailInput.value = email || '';
-      emailInput.readOnly = !!email; // editable only if Apple didn't return an email
-      document.getElementById('regDesc').textContent = "Your account isn't on the roster yet. Fill in your details — your Branch President will approve your profile.";
+      // Apple's Authentication Services already provided name/email (cached
+      // per-sub for repeat sign-ins) — never ask for them again (Guideline 4)
+      prefillRegistrationIdentity(givenName, familyName, email);
       document.getElementById('authScreen').classList.add('hidden');
       document.getElementById('registerCard').classList.remove('hidden');
       return;
@@ -1125,7 +1159,7 @@ const WELCOME_SLIDES = [
   {
     icon: '⏱️',
     title: 'Log hours & donations',
-    body: 'Use <b>Hours</b> to record volunteer time and <b>Donate</b> to log fundraising. Your coordinator reviews what you submit.'
+    body: 'Use <b>Hours</b> to record volunteer time and <b>Record</b> to log donations you collected in person at fundraisers. Your coordinator reviews what you submit.'
   },
   {
     icon: '✅',
