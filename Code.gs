@@ -23,6 +23,10 @@ const BRANCH_NAMES = { "A": "Hopkinton", "H": "Holliston", "W": "Westford", "S":
 const BRANCH_CODES = { "Hopkinton": "A", "Holliston": "H", "Westford": "W", "Shrewsbury": "S", "Medway": "M" };
 
 // ── Account deletion ──────────────────────────────────────────────────────────
+// App Review 5.1.1(v): deletion must remove the account and its personal data,
+// not just disable sign-in. Clears name, phone, email, photo, DoB AND the
+// Apple sub (col J) — otherwise a "deleted" Apple user could still sign back
+// in via the sub lookup in appleSignIn_. Anonymized activity rows remain.
 function deleteAccount_(email) {
   try {
     if (!email) return { error: 'No email provided' };
@@ -32,7 +36,14 @@ function deleteAccount_(email) {
     const lc   = email.toLowerCase().trim();
     for (let i = 1; i < data.length; i++) {
       if ((data[i][3] || '').toString().toLowerCase().trim() === lc) {
-        sheet.getRange(i + 1, 4).setValue('');
+        sheet.getRange(i + 1, 2).setValue('');   // B — full name
+        sheet.getRange(i + 1, 3).setValue('');   // C — phone
+        sheet.getRange(i + 1, 4).setValue('');   // D — email
+        sheet.getRange(i + 1, 7).setValue('');   // G — photo URL
+        sheet.getRange(i + 1, 8).setValue('No'); // H — Active?
+        sheet.getRange(i + 1, 9).setValue('');   // I — DoB
+        sheet.getRange(i + 1, 10).setValue('');  // J — Apple sub
+        removeFcmTokens_(email);
         return { success: true };
       }
     }
@@ -40,6 +51,21 @@ function deleteAccount_(email) {
   } catch (err) {
     return { error: err.message };
   }
+}
+
+// Remove the user's push tokens so a deleted account stops receiving pushes.
+function removeFcmTokens_(email) {
+  try {
+    const sheet = SpreadsheetApp.openById(ROSTER_SS_ID).getSheetByName('FCM Tokens');
+    if (!sheet) return;
+    const data = sheet.getDataRange().getValues();
+    const lc   = email.toLowerCase().trim();
+    for (let i = data.length - 1; i >= 1; i--) {
+      if ((data[i][0] || '').toString().toLowerCase().trim() === lc) {
+        sheet.deleteRow(i + 1);
+      }
+    }
+  } catch (e) { /* non-fatal — roster wipe already succeeded */ }
 }
 
 // ── doGet ─────────────────────────────────────────────────────────────────────

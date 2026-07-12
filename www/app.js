@@ -1094,7 +1094,7 @@ async function submitRegistration() {
 async function deleteAccount() {
   if (!volunteerEmail) return;
   const confirmed = confirm(
-    'Delete your account?\n\nThis will remove your email from the volunteer roster. Your activity history will remain but you will no longer be able to sign in.\n\nThis cannot be undone.'
+    'Delete your account?\n\nThis removes your name, contact details, photo, date of birth, and sign-in access from the volunteer roster, and stops push notifications. Anonymized activity records are kept for organizational bookkeeping.\n\nThis cannot be undone.'
   );
   if (!confirmed) return;
   try {
