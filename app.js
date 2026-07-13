@@ -359,8 +359,12 @@ async function deleteDonation(id) {
 }
 
 // ===== SYNC ENGINE =====
+// Returns the list of UDIs the server rejected as duplicates so callers can
+// tell the volunteer instead of silently showing success (the offline record
+// is still dropped either way — the donation already exists on the sheet).
 async function syncDonations() {
-  if (!navigator.onLine) return;
+  const duplicates = [];
+  if (!navigator.onLine) return duplicates;
   const pending = await getUnsyncedDonations();
 
   for (const rec of pending) {
@@ -378,6 +382,7 @@ async function syncDonations() {
       const json = await res.json();
 
       if (json.success || json.error === "UDI exists") {
+        if (json.error === "UDI exists") duplicates.push(rec.udi);
         await deleteDonation(rec.id);
       }
     } catch (err) {
@@ -385,6 +390,7 @@ async function syncDonations() {
       break;
     }
   }
+  return duplicates;
 }
 
 window.addEventListener('online', syncDonations);
@@ -421,7 +427,12 @@ function submitDonation() {
 
   saveDonationOffline(record)
     .then(() => syncDonations())
-    .then(() => {
+    .then((duplicates) => {
+      if (Array.isArray(duplicates) && duplicates.includes(udi)) {
+        haptic('error');
+        alert("UDI " + udi + " has already been recorded. Double-check the slip number — no new record was created.");
+        return;
+      }
       haptic('success');
       document.getElementById("finalUDI").innerText = udi;
       document.getElementById("step2").classList.add("hidden");

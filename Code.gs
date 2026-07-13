@@ -946,18 +946,43 @@ function getQualifiedNames() {
   if (!sheet) return [];
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return [];
+  const tz   = Session.getScriptTimeZone();
   const data = sheet.getRange(2, 1, lastRow - 1, 13).getValues();
   return data
     .map((row, i) => ({ row, rawIdx: i + 2 }))
     .filter(({ row }) => (row[0] || '').toString().trim())
-    .map(({ row, rawIdx }) => ({
-      name:         row[0].toString().trim(),
-      email:        row[1].toString().trim(),
-      isMinor:      row[2].toString().trim().toLowerCase() === 'yes',
-      phone:        row[3].toString().trim(),
-      rowIndex:     rawIdx,
-      isRegistered: !!(row[12] || '').toString().trim(),
-    }));
+    .map(({ row, rawIdx }) => {
+      // Col C holds a DoB date for online-form rows, or legacy "Yes"/"No".
+      // Compute isMinor from DoB when we have one so it stays current as
+      // people age (a stored Yes/No snapshot goes stale after birthdays).
+      const rawC = row[2];
+      let dob = '';
+      let isMinor = false;
+      if (rawC instanceof Date && !isNaN(rawC)) {
+        dob = Utilities.formatDate(rawC, tz, 'yyyy-MM-dd');
+        isMinor = isUnder18_(dob);
+      } else {
+        const s = (rawC || '').toString().trim();
+        if (/^yes$/i.test(s)) {
+          isMinor = true;
+        } else if (s && !/^no$/i.test(s)) {
+          const parsed = new Date(s);
+          if (!isNaN(parsed)) {
+            dob = Utilities.formatDate(parsed, tz, 'yyyy-MM-dd');
+            isMinor = isUnder18_(dob);
+          }
+        }
+      }
+      return {
+        name:         row[0].toString().trim(),
+        email:        row[1].toString().trim(),
+        isMinor:      isMinor,
+        dob:          dob,
+        phone:        row[3].toString().trim(),
+        rowIndex:     rawIdx,
+        isRegistered: !!(row[12] || '').toString().trim(),
+      };
+    });
 }
 
 function addQualifiedPerson(name, email, phone, dob) {
@@ -999,8 +1024,10 @@ function addQualifiedPerson(name, email, phone, dob) {
       }
     }
     console.log('addQualifiedPerson: appending row for', email, 'name=', name, 'phone=', phone);
+    // Store the DoB itself in col C when we have it (getQualifiedNames
+    // recomputes minor status from it); fall back to a Yes/No snapshot.
     const isMinor  = dob ? isUnder18_(dob) : false;
-    sheet.appendRow([name, email, isMinor ? 'Yes' : 'No', phone, '', '', '', '', '', '', '', '', '']);
+    sheet.appendRow([name, email, dob ? dob : (isMinor ? 'Yes' : 'No'), phone, '', '', '', '', '', '', '', '', '']);
     const newRow   = sheet.getLastRow();
     console.log('addQualifiedPerson: appended at row', newRow);
     if (dob) { try { saveDobToRoster_(email, dob); } catch(e) { console.warn('saveDobToRoster_ failed:', e.message); } }
@@ -1734,9 +1761,17 @@ function checkMeetingNotifications() {
     const parts   = meetingTime.split(':');
     const meetH   = parseInt(parts[0]);
     const meetM   = parseInt(parts[1] || '0');
-    const notifyH = meetH - 4;
+    // Reminder fires 4h before the meeting. For meetings before 4:00 AM the
+    // notify slot rolls back to the previous day (a plain meetH-4 goes
+    // negative and would never match nowH, silently skipping the reminder).
+    let notifyDay = meetingDay;
+    let notifyH   = meetH - 4;
+    if (notifyH < 0) {
+      notifyH  += 24;
+      notifyDay = (meetingDay + 6) % 7;
+    }
 
-    if (nowDay !== meetingDay) return;
+    if (nowDay !== notifyDay) return;
     if (nowH !== notifyH || nowM > 9) return;
 
     const tokens = getFcmTokensByBranch_(bc);

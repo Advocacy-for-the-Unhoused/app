@@ -1,7 +1,28 @@
 # AFU Volunteer Portal — Bug Audit (2026-07-09)
 
 Deep read of `app.js`, `Code.gs`, `index.html` (all inline scripts), `service-worker.js`.
-**Identification only — nothing fixed.** Ordered by severity.
+Ordered by severity.
+
+## Status update (2026-07-12 design/bug sweep)
+
+| Item | Status |
+|------|--------|
+| S1 pending-vols XSS | ✅ Fixed earlier — `renderPendingVolunteers` uses `crEsc()` on name/email/phone/photoUrl |
+| S2 qual-list XSS | ✅ Fixed earlier — `renderQualList` uses `crEsc()` |
+| S3 hours eventName XSS | ✅ Fixed earlier — `loadMyHours` uses `escHours()` |
+| S4 task assignee XSS | ✅ Fixed earlier — `tbTaskHTML` uses `tbEsc()` |
+| S5 no server-side auth | ⚠️ OPEN (architectural — GAS "Anyone" web app; needs signed-token redesign) |
+| F1 wrong biometric key | ✅ Fixed earlier — `deleteAccount()` calls `clearStoredAuth()` |
+| F2 denied shows pending | ✅ Fixed earlier — three-state in `loadMyHours` + `renderAllHours`/`renderPendingHours` |
+| F3 blank role code | ✅ Fixed earlier — `approveVolunteer` writes `'V'` |
+| F4 stuck reg button | ✅ Fixed earlier — email check precedes disable |
+| L1 pre-4am reminder | ✅ Fixed 2026-07-12 — notify slot rolls to previous day |
+| L2 isMinor snapshot | ✅ Fixed 2026-07-12 — `getQualifiedNames` computes from DoB in col C (Date or string), returns `dob`; `addQualifiedPerson` stores DoB. **Was worse than logged: online-form rows (col C = Date) made all minors read as adults.** |
+| L3 SW staleness | ✅ Fixed 2026-07-12 — cache key keeps query string, so `?v=` bumps actually bust |
+| L4 silent duplicate UDI | ✅ Fixed 2026-07-12 — `syncDonations` returns duplicate UDIs; `submitDonation` warns instead of showing success |
+| L5 compCanApprove substring | ⚠️ OPEN (safe with current single-letter codes; revisit if multi-char codes added) |
+| L6 orphan webp icons | ✅ Deleted 2026-07-12 |
+| L7 SCRIPT_URL literals | ⚠️ OPEN (fragile-but-correct; consolidate on next URL rotation) |
 
 ---
 
