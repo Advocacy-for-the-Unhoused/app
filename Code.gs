@@ -372,6 +372,17 @@ function doPost(e) {
     } else if (p.action === "deleteAccount") {
       result = deleteAccount_(p.email || '');
 
+    } else if (p.action === "getPasswords") {
+      result = getPasswords_(p.email || '');
+    } else if (p.action === "revealPassword") {
+      result = revealPassword_(p.id || '', p.email || '');
+    } else if (p.action === "savePassword") {
+      result = savePassword_(p);
+    } else if (p.action === "deletePassword") {
+      result = deletePassword_(p.id || '', p.email || '');
+    } else if (p.action === "getPasswordAccessLog") {
+      result = getPasswordAccessLog_(p.email || '');
+
     } else {
       result = { error: "Invalid request" };
     }
@@ -2130,5 +2141,171 @@ function denyCompRequest_(id) {
   } catch (err) {
     return { error: err.message };
   }
+}
+
+// ── Password Vault ────────────────────────────────────────────────────────────
+// Sheet "Passwords":        ID | Category | Service | Username | Password | Notes | UpdatedAt | UpdatedBy
+// Sheet "Password Access Log": Timestamp | Email | Name | Service | Action
+// View (list + reveal) is allowed for any admin-tab role (A/Z/P/C). Editing
+// (add/edit/delete) is restricted to A/Z. Every reveal is logged server-side.
+
+const PW_VIEW_ROLES = /[AZPC]/;   // can list + reveal
+const PW_EDIT_ROLES = /[AZ]/;     // can add / edit / delete
+
+function pwPosition_(email) {
+  try { return (getMemberInfo(email).position || '').toUpperCase(); }
+  catch (e) { return ''; }
+}
+function pwName_(email) {
+  try {
+    const info = getMemberInfo(email);
+    return (info.firstName || email);
+  } catch (e) { return email; }
+}
+
+function getPasswordSheet_() {
+  const ss = SpreadsheetApp.openById(ROSTER_SS_ID);
+  let sheet = ss.getSheetByName('Passwords');
+  if (!sheet) {
+    sheet = ss.insertSheet('Passwords');
+    const headers = ['ID','Category','Service','Username','Password','Notes','UpdatedAt','UpdatedBy'];
+    sheet.getRange(1, 1, 1, headers.length)
+         .setValues([headers]).setFontWeight('bold')
+         .setBackground('#1A1311').setFontColor('#F9F6F0');
+    sheet.setFrozenRows(1);
+    sheet.setColumnWidth(2, 150);
+    sheet.setColumnWidth(3, 170);
+    sheet.setColumnWidth(4, 220);
+    sheet.setColumnWidth(5, 200);
+    sheet.setColumnWidth(6, 320);
+  }
+  return sheet;
+}
+
+function getPasswordLogSheet_() {
+  const ss = SpreadsheetApp.openById(ROSTER_SS_ID);
+  let sheet = ss.getSheetByName('Password Access Log');
+  if (!sheet) {
+    sheet = ss.insertSheet('Password Access Log');
+    const headers = ['Timestamp','Email','Name','Service','Action'];
+    sheet.getRange(1, 1, 1, headers.length)
+         .setValues([headers]).setFontWeight('bold')
+         .setBackground('#1A1311').setFontColor('#F9F6F0');
+    sheet.setFrozenRows(1);
+    sheet.setColumnWidth(1, 170);
+    sheet.setColumnWidth(2, 220);
+    sheet.setColumnWidth(4, 200);
+  }
+  return sheet;
+}
+
+function pwLog_(email, service, action) {
+  try {
+    getPasswordLogSheet_().appendRow([new Date(), (email || '').toLowerCase().trim(), pwName_(email), service || '', action || '']);
+  } catch (e) { console.warn('pwLog_ failed:', e.message); }
+}
+
+// List — never returns secret fields (password / notes stay server-side until reveal).
+function getPasswords_(email) {
+  if (!PW_VIEW_ROLES.test(pwPosition_(email))) return { error: 'Not authorized' };
+  const sheet = getPasswordSheet_();
+  const data  = sheet.getDataRange().getValues();
+  const rows  = [];
+  for (let i = 1; i < data.length; i++) {
+    if (!data[i][0]) continue;
+    rows.push({
+      id:        String(data[i][0]),
+      category:  String(data[i][1] || ''),
+      service:   String(data[i][2] || ''),
+      username:  String(data[i][3] || ''),
+      hasNotes:  !!String(data[i][5] || '').trim(),
+      updatedAt: data[i][6] ? new Date(data[i][6]).toISOString() : '',
+      updatedBy: String(data[i][7] || '')
+    });
+  }
+  return { passwords: rows, canEdit: PW_EDIT_ROLES.test(pwPosition_(email)) };
+}
+
+// Reveal a single secret — logs the access, then returns password + notes.
+function revealPassword_(id, email) {
+  if (!PW_VIEW_ROLES.test(pwPosition_(email))) return { error: 'Not authorized' };
+  const sheet = getPasswordSheet_();
+  const data  = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(id)) {
+      pwLog_(email, String(data[i][2] || ''), 'Revealed');
+      return {
+        password: String(data[i][4] || ''),
+        notes:    String(data[i][5] || ''),
+        username: String(data[i][3] || '')
+      };
+    }
+  }
+  return { error: 'Entry not found' };
+}
+
+// Add or update. id blank = new row. Restricted to A/Z.
+function savePassword_(p) {
+  const email = p.email || '';
+  if (!PW_EDIT_ROLES.test(pwPosition_(email))) return { error: 'Not authorized' };
+  const sheet    = getPasswordSheet_();
+  const category = (p.category || '').toString().trim();
+  const service  = (p.service  || '').toString().trim();
+  const username = (p.username || '').toString();
+  const password = (p.password || '').toString();
+  const notes    = (p.notes    || '').toString();
+  if (!service) return { error: 'Service name is required' };
+  const by = pwName_(email);
+
+  if (p.id) {
+    const data = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === String(p.id)) {
+        sheet.getRange(i + 1, 2, 1, 7).setValues([[category, service, username, password, notes, new Date(), by]]);
+        pwLog_(email, service, 'Edited');
+        return { success: true, id: String(p.id) };
+      }
+    }
+    return { error: 'Entry not found' };
+  }
+
+  const id = 'pw' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  sheet.appendRow([id, category, service, username, password, notes, new Date(), by]);
+  pwLog_(email, service, 'Added');
+  return { success: true, id: id };
+}
+
+function deletePassword_(id, email) {
+  if (!PW_EDIT_ROLES.test(pwPosition_(email))) return { error: 'Not authorized' };
+  const sheet = getPasswordSheet_();
+  const data  = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(id)) {
+      const service = String(data[i][2] || '');
+      sheet.deleteRow(i + 1);
+      pwLog_(email, service, 'Deleted');
+      return { success: true };
+    }
+  }
+  return { error: 'Entry not found' };
+}
+
+// Recent access log — A/Z only (monitoring who viewed what).
+function getPasswordAccessLog_(email) {
+  if (!PW_EDIT_ROLES.test(pwPosition_(email))) return { error: 'Not authorized' };
+  const sheet = getPasswordLogSheet_();
+  const data  = sheet.getDataRange().getValues();
+  const rows  = [];
+  for (let i = data.length - 1; i >= 1 && rows.length < 100; i--) {
+    if (!data[i][0]) continue;
+    rows.push({
+      timestamp: data[i][0] ? new Date(data[i][0]).toISOString() : '',
+      email:     String(data[i][1] || ''),
+      name:      String(data[i][2] || ''),
+      service:   String(data[i][3] || ''),
+      action:    String(data[i][4] || '')
+    });
+  }
+  return { log: rows };
 }
 
