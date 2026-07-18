@@ -3336,6 +3336,10 @@
 <!-- ── End Admin Tab ── -->
 
 <style>
+  /* Admin scope forces buttons to width:100%; vault buttons must size to their
+     content so they don't collapse the flex siblings next to them. */
+  #pw-section .pw-addbtn, #pw-section .pw-logbtn, #pw-section .pw-reveal,
+  #pw-section .pw-copy, #pw-section .pw-mini { width:auto; flex:0 0 auto; }
   #pw-section .pw-toolbar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
   #pw-section .pw-search { flex:1; min-width:0; padding:9px 11px; border:2px solid var(--dark); border-radius:8px; font-size:0.8rem; font-weight:600; background:white; color:var(--dark); }
   #pw-section .pw-addbtn { border:2px solid var(--dark); background:var(--orange); color:white; font-weight:800; font-size:0.7rem; letter-spacing:0.5px; text-transform:uppercase; padding:9px 13px; border-radius:8px; box-shadow:2px 2px 0 var(--dark); cursor:pointer; white-space:nowrap; }
