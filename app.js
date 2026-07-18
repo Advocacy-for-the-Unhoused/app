@@ -153,6 +153,7 @@ window.onSignedIn = async function (preloadedPayload = null) {
       branchCode: branchLetter,
       email: volunteerEmail,
       photoUrl: info.photoUrl || payload.picture || null,
+      hasRosterPhoto: !!info.photoUrl,   // false → prompt to add a photo on Home
       position: info.position || '',
     };
 
@@ -254,6 +255,7 @@ window.onAppleSignedIn = async function(sub, email, givenName, familyName) {
       branchCode: branchLetter,
       email: volunteerEmail,
       photoUrl: info.photoUrl || null,
+      hasRosterPhoto: !!info.photoUrl,   // false → prompt to add a photo on Home
       position: info.position || '',
     };
 

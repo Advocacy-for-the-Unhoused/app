@@ -100,6 +100,9 @@ function doPost(e) {
         appleSub: p.appleSub || ''
       });
 
+    } else if (p.action === "updateProfilePhoto") {
+      result = updateProfilePhoto_(p.email, p.photoBase64, p.photoMime);
+
     } else if (p.action === "generateSlips") {
       return handleGenerateSlips(p.dateString, p.branchCode);
 
@@ -459,6 +462,45 @@ function appleSignIn_(sub, email) {
       }
     }
 
+    return { error: 'Not found in roster' };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+// ── Update an existing member's profile photo (roster col G) ──────────────────
+// Used by the home-tab "add photo later" flow for volunteers who skipped the
+// photo on onboarding. Uploads to the branch Drive folder, stores the shareable
+// URL in col G, and returns a thumbnail URL for immediate display.
+function updateProfilePhoto_(email, photoBase64, photoMime) {
+  try {
+    if (!email) return { error: 'No email provided' };
+    if (!photoBase64 || !photoMime) return { error: 'No photo provided' };
+
+    const sheet = SpreadsheetApp.openById(ROSTER_SS_ID).getSheetByName('Roster');
+    if (!sheet) return { error: 'Roster sheet not found' };
+
+    const data = sheet.getDataRange().getValues();
+    const lc   = email.toLowerCase().trim();
+    for (let i = 1; i < data.length; i++) {
+      if ((data[i][3] || '').toString().toLowerCase().trim() === lc) { // col D = email
+        const branchCode = (data[i][5] || '').toString().trim().toUpperCase(); // col F
+        const branchName = BRANCH_NAMES[branchCode];
+        const config     = branchName ? BRANCH_CONFIG[branchName] : null;
+        if (!config || !config.folderId) return { error: 'No Drive folder for this branch' };
+
+        const nameSafe = (data[i][1] || 'volunteer').toString().trim().replace(/\s+/g, '_') || 'volunteer';
+        const filename = nameSafe + '_profile';
+        const blob     = Utilities.newBlob(Utilities.base64Decode(photoBase64), photoMime, filename);
+        const file     = DriveApp.getFolderById(config.folderId).createFile(blob);
+        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+        const photoUrl = 'https://drive.google.com/uc?export=view&id=' + file.getId();
+        sheet.getRange(i + 1, 7).setValue(photoUrl); // col G = photo URL
+
+        return { success: true, photoUrl: 'https://drive.google.com/thumbnail?id=' + file.getId() + '&sz=w200' };
+      }
+    }
     return { error: 'Not found in roster' };
   } catch (err) {
     return { error: err.message };

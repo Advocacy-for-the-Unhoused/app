@@ -1058,6 +1058,41 @@
       background: var(--camp-cream);
     }
 
+    /* Tappable profile card → add / change photo */
+    .dash-profile-card.dash-profile-tappable { cursor: pointer; }
+    .dash-avatar-wrap {
+      position: relative;
+      flex-shrink: 0;
+      line-height: 0;
+    }
+    .dash-avatar-badge {
+      position: absolute;
+      right: -2px;
+      bottom: -2px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--camp-orange);
+      color: #fff;
+      border: 2px solid white;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      line-height: 1;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+    }
+    .dash-profile-card.no-photo .dash-avatar-badge { display: flex; }
+    .dash-photo-hint {
+      display: none;
+      margin: 6px 0 0 0;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--camp-orange);
+      letter-spacing: 0.3px;
+    }
+    .dash-profile-card.no-photo .dash-photo-hint { display: block; }
+
     .dash-greeting {
       font-family: 'Abril Fatface', serif;
       font-size: clamp(1.3rem, 5vw, 1.8rem);
@@ -2747,16 +2782,21 @@
 
     <div class="subtitle">Advocacy for the Unhoused</div>
 
-    <!-- Profile header -->
-    <div class="dash-profile-card">
-      <img id="dashAvatar" class="dash-avatar"
-           src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='24' r='14' fill='%23ddd'/%3E%3Cellipse cx='32' cy='60' rx='22' ry='16' fill='%23ddd'/%3E%3C/svg%3E"
-           alt="Profile">
+    <!-- Profile header — tap to add / change photo -->
+    <div class="dash-profile-card dash-profile-tappable" id="dashProfileCard" onclick="openProfilePhotoPicker()">
+      <div class="dash-avatar-wrap">
+        <img id="dashAvatar" class="dash-avatar"
+             src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='24' r='14' fill='%23ddd'/%3E%3Cellipse cx='32' cy='60' rx='22' ry='16' fill='%23ddd'/%3E%3C/svg%3E"
+             alt="Profile">
+        <span class="dash-avatar-badge" aria-hidden="true">＋</span>
+      </div>
       <div>
         <p class="dash-greeting">Hey, <span id="dashName">Volunteer</span>.</p>
         <p class="dash-meta" id="dashBranch">Loading…</p>
+        <p class="dash-photo-hint" id="dashPhotoHint">📷 Tap to add your profile photo</p>
       </div>
     </div>
+    <input type="file" id="profilePhotoInput" accept="image/*" style="display:none" onchange="handleProfilePhotoPick(event)">
 
     <!-- Quick stats -->
     <div class="dash-stats">
@@ -3985,6 +4025,68 @@
   /* ─────────────────────────────────────────
      Tab switching
   ───────────────────────────────────────── */
+  /* ─────────────────────────────────────────
+     Profile photo — add / change from Home card
+     Lets volunteers who skipped the photo on
+     onboarding add one by tapping their profile.
+  ───────────────────────────────────────── */
+  // Shows the "add photo" badge + hint only when the roster has no photo yet.
+  window.refreshProfilePhotoUI = function () {
+    var card = document.getElementById('dashProfileCard');
+    if (!card) return;
+    var p = window.volunteerProfile;
+    var hasPhoto = !!(p && p.hasRosterPhoto);
+    card.classList.toggle('no-photo', !hasPhoto);
+  };
+
+  window.openProfilePhotoPicker = function () {
+    var input = document.getElementById('profilePhotoInput');
+    if (input) input.click();
+  };
+
+  window.handleProfilePhotoPick = function (e) {
+    var file = e.target.files && e.target.files[0];
+    e.target.value = ''; // allow re-picking the same file later
+    if (!file) return;
+    if (!/^image\//.test(file.type)) { alert('Please choose an image file.'); return; }
+
+    var p = window.volunteerProfile;
+    var email = p && p.email;
+    if (!email) { alert('Please sign in again before adding a photo.'); return; }
+
+    var reader = new FileReader();
+    reader.onload = function (ev) {
+      var dataUrl = ev.target.result;
+      var base64  = dataUrl.split(',')[1];
+      var avatar  = document.getElementById('dashAvatar');
+      var prevSrc = avatar ? avatar.src : '';
+      if (avatar) avatar.src = dataUrl; // optimistic preview
+
+      var body = 'action=updateProfilePhoto'
+        + '&email=' + encodeURIComponent(email)
+        + '&photoBase64=' + encodeURIComponent(base64)
+        + '&photoMime=' + encodeURIComponent(file.type);
+
+      window.gasFetch(body)
+        .then(function (data) {
+          if (data && data.success) {
+            if (data.photoUrl && avatar) avatar.src = data.photoUrl;
+            p.photoUrl = data.photoUrl || p.photoUrl;
+            p.hasRosterPhoto = true;
+            window.refreshProfilePhotoUI();
+            if (typeof haptic === 'function') haptic('success');
+          } else {
+            throw new Error((data && data.error) || 'Upload failed');
+          }
+        })
+        .catch(function (err) {
+          if (avatar) avatar.src = prevSrc; // revert preview
+          alert('Could not save your photo: ' + err.message);
+        });
+    };
+    reader.readAsDataURL(file);
+  };
+
   function switchTab(tab) {
     document.querySelectorAll('.tab-view').forEach(v => v.classList.add('hidden'));
     document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
@@ -3995,6 +4097,7 @@
       document.getElementById('navHome').classList.add('active');
       if (typeof window.loadDashboard === 'function') window.loadDashboard();
       if (typeof window.renderMyTasksCard === 'function') window.renderMyTasksCard();
+      if (typeof window.refreshProfilePhotoUI === 'function') window.refreshProfilePhotoUI();
       initBostonBanner();
 
     } else if (tab === 'donations') {
@@ -4795,7 +4898,7 @@
   });
 </script>
 
-<script src="app.js?v=15"></script>
+<script src="app.js?v=16"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 
 <script>
