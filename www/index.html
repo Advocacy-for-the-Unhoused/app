@@ -3367,10 +3367,18 @@
   #pw-section .pw-log-svc { color:var(--dark); font-weight:800; }
   #pw-section .pw-log-meta { color:rgba(26,19,17,0.5); text-align:right; flex-shrink:0; }
   #pw-section .pw-empty { padding:20px; text-align:center; font-size:0.68rem; font-weight:700; color:rgba(26,19,17,0.35); }
+  #pw-section .pw-badge { display:inline-flex; align-items:center; gap:4px; font-size:0.54rem; font-weight:800; letter-spacing:0.6px; text-transform:uppercase; padding:2px 7px; border-radius:20px; vertical-align:middle; white-space:nowrap; }
+  #pw-section .pw-badge.high { background:#fbe9e7; color:#b83232; border:1.5px solid #b83232; }
+  #pw-section .pw-badge.low  { background:#e7f5ee; color:#1D9E75; border:1.5px solid #1D9E75; }
+  #pw-section .pw-passprompt { padding:2px 0; }
+  #pw-section .pw-pp-label { font-size:0.64rem; font-weight:800; letter-spacing:0.4px; color:#b83232; display:flex; align-items:center; gap:6px; }
+  #pw-section .pw-pp-err { font-size:0.62rem; font-weight:700; color:#b83232; margin-top:5px; }
+  #pw-section .pw-pp-row { display:flex; gap:8px; margin-top:8px; }
+  #pw-section .pw-pp-input { flex:1; min-width:0; padding:8px 10px; border:2px solid var(--dark); border-radius:7px; font-size:0.78rem; font-weight:600; background:white; color:var(--dark); }
 </style>
 <script>
 (function(){
-  var pwData = [], pwCanEdit = false, pwFilter = '';
+  var pwData = [], pwCanEdit = false, pwFilter = '', pwPass = '';
   function pwEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   function pwEmail(){ return (window.volunteerProfile && window.volunteerProfile.email) || ''; }
   function pwToast(msg){ try { (window.showToast||window.tbToast||function(m){})(msg); } catch(e){} }
@@ -3395,6 +3403,7 @@
       + '<input class="pw-search" id="pw-search" placeholder="Search service or username&hellip;" oninput="window.pwSetFilter(this.value)" value="' + pwEsc(pwFilter) + '">'
       + (pwCanEdit ? '<button class="pw-addbtn" onclick="window.pwShowForm()">+ Add</button>' : '')
       + (pwCanEdit ? '<button class="pw-logbtn" onclick="window.pwToggleLog()">Access log</button>' : '')
+      + (pwPass ? '<button class="pw-logbtn" onclick="window.pwLockVault()" title="Forget the vault passphrase for this session"><i class="bi bi-lock-fill"></i> Lock</button>' : '')
       + '</div>';
     html += '<div id="pw-form-slot"></div><div id="pw-log-slot"></div>';
 
@@ -3414,9 +3423,12 @@
     order.forEach(function(c){
       html += '<div class="pw-cat-hdr">' + pwEsc(c) + '</div>';
       cats[c].sort(function(a,b){ return a.service.localeCompare(b.service); }).forEach(function(r){
+        var badge = (r.security === 'High')
+          ? '<span class="pw-badge high"><i class="bi bi-shield-lock-fill"></i> Restricted</span>'
+          : '<span class="pw-badge low"><i class="bi bi-people-fill"></i> Shared</span>';
         html += '<div class="pw-card" id="pw-card-' + pwEsc(r.id) + '">'
           + '<div class="pw-card-top"><div style="flex:1;min-width:0;">'
-          + '<div class="pw-svc">' + pwEsc(r.service) + '</div>'
+          + '<div class="pw-svc">' + pwEsc(r.service) + ' ' + badge + '</div>'
           + (r.username ? '<div class="pw-user">' + pwEsc(r.username) + '</div>' : '')
           + '</div>'
           + '<button class="pw-reveal" onclick="window.pwReveal(\'' + pwEsc(r.id) + '\')">Reveal</button>'
@@ -3435,11 +3447,43 @@
     if (!box) return;
     if (box.classList.contains('open')){ box.classList.remove('open'); box.innerHTML=''; return; }
     box.classList.add('open');
+    var rec = pwData.filter(function(x){return x.id===id;})[0] || {};
+    if (rec.security === 'High' && !pwPass){ pwRenderPassPrompt(box, id, false); return; }
+    pwDoReveal(id, box);
+  }
+
+  function pwRenderPassPrompt(box, id, wrong){
+    box.innerHTML = '<div class="pw-passprompt">'
+      + '<div class="pw-pp-label"><i class="bi bi-shield-lock-fill"></i> Restricted &mdash; enter the vault passphrase to reveal</div>'
+      + (wrong ? '<div class="pw-pp-err">Incorrect passphrase &mdash; try again</div>' : '')
+      + '<div class="pw-pp-row">'
+      + '<input type="password" class="pw-pp-input" id="pw-pp-' + pwEsc(id) + '" placeholder="Vault passphrase" autocomplete="off" onkeydown="if(event.key===\'Enter\')window.pwUnlock(\'' + pwEsc(id) + '\')">'
+      + '<button class="pw-reveal" onclick="window.pwUnlock(\'' + pwEsc(id) + '\')">Unlock</button>'
+      + '</div></div>';
+    var el = document.getElementById('pw-pp-' + id); if (el) el.focus();
+  }
+
+  function pwUnlock(id){
+    var el = document.getElementById('pw-pp-' + id);
+    var v = el ? el.value : '';
+    if (!v) return;
+    pwPass = v;
+    var lockBtn = document.querySelector('#pw-body .pw-toolbar');   // re-render toolbar to show Lock
+    var box = document.getElementById('pw-secret-' + id);
+    pwDoReveal(id, box);
+  }
+
+  function pwLockVault(){ pwPass = ''; pwToast('Vault locked'); renderPasswordVault(); }
+
+  function pwDoReveal(id, box){
+    box.classList.add('open');
     box.innerHTML = '<div class="pw-empty" style="padding:8px;"><i class="bi bi-hourglass-split spinner"></i> Revealing&hellip;</div>';
-    window.gasFetch('action=revealPassword&id=' + encodeURIComponent(id) + '&email=' + encodeURIComponent(pwEmail()))
+    window.gasFetch('action=revealPassword&id=' + encodeURIComponent(id) + '&email=' + encodeURIComponent(pwEmail()) + '&passphrase=' + encodeURIComponent(pwPass))
       .then(function(d){
+        if (d && d.needPassphrase){ pwPass = ''; pwRenderPassPrompt(box, id, true); return; }
         if (!d || d.error){ box.innerHTML = '<div class="pw-empty" style="padding:8px;">' + pwEsc((d&&d.error)||'Failed.') + '</div>'; return; }
         var rec = pwData.filter(function(x){return x.id===id;})[0] || {};
+        var wasLocked = !document.querySelector('#pw-body .bi-lock-fill');
         var h = '';
         if (d.username) h += pwField('User', d.username);
         h += pwField('Password', d.password || '(none)');
@@ -3451,9 +3495,27 @@
             + '</div>';
         }
         box.innerHTML = h;
-        box._rec = { username: d.username, password: d.password, notes: d.notes, category: rec.category, service: rec.service };
+        box._rec = { username: d.username, password: d.password, notes: d.notes, category: rec.category, service: rec.service, security: rec.security };
+        // If this was the first High unlock of the session, surface the Lock button.
+        if (pwPass && wasLocked){ pwRefreshToolbar(); }
       })
       .catch(function(){ box.innerHTML = '<div class="pw-empty" style="padding:8px;">Failed to reveal.</div>'; });
+  }
+
+  // Re-render only the toolbar so the "Lock" button appears/disappears without
+  // collapsing any secret boxes the user has already opened.
+  function pwRefreshToolbar(){
+    var tb = document.querySelector('#pw-body .pw-toolbar');
+    if (!tb) return;
+    var hasLock = !!tb.querySelector('.bi-lock-fill');
+    if (pwPass && !hasLock){
+      var b = document.createElement('button');
+      b.className = 'pw-logbtn';
+      b.setAttribute('onclick', 'window.pwLockVault()');
+      b.title = 'Forget the vault passphrase for this session';
+      b.innerHTML = '<i class="bi bi-lock-fill"></i> Lock';
+      tb.appendChild(b);
+    }
   }
 
   function pwField(label, val){
@@ -3474,16 +3536,21 @@
 
   function pwShowForm(id){
     var slot = document.getElementById('pw-form-slot'); if(!slot) return;
-    var rec = { id:'', category:'', service:'', username:'', password:'', notes:'' };
+    var rec = { id:'', category:'', service:'', username:'', password:'', notes:'', security:'High' };
     if (id){
       var box = document.getElementById('pw-secret-' + id);
       var base = pwData.filter(function(x){return x.id===id;})[0] || {};
       var sec = (box && box._rec) || {};
-      rec = { id:id, category:base.category||'', service:base.service||'', username:sec.username||base.username||'', password:sec.password||'', notes:sec.notes||'' };
+      rec = { id:id, category:base.category||'', service:base.service||'', username:sec.username||base.username||'', password:sec.password||'', notes:sec.notes||'', security:base.security||'High' };
     }
+    var isHigh = rec.security !== 'Low';
     slot.innerHTML = '<div class="pw-form">'
       + '<label>Category</label><input id="pw-f-cat" value="' + pwEsc(rec.category) + '" placeholder="e.g. Finance, Social Media">'
       + '<label>Service *</label><input id="pw-f-svc" value="' + pwEsc(rec.service) + '" placeholder="e.g. Stripe">'
+      + '<label>Security level</label><select id="pw-f-sec">'
+      +   '<option value="High"' + (isHigh?' selected':'') + '>High &mdash; passphrase required (banking, IRS, email, domains)</option>'
+      +   '<option value="Low"'  + (!isHigh?' selected':'') + '>Low &mdash; any officer can view (socials)</option>'
+      + '</select>'
       + '<label>Username / Email</label><input id="pw-f-user" value="' + pwEsc(rec.username) + '">'
       + '<label>Password</label><input id="pw-f-pass" value="' + pwEsc(rec.password) + '">'
       + '<label>Notes (keys, account #, recovery codes&hellip;)</label><textarea id="pw-f-notes">' + pwEsc(rec.notes) + '</textarea>'
@@ -3505,7 +3572,8 @@
       + '&service='  + encodeURIComponent(svc)
       + '&username=' + encodeURIComponent((document.getElementById('pw-f-user')||{}).value || '')
       + '&password=' + encodeURIComponent((document.getElementById('pw-f-pass')||{}).value || '')
-      + '&notes='    + encodeURIComponent((document.getElementById('pw-f-notes')||{}).value || '');
+      + '&notes='    + encodeURIComponent((document.getElementById('pw-f-notes')||{}).value || '')
+      + '&security=' + encodeURIComponent((document.getElementById('pw-f-sec')||{}).value || 'High');
     window.gasFetch(body)
       .then(function(d){
         if (!d || d.error){ pwToast((d&&d.error)||'Save failed'); return; }
@@ -3555,6 +3623,8 @@
   window.pwSave = pwSave;
   window.pwDelete = pwDelete;
   window.pwToggleLog = pwToggleLog;
+  window.pwUnlock = pwUnlock;
+  window.pwLockVault = pwLockVault;
 })();
 </script>
 

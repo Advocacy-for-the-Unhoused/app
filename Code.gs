@@ -375,13 +375,17 @@ function doPost(e) {
     } else if (p.action === "getPasswords") {
       result = getPasswords_(p.email || '');
     } else if (p.action === "revealPassword") {
-      result = revealPassword_(p.id || '', p.email || '');
+      result = revealPassword_(p.id || '', p.email || '', p.passphrase || '');
     } else if (p.action === "savePassword") {
       result = savePassword_(p);
     } else if (p.action === "deletePassword") {
       result = deletePassword_(p.id || '', p.email || '');
     } else if (p.action === "getPasswordAccessLog") {
       result = getPasswordAccessLog_(p.email || '');
+    } else if (p.action === "setVaultPassphrase") {
+      result = setVaultPassphrase_(p);
+    } else if (p.action === "migrateVault") {
+      result = migrateVault_(p);
 
     } else {
       result = { error: "Invalid request" };
@@ -2144,13 +2148,105 @@ function denyCompRequest_(id) {
 }
 
 // ── Password Vault ────────────────────────────────────────────────────────────
-// Sheet "Passwords":        ID | Category | Service | Username | Password | Notes | UpdatedAt | UpdatedBy
+// Sheet "Passwords":  ID | Category | Service | Username | Password | Notes | UpdatedAt | UpdatedBy | Security
 // Sheet "Password Access Log": Timestamp | Email | Name | Service | Action
-// View (list + reveal) is allowed for any admin-tab role (A/Z/P/C). Editing
-// (add/edit/delete) is restricted to A/Z. Every reveal is logged server-side.
+//
+// Access model:
+//  - List + reveal: any admin-tab role (A/Z/P/C). Add/edit/delete: A/Z only.
+//  - Every entry is Low or High security (col I). Low = any officer can reveal
+//    (logged). High = a vault passphrase is ALSO required to reveal (logged;
+//    blocked+logged on wrong passphrase).
+//  - Password + Notes are ENCRYPTED at rest (AES-style HMAC-CTR + encrypt-then-
+//    MAC). The key lives in Script Properties (PW_ENC_KEY), never in the sheet
+//    or in git. Decryption happens server-side only, on a successful reveal.
+//  - The High passphrase is stored ONLY as a SHA-256 hash in Script Properties
+//    (PW_HIGH_HASH). Set it once via action=setVaultPassphrase.
 
 const PW_VIEW_ROLES = /[AZPC]/;   // can list + reveal
 const PW_EDIT_ROLES = /[AZ]/;     // can add / edit / delete
+
+// ── Encryption at rest (HMAC-CTR keystream + encrypt-then-MAC) ──
+function pwRandBytes_(n) {
+  const out = [];
+  while (out.length < n) {
+    const h = Utilities.getUuid().replace(/-/g, '');   // 16 random bytes (secure)
+    for (let i = 0; i < h.length; i += 2) {
+      const v = parseInt(h.substr(i, 2), 16);
+      out.push(v > 127 ? v - 256 : v);
+    }
+  }
+  return out.slice(0, n);
+}
+function pwMasterKey_() {
+  const props = PropertiesService.getScriptProperties();
+  let k = props.getProperty('PW_ENC_KEY');
+  if (!k) { k = Utilities.base64Encode(pwRandBytes_(32)); props.setProperty('PW_ENC_KEY', k); }
+  return Utilities.base64Decode(k);
+}
+function pwSubKey_(master, label) {
+  return Utilities.computeHmacSha256Signature(Utilities.newBlob(label).getBytes(), master);
+}
+function pwCounter_(n) {
+  return [(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].map(function(v){ return v > 127 ? v - 256 : v; });
+}
+function pwXor_(bytes, encKey, iv) {
+  const out = [];
+  let block = null;
+  for (let i = 0; i < bytes.length; i++) {
+    const bi = i % 32;
+    if (bi === 0) block = Utilities.computeHmacSha256Signature(iv.concat(pwCounter_(Math.floor(i / 32))), encKey);
+    const x = (bytes[i] & 255) ^ (block[bi] & 255);
+    out.push(x > 127 ? x - 256 : x);
+  }
+  return out;
+}
+function pwEncrypt_(plaintext) {
+  if (plaintext === null || plaintext === undefined) plaintext = '';
+  plaintext = String(plaintext);
+  if (plaintext === '') return '';
+  const master = pwMasterKey_();
+  const encKey = pwSubKey_(master, 'enc'), macKey = pwSubKey_(master, 'mac');
+  const pt = Utilities.newBlob(plaintext).getBytes();
+  const iv = pwRandBytes_(16);
+  const ct = pwXor_(pt, encKey, iv);
+  const mac = Utilities.computeHmacSha256Signature(iv.concat(ct), macKey);
+  return 'v1:' + Utilities.base64Encode(iv.concat(ct).concat(mac));
+}
+function pwDecrypt_(token) {
+  if (token === null || token === undefined) return '';
+  token = String(token);
+  if (token.indexOf('v1:') !== 0) return token;   // legacy / unencrypted
+  try {
+    const raw = Utilities.base64Decode(token.slice(3));
+    const iv  = raw.slice(0, 16);
+    const mac = raw.slice(raw.length - 32);
+    const ct  = raw.slice(16, raw.length - 32);
+    const master = pwMasterKey_();
+    const encKey = pwSubKey_(master, 'enc'), macKey = pwSubKey_(master, 'mac');
+    const calc = Utilities.computeHmacSha256Signature(iv.concat(ct), macKey);
+    let diff = 0; for (let i = 0; i < 32; i++) diff |= (calc[i] ^ mac[i]);
+    if (diff !== 0) return '[decrypt error]';
+    return Utilities.newBlob(pwXor_(ct, encKey, iv)).getDataAsString('UTF-8');
+  } catch (e) { return '[decrypt error]'; }
+}
+
+// ── High-security passphrase (stored as SHA-256 hash only) ──
+function pwHashPass_(s) {
+  return Utilities.base64Encode(
+    Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(s), Utilities.Charset.UTF_8));
+}
+function pwCheckPass_(s) {
+  const stored = PropertiesService.getScriptProperties().getProperty('PW_HIGH_HASH');
+  if (!stored || !s) return false;
+  return pwHashPass_(s) === stored;
+}
+function setVaultPassphrase_(p) {
+  if (!PW_EDIT_ROLES.test(pwPosition_(p.email || ''))) return { error: 'Not authorized' };
+  if (!p.passphrase) return { error: 'Passphrase required' };
+  PropertiesService.getScriptProperties().setProperty('PW_HIGH_HASH', pwHashPass_(p.passphrase));
+  return { success: true };
+}
+function pwSecOf_(v) { return String(v || '').toLowerCase() === 'low' ? 'Low' : 'High'; }
 
 function pwPosition_(email) {
   try { return (getMemberInfo(email).position || '').toUpperCase(); }
@@ -2168,7 +2264,7 @@ function getPasswordSheet_() {
   let sheet = ss.getSheetByName('Passwords');
   if (!sheet) {
     sheet = ss.insertSheet('Passwords');
-    const headers = ['ID','Category','Service','Username','Password','Notes','UpdatedAt','UpdatedBy'];
+    const headers = ['ID','Category','Service','Username','Password','Notes','UpdatedAt','UpdatedBy','Security'];
     sheet.getRange(1, 1, 1, headers.length)
          .setValues([headers]).setFontWeight('bold')
          .setBackground('#1A1311').setFontColor('#F9F6F0');
@@ -2178,6 +2274,11 @@ function getPasswordSheet_() {
     sheet.setColumnWidth(4, 220);
     sheet.setColumnWidth(5, 200);
     sheet.setColumnWidth(6, 320);
+  }
+  // Ensure the Security column (col I) header exists on pre-existing sheets.
+  if (sheet.getRange(1, 9).getValue() !== 'Security') {
+    sheet.getRange(1, 9).setValue('Security').setFontWeight('bold')
+         .setBackground('#1A1311').setFontColor('#F9F6F0');
   }
   return sheet;
 }
@@ -2220,23 +2321,34 @@ function getPasswords_(email) {
       username:  String(data[i][3] || ''),
       hasNotes:  !!String(data[i][5] || '').trim(),
       updatedAt: data[i][6] ? new Date(data[i][6]).toISOString() : '',
-      updatedBy: String(data[i][7] || '')
+      updatedBy: String(data[i][7] || ''),
+      security:  pwSecOf_(data[i][8])
     });
   }
   return { passwords: rows, canEdit: PW_EDIT_ROLES.test(pwPosition_(email)) };
 }
 
-// Reveal a single secret — logs the access, then returns password + notes.
-function revealPassword_(id, email) {
+// Reveal a single secret — logs the access, then returns decrypted password + notes.
+// High-security entries additionally require the vault passphrase.
+function revealPassword_(id, email, passphrase) {
   if (!PW_VIEW_ROLES.test(pwPosition_(email))) return { error: 'Not authorized' };
   const sheet = getPasswordSheet_();
   const data  = sheet.getDataRange().getValues();
   for (let i = 1; i < data.length; i++) {
     if (String(data[i][0]) === String(id)) {
-      pwLog_(email, String(data[i][2] || ''), 'Revealed');
+      const service = String(data[i][2] || '');
+      const sec     = pwSecOf_(data[i][8]);
+      if (sec === 'High') {
+        if (!passphrase)          return { error: 'Passphrase required', needPassphrase: true };
+        if (!pwCheckPass_(passphrase)) {
+          pwLog_(email, service, 'Reveal blocked (bad passphrase)');
+          return { error: 'Incorrect passphrase', needPassphrase: true };
+        }
+      }
+      pwLog_(email, service, 'Revealed' + (sec === 'High' ? ' (high)' : ''));
       return {
-        password: String(data[i][4] || ''),
-        notes:    String(data[i][5] || ''),
+        password: pwDecrypt_(data[i][4]),
+        notes:    pwDecrypt_(data[i][5]),
         username: String(data[i][3] || '')
       };
     }
@@ -2244,7 +2356,7 @@ function revealPassword_(id, email) {
   return { error: 'Entry not found' };
 }
 
-// Add or update. id blank = new row. Restricted to A/Z.
+// Add or update. id blank = new row. Restricted to A/Z. Secrets stored encrypted.
 function savePassword_(p) {
   const email = p.email || '';
   if (!PW_EDIT_ROLES.test(pwPosition_(email))) return { error: 'Not authorized' };
@@ -2252,8 +2364,9 @@ function savePassword_(p) {
   const category = (p.category || '').toString().trim();
   const service  = (p.service  || '').toString().trim();
   const username = (p.username || '').toString();
-  const password = (p.password || '').toString();
-  const notes    = (p.notes    || '').toString();
+  const encPass  = pwEncrypt_((p.password || '').toString());
+  const encNotes = pwEncrypt_((p.notes    || '').toString());
+  const security = pwSecOf_(p.security);
   if (!service) return { error: 'Service name is required' };
   const by = pwName_(email);
 
@@ -2261,7 +2374,7 @@ function savePassword_(p) {
     const data = sheet.getDataRange().getValues();
     for (let i = 1; i < data.length; i++) {
       if (String(data[i][0]) === String(p.id)) {
-        sheet.getRange(i + 1, 2, 1, 7).setValues([[category, service, username, password, notes, new Date(), by]]);
+        sheet.getRange(i + 1, 2, 1, 8).setValues([[category, service, username, encPass, encNotes, new Date(), by, security]]);
         pwLog_(email, service, 'Edited');
         return { success: true, id: String(p.id) };
       }
@@ -2270,9 +2383,32 @@ function savePassword_(p) {
   }
 
   const id = 'pw' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
-  sheet.appendRow([id, category, service, username, password, notes, new Date(), by]);
+  sheet.appendRow([id, category, service, username, encPass, encNotes, new Date(), by, security]);
   pwLog_(email, service, 'Added');
   return { success: true, id: id };
+}
+
+// One-time migration: encrypt any plaintext rows in place and set each row's
+// security level (services named in `lowServices`, pipe-separated, become Low;
+// everything else High). Idempotent — already-encrypted rows are left as-is.
+function migrateVault_(p) {
+  if (!PW_EDIT_ROLES.test(pwPosition_(p.email || ''))) return { error: 'Not authorized' };
+  const low = {};
+  String(p.lowServices || '').split('|').forEach(function(s){ s = s.trim().toLowerCase(); if (s) low[s] = 1; });
+  const sheet = getPasswordSheet_();
+  const data  = sheet.getDataRange().getValues();
+  let n = 0;
+  for (let i = 1; i < data.length; i++) {
+    if (!data[i][0]) continue;
+    const pass  = String(data[i][4] || '');
+    const notes = String(data[i][5] || '');
+    if (pass.indexOf('v1:')  !== 0) sheet.getRange(i + 1, 5).setValue(pwEncrypt_(pass));
+    if (notes.indexOf('v1:') !== 0) sheet.getRange(i + 1, 6).setValue(pwEncrypt_(notes));
+    const svc = String(data[i][2] || '').trim().toLowerCase();
+    sheet.getRange(i + 1, 9).setValue(low[svc] ? 'Low' : 'High');
+    n++;
+  }
+  return { migrated: n };
 }
 
 function deletePassword_(id, email) {
