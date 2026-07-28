@@ -3038,7 +3038,7 @@
     <div class="card" id="expense-form-card">
       <h3>Request Reimbursement</h3>
       <p style="font-size:0.85rem;color:#555;line-height:1.6;margin-bottom:12px;">
-        Shopped for HAU? Upload your receipt and we'll reimburse you.
+        Shopped for AFU? Upload your receipt and we'll reimburse you.
       </p>
 
       <label for="cr-desc">What did you purchase?</label>
@@ -3390,7 +3390,7 @@
       <div id="boston-not-found" style="display:none;text-align:center;max-width:320px;">
         <div style="font-size:2rem;margin-bottom:12px;">&#x1F6AB;</div>
         <div style="font-size:0.9rem;font-weight:700;color:#b83232;margin-bottom:8px;">Not on the list</div>
-        <div style="font-size:0.75rem;color:rgba(26,19,17,0.5);line-height:1.7;">Your email isn&rsquo;t in the Boston Trip roster yet. Contact HAU leadership to be added.</div>
+        <div style="font-size:0.75rem;color:rgba(26,19,17,0.5);line-height:1.7;">Your email isn&rsquo;t in the Boston Trip roster yet. Contact AFU leadership to be added.</div>
       </div>
       <div id="lookup-error" style="display:none;" class="error-msg"></div>
 
@@ -4732,13 +4732,13 @@
       document.getElementById('reg-ack-title').textContent     = m ? 'Parent / Guardian Acknowledgments' : 'Acknowledgments';
 
       document.getElementById('reg-feeAckText').textContent = m
-        ? 'As the parent or legal guardian, I understand that trip costs including train ticket, bus, and food will be charged to the volunteer and are the family\'s responsibility to reimburse to HAU.'
-        : 'I understand that trip costs including train ticket, bus, and food are my responsibility to reimburse to HAU.';
+        ? 'As the parent or legal guardian, I understand that trip costs including train ticket, bus, and food will be charged to the volunteer and are the family\'s responsibility to reimburse to AFU.'
+        : 'I understand that trip costs including train ticket, bus, and food are my responsibility to reimburse to AFU.';
       document.getElementById('reg-feeAckLabel').textContent = 'I acknowledge the reimbursement obligation.';
 
       document.getElementById('reg-permissionText').textContent = m
-        ? 'As the parent or legal guardian of the minor named above, I grant permission for my child to participate in the HAU Boston Trip. I understand this is a volunteer activity organized by Advocacy for the Unhoused, Inc. I agree that my child will follow all guidelines and instructions provided by trip organizers, and I accept responsibility for their conduct during the trip.'
-        : 'I agree to participate in the HAU Boston Trip and follow all guidelines and instructions provided by trip organizers.';
+        ? 'As the parent or legal guardian of the minor named above, I grant permission for my child to participate in the AFU Boston Trip. I understand this is a volunteer activity organized by Advocacy for the Unhoused, Inc. I agree that my child will follow all guidelines and instructions provided by trip organizers, and I accept responsibility for their conduct during the trip.'
+        : 'I agree to participate in the AFU Boston Trip and follow all guidelines and instructions provided by trip organizers.';
       document.getElementById('reg-permissionLabel').textContent = m
         ? 'I grant permission and accept the terms above.'
         : 'I agree to the terms above.';
@@ -4838,7 +4838,7 @@
 
       gasCall('getVolunteerBill', {email: p.email}, result => {
           if (!result.found) {
-            card.innerHTML = '<div style="padding:20px;font-size:0.7rem;font-weight:700;color:#b83232;">No billing record found for this account. Please contact HAU leadership.</div>';
+            card.innerHTML = '<div style="padding:20px;font-size:0.7rem;font-weight:700;color:#b83232;">No billing record found for this account. Please contact AFU leadership.</div>';
             return;
           }
           renderBill(result);
@@ -4882,7 +4882,7 @@
         items.forEach(fi => {
           lineItemsHTML += `<div class="line-item">
             <div class="item-icon-col active"><i class="bi bi-fork-knife"></i></div>
-            <div class="item-body"><div class="item-name">${esc(fi.item)}</div><div class="item-note owed">Owed to HAU</div></div>
+            <div class="item-body"><div class="item-name">${esc(fi.item)}</div><div class="item-note owed">Owed to AFU</div></div>
             <div class="item-amount-col"><div class="item-amount">${fmt(fi.cost)}</div></div>
           </div>`;
         });
@@ -4919,7 +4919,7 @@
         <div class="bill-header">
           <div class="bill-eyebrow">Advocacy for the Unhoused, Inc.</div>
           <div class="bill-title">Pay My <span>Bill</span></div>
-          <div class="bill-sub">Boston Trip 2026 &middot; What you owe HAU</div>
+          <div class="bill-sub">Boston Trip 2026 &middot; What you owe AFU</div>
         </div>
         <div class="bill-to-strip">
           <div class="micro">Volunteer</div>
@@ -5015,7 +5015,7 @@
       }
       const active   = f.val > 0 ? ' active' : '';
       const amtClass = f.val > 0 ? '' : ' zero';
-      const note     = f.val > 0 ? '<div class="item-note owed">Owed to HAU</div>' : '<div class="item-note">Not applicable</div>';
+      const note     = f.val > 0 ? '<div class="item-note owed">Owed to AFU</div>' : '<div class="item-note">Not applicable</div>';
       return `<div class="line-item">
         <div class="item-icon-col${active}"><i class="bi ${f.icon}"></i></div>
         <div class="item-body"><div class="item-name">${f.label}</div>${note}</div>
