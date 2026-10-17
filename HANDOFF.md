@@ -43,18 +43,41 @@ outgoing dev / AFU to grant:
 | **Firebase** | Access to the FCM project | Push notifications |
 | **DNS for `app.hauhelps.org`** | Registrar/Cloudflare access | Controls the live domain |
 
-> **Note from the outgoing dev:** deeper internal context (App Store review history,
-> per-feature notes, sheet layouts, hard-won gotchas) is shared **privately**, not in
-> this public repo. Ask for that bundle.
+> **Deeper context lives in [`docs/internal-notes/`](docs/internal-notes/).** That folder
+> holds the full set of development notes — App Store review history, per-feature details,
+> sheet layouts, and hard-won gotchas. Point your AI assistant at it, or read it directly.
 
 ---
 
 ## 3. Local setup
 
+> ⚠️ **Clone the repo — do NOT use GitHub's "Download ZIP".** A downloaded ZIP has
+> no `.git` history and no link to GitHub, so it can **never push** (it unzips to a
+> folder named `app-main`, a dead copy). If `git status` says *"not a git repository"*,
+> that's the problem — delete it and clone instead.
+
 ```bash
 git clone https://github.com/Advocacy-for-the-Unhoused/app.git
 cd app
 npm install            # only needed for the Capacitor/iOS tooling, not the frontend
+```
+
+**Authenticate with GitHub so pushing works** (one-time). Easiest:
+
+```bash
+gh auth login          # GitHub CLI — follow the browser login
+```
+
+No `gh`? The first `git push` over HTTPS will pop a browser sign-in via Git Credential
+Manager — sign in once and it's cached. You also need a **collaborator invite accepted**
+(check your email or github.com/Advocacy-for-the-Unhoused/app/invitations) — permission
+to push comes from that, not from having the files.
+
+**Set your commit identity** (one-time):
+
+```bash
+git config --global user.name  "Your Name"
+git config --global user.email "your-github-email@example.com"
 ```
 
 **Recreate the pre-commit hook** (it lives in `.git/hooks/` and does NOT clone):
@@ -67,14 +90,69 @@ cp app.js www/app.js
 git add www/index.html www/app.js
 ```
 
-Then `chmod +x .git/hooks/pre-commit`. See §5 for why this matters.
+Then `chmod +x .git/hooks/pre-commit`. See §6 for why this matters.
 
 Install `clasp` globally (`npm i -g @google/clasp`) and `clasp login` with a Google
 account that has access to the script project.
 
 ---
 
-## 4. Deploy workflow
+## 4. Working with git — two developers at once
+
+Two people can work on this repo at the same time. Git will **not** silently overwrite
+anyone's work — a normal `git push` is *rejected* if you're behind, forcing you to pull
+first. The whole game is to pull before you push.
+
+### The daily routine (do this every session)
+
+```bash
+git pull          # 1. start from the latest code
+# ...make your changes, then:
+git add <files>
+git commit -m "what you changed"
+git pull          # 2. grab anything the other dev pushed while you worked
+git push          # 3. publish
+```
+
+**Always `git pull` before you start AND right before you push.** That second pull is
+what prevents collisions — it merges in the other person's work before yours goes up.
+
+- If a pull reports a **merge conflict**, you both edited the same lines. Git marks them
+  in the file with `<<<<<<<` / `=======` / `>>>>>>>`; pick the correct final version,
+  delete the markers, then `git add` + `git commit` + `git push`. Nothing is lost.
+- `index.html` is one big file — **coordinate so you're not both editing the same
+  section at the same time.** A quick "pushing now" message avoids most conflicts.
+- Only `git push --force` overwrites someone else's work. **Never use `--force`** in
+  normal collaboration.
+
+### Branches (recommended for anything non-trivial)
+
+`main` is what GitHub Pages serves live, so you don't want half-finished work on it.
+A **branch** is a separate line of work you can commit to freely without touching `main`:
+
+```bash
+git checkout -b my-feature       # create & switch to a branch off main
+# ...edit, commit as usual...
+git push -u origin my-feature    # push the branch to GitHub
+```
+
+Then open a **Pull Request (PR)** on GitHub to merge `my-feature` into `main`. The PR
+shows exactly what changed and flags conflicts before they hit the live site. Small
+tweaks can go straight to `main` with pull-first; bigger features should use a branch.
+
+### Getting Claude (or any AI assistant) to push for you
+
+Claude pushes by running the same `git add` / `git commit` / `git push` in its shell,
+using **your** credentials already set up on the machine. So the requirement is simply:
+the folder must be a **real clone** (not a ZIP), GitHub auth must be configured
+(`gh auth login`), and your identity must be set. Once a manual `git push` works from
+that folder, Claude's automatic pushes will work too — there's no separate step. If
+Claude's push fails, run `git push` yourself once; the error points to which setup step
+above is missing.
+
+---
+
+## 5. Deploy workflow
 
 There are **three independent deploy targets**. Changing one does not update the others.
 
@@ -104,7 +182,7 @@ new build ships the code. After changing frontend files, make sure `www/` is syn
 
 ---
 
-## 5. Gotchas that will bite you
+## 6. Gotchas that will bite you
 
 These cost real debugging time. Internalize them before your first change.
 
@@ -128,7 +206,7 @@ These cost real debugging time. Internalize them before your first change.
 
 ---
 
-## 6. Repo map
+## 7. Repo map
 
 | Path | What |
 |------|------|
@@ -143,3 +221,4 @@ These cost real debugging time. Internalize them before your first change.
 | `Integrated boston trip online form/` | Separate public permission form (its own GAS web app) |
 | `DEVELOPER.md` | Full architecture reference — **read this** |
 | `BUG_AUDIT.md` | Historical bug audit notes |
+| `docs/internal-notes/` | Full development notes (feature details, gotchas, history) — great context for an AI assistant |
