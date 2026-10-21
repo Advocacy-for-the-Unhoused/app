@@ -7312,7 +7312,10 @@
                 '<span style="font-family:\'Abril Fatface\',serif;font-size:1rem;color:var(--cream);">' + _esc(b.name) + '</span>' +
                 '<span style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:rgba(249,246,240,0.4);margin-left:8px;">' + _esc(b.code) + '</span>' +
               '</div>' +
-              '<i id="branch-chevron-' + b.code + '" class="bi bi-chevron-up" style="color:rgba(249,246,240,0.5);font-size:0.75rem;transition:transform 0.2s;"></i>' +
+              '<div style="display:flex;align-items:center;gap:12px;">' +
+                (isAZ ? '<button type="button" title="Delete branch" aria-label="Delete branch ' + _ea(b.name) + '" onclick="event.stopPropagation();deleteBranch(\'' + _ea(b.code) + '\',\'' + _ea(b.name) + '\')" style="background:none;border:none;padding:2px;cursor:pointer;color:rgba(249,246,240,0.55);font-size:0.85rem;line-height:1;display:flex;"><i class="bi bi-trash3"></i></button>' : '') +
+                '<i id="branch-chevron-' + b.code + '" class="bi bi-chevron-up" style="color:rgba(249,246,240,0.5);font-size:0.75rem;transition:transform 0.2s;"></i>' +
+              '</div>' +
             '</div>' +
             '<div id="branch-body-' + b.code + '" style="padding:14px;">' +
               fundHtml +
@@ -7395,6 +7398,20 @@
           setTimeout(loadBranchManagement, 900);
         } else { if(msg){msg.textContent=r.error||'Error.';msg.style.color='#b83232';} }
       } catch(e) { if(msg){msg.textContent='Network error.';msg.style.color='#b83232';} }
+    }
+
+    async function deleteBranch(code, name) {
+      if (!confirm('Delete the ' + name + ' (' + code + ') branch?\n\nIts meeting schedule and goal will be removed. Members, hours and donations keep their branch code.')) return;
+      try {
+        var res = await fetch(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: 'action=deleteBranch&code=' + encodeURIComponent(code)
+        });
+        var r = await res.json();
+        if (r.ok) loadBranchManagement();
+        else alert(r.error || 'Could not delete branch.');
+      } catch(e) { alert('Network error.'); }
     }
 
     async function approveBranchRequest(id) {
@@ -7579,6 +7596,7 @@
     window.loadMeetingConfig            = loadBranchManagement; // backward compat
     window.showAddBranchForm            = showAddBranchForm;
     window.submitAddBranch              = submitAddBranch;
+    window.deleteBranch                 = deleteBranch;
     window.approveBranchRequest         = approveBranchRequest;
     window.dismissBranchRequest         = dismissBranchRequest;
     window.showAddLeaderForm            = showAddLeaderForm;

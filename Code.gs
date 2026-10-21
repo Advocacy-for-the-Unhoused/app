@@ -398,6 +398,9 @@ function doPost(e) {
     } else if (p.action === "addBranch") {
       result = addBranch_(p.code || '', p.name || '');
 
+    } else if (p.action === "deleteBranch") {
+      result = deleteBranch_(p.code || '');
+
     } else if (p.action === "getBranches") {
       result = { branches: getBranches_() };
 
@@ -2466,6 +2469,33 @@ function addBranch_(code, name) {
   setMeetingConfigKey_('meetingTime_' + code, '17:00');
   setMeetingConfigKey_('cancel_'      + code, 'No');
   setMeetingConfigKey_('goal_'        + code, String(BRANCH_GOAL_TARGET));
+
+  return { ok: true };
+}
+
+// Removes the branch row and its Meeting Config keys. Roster members and
+// historical hours/donations keep their branch code untouched.
+function deleteBranch_(code) {
+  code = String(code || '').trim().toUpperCase();
+  if (!code) return { error: 'Code required' };
+
+  const sheet = getBranchesSheet_();
+  const data  = sheet.getDataRange().getValues();
+  let found = false;
+  for (let i = data.length - 1; i >= 1; i--) {
+    if (String(data[i][0] || '').trim().toUpperCase() === code) {
+      sheet.deleteRow(i + 1);
+      found = true;
+    }
+  }
+  if (!found) return { error: 'Branch not found' };
+
+  const cfg     = getMeetingConfigSheet_();
+  const cfgData = cfg.getDataRange().getValues();
+  const keys    = ['meetingDay_', 'meetingTime_', 'cancel_', 'goal_'].map(function(k) { return k + code; });
+  for (let i = cfgData.length - 1; i >= 1; i--) {
+    if (keys.indexOf(String(cfgData[i][0])) !== -1) cfg.deleteRow(i + 1);
+  }
 
   return { ok: true };
 }
