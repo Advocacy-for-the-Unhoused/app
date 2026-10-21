@@ -723,6 +723,17 @@
     .reg-row-badge.pending-badge   { background: rgba(26,19,17,0.08); color: rgba(26,19,17,0.4); }
     .reg-row-minor { font-size: 0.5rem; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; color: var(--orange); }
 
+    /* ── New Branch onboarding sub-form ── */
+    .new-branch-block { margin: 6px 0 2px; padding: 14px; border: 2px dashed var(--orange); border-radius: 12px; background: rgba(200,82,45,0.06); }
+    .seg-toggle { display: flex; gap: 0; margin: 4px 0 2px; border: 2px solid var(--dark); border-radius: 10px; overflow: hidden; }
+    .seg-toggle input { display: none; }
+    .seg-toggle label { flex: 1; text-align: center; padding: 9px 0; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.5px; color: var(--dark); background: white; cursor: pointer; transition: background 0.15s, color 0.15s; }
+    .seg-toggle label + input + label { border-left: 2px solid var(--dark); }
+    .seg-toggle input:checked + label { background: var(--orange); color: white; }
+    .new-branch-help { font-size: 0.72rem; line-height: 1.6; color: #555; margin-top: 10px; }
+    .new-branch-help strong { color: var(--dark); }
+    .new-branch-help a { color: var(--orange); font-weight: 700; }
+
     /* ── Hours Editor Section ── */
     .hrs-tabs { display: flex; border-bottom: 2px solid var(--dark); }
     .hrs-tab  { flex: 1; padding: 10px 0; font-size: 0.6rem; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; text-align: center; cursor: pointer; color: rgba(26,19,17,0.4); background: transparent; border: none; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: color 0.15s; }
@@ -2736,16 +2747,44 @@
   <label>Branch</label>
   <!-- Populated dynamically from the Branches sheet by loadBranchOptions().
        These options are only a fallback if that request fails. -->
-  <select id="regBranch">
-    <option value="" disabled selected>Select your branch</option>
-    <option>Hopkinton</option>
+  <select id="regBranch" onchange="toggleNewBranchFields()">
+    <option value="" disabled>Select your branch</option>
+    <option selected>Hopkinton</option>
     <option>Holliston</option>
     <option>Westford</option>
     <option>Shrewsbury</option>
     <option>Medway</option>
     <option>UMass Amherst</option>
     <option>Northborough</option>
+    <option value="__new_branch__">Starting a new branch</option>
   </select>
+
+  <!-- Shown only when "Starting a new branch" is selected above -->
+  <div id="regNewBranchBlock" class="new-branch-block hidden">
+    <label>Branch Location</label>
+    <input type="text" id="regNewBranchLocation" placeholder="e.g. Lincoln-Sudbury High School, Boston" />
+
+    <label style="margin-top:10px;">Branch Type</label>
+    <div class="seg-toggle">
+      <input type="radio" name="regNewBranchType" id="regBranchTypeHS" value="High School" checked />
+      <label for="regBranchTypeHS">High School</label>
+      <input type="radio" name="regNewBranchType" id="regBranchTypeCollege" value="Collegiate" />
+      <label for="regBranchTypeCollege">Collegiate</label>
+    </div>
+
+    <div class="new-branch-help">
+      <strong>How to start a branch</strong><br>
+      We're always looking for new branches at high schools and colleges.
+      <br><br>
+      <strong>1. Contact.</strong> Reach out to our Branch Coordinator, Maanya — tell her your grade, your school, and that you want to start a branch. She'll guide you through club approval and send you the materials.
+      <br><br>
+      <strong>2. Propose.</strong> Email your Vice Principal to express interest in starting a club and ask about the approval process. Point them to <a href="https://www.hauhelps.org" target="_blank" rel="noopener">www.hauhelps.org</a>.
+      <br><br>
+      <strong>3. Organize.</strong> Gather at least 5 members and a teacher sponsor (any subject). Some schools also ask for a short club constitution — a sample is available if yours does.
+      <br><br>
+      Submit this form to let the Branch Coordination team know you're getting started.
+    </div>
+  </div>
 
   <label>Profile Photo (Optional)</label>
   <div class="reg-photo-row">

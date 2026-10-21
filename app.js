@@ -1062,18 +1062,35 @@ async function loadBranchOptions() {
     const data = await res.json();
     const branches = (data && data.branches) || [];
     if (!branches.length) return; // keep the hardcoded fallback options
-    sel.innerHTML = '<option value="" disabled selected>Select your branch</option>';
+    sel.innerHTML = '<option value="" disabled>Select your branch</option>';
     branches.forEach(b => {
       const opt = document.createElement('option');
       opt.value = b.name;
       opt.textContent = b.name;
       sel.appendChild(opt);
     });
+    // "Starting a new branch" lets a member register before their branch exists.
+    const newOpt = document.createElement('option');
+    newOpt.value = '__new_branch__';
+    newOpt.textContent = 'Starting a new branch';
+    sel.appendChild(newOpt);
+    // Default to Hopkinton when it's in the list; otherwise leave the placeholder.
+    sel.value = [...sel.options].some(o => o.value === 'Hopkinton') ? 'Hopkinton' : '';
   } catch (err) {
     console.error('Failed to load branches:', err);
     // leave the hardcoded options in place so registration still works
   }
 }
+
+// Show/hide the "Starting a new branch" sub-form (location, type, help text)
+// based on the branch dropdown selection.
+function toggleNewBranchFields() {
+  const sel   = document.getElementById('regBranch');
+  const block = document.getElementById('regNewBranchBlock');
+  if (!sel || !block) return;
+  block.classList.toggle('hidden', sel.value !== '__new_branch__');
+}
+window.toggleNewBranchFields = toggleNewBranchFields;
 
 async function submitRegistration() {
   const fname  = document.getElementById('regFname').value.trim();
@@ -1086,6 +1103,21 @@ async function submitRegistration() {
   if (!fname || !lname || !branch) {
     alert('Please fill in all required fields.');
     return;
+  }
+
+  // When starting a new branch, collect the location and type instead of an
+  // existing branch code. The backend creates the branch from these fields.
+  const isNewBranch = branch === '__new_branch__';
+  let newBranchLocation = '';
+  let newBranchType     = '';
+  if (isNewBranch) {
+    newBranchLocation = document.getElementById('regNewBranchLocation').value.trim();
+    const typeEl = document.querySelector('input[name="regNewBranchType"]:checked');
+    newBranchType = typeEl ? typeEl.value : '';
+    if (!newBranchLocation) {
+      alert('Please enter the branch location.');
+      return;
+    }
   }
 
   const emailToSubmit = volunteerEmail || document.getElementById('regEmail').value.trim();
@@ -1106,6 +1138,8 @@ async function submitRegistration() {
       `email=${encodeURIComponent(emailToSubmit)}`,
       `phone=${encodeURIComponent(phone)}`,
       `branch=${encodeURIComponent(branch)}`,
+      `newBranchLocation=${encodeURIComponent(newBranchLocation)}`,
+      `newBranchType=${encodeURIComponent(newBranchType)}`,
       `photoBase64=${encodeURIComponent(regPhotoBase64)}`,
       `photoMime=${encodeURIComponent(regPhotoMime)}`,
       `appleSub=${encodeURIComponent(window._pendingAppleSub || '')}`
