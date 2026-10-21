@@ -129,6 +129,12 @@ window.onSignedIn = async function (preloadedPayload = null) {
     const info = JSON.parse(responseText);
     console.log("Parsed info:", info);
 
+    if (info.removed) {
+      await clearStoredAuth();
+      alert(info.error);
+      return;
+    }
+
     if (!info.firstName || info.firstName === "User" || !info.branchCode || info.branchCode === "X") {
       console.log("User not found — showing registration form");
       // Pre-fill from the JWT we already have; hides name/email fields
@@ -232,6 +238,12 @@ window.onAppleSignedIn = async function(sub, email, givenName, familyName) {
       body
     });
     const info = JSON.parse(await res.text());
+
+    if (info.removed) {
+      await clearStoredAuth();
+      alert(info.error);
+      return;
+    }
 
     if (info.error || !info.firstName || info.firstName === 'User' || !info.branchCode || info.branchCode === 'X') {
       volunteerEmail = email || '';

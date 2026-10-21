@@ -4802,7 +4802,7 @@
   });
 </script>
 
-<script src="app.js?v=17"></script>
+<script src="app.js?v=18"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 
 <script>
@@ -7324,6 +7324,12 @@
                 leaderRows +
                 addLeaderHtml +
               '</div>' +
+              (isAZ
+                ? '<div style="margin:18px 0 14px;">' +
+                    '<div style="font-size:0.6rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;">Members <span id="branch-members-count-' + b.code + '" style="opacity:0.45;"></span></div>' +
+                    '<div id="branch-members-' + b.code + '" style="max-height:260px;overflow-y:auto;"><div style="font-size:0.65rem;opacity:0.4;padding:6px 0;">Loading…</div></div>' +
+                  '</div>'
+                : '') +
               meetHtml +
             '</div>' +
           '</div>';
@@ -7349,7 +7355,25 @@
         });
         var data = await res.json();
         if (!data.members) return;
+        var myEmail = ((window.volunteerProfile && window.volunteerProfile.email) || '').toLowerCase();
         branches.forEach(function(b) {
+          var list = document.getElementById('branch-members-' + b.code);
+          if (list) {
+            var members = data.members.filter(function(m) { return m.branchCode === b.code; });
+            document.getElementById('branch-members-count-' + b.code).textContent = '(' + members.length + ')';
+            list.innerHTML = members.length === 0
+              ? '<div style="font-size:0.65rem;opacity:0.4;padding:6px 0;">No members.</div>'
+              : members.map(function(m) {
+                  return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px solid #eee;">' +
+                    '<div style="min-width:0;overflow:hidden;">' +
+                      '<div style="font-size:0.78rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + _esc(m.name) + '</div>' +
+                      '<div style="font-size:0.62rem;opacity:0.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + _esc(m.email) + '</div>' +
+                    '</div>' +
+                    (m.email.toLowerCase() === myEmail ? '' :
+                      '<button onclick="removeMember(\'' + _ea(m.email) + '\',\'' + _ea(m.name) + '\')" style="background:none;border:1.5px solid #b83232;color:#b83232;padding:3px 9px;font-size:0.6rem;font-weight:700;cursor:pointer;font-family:\'Montserrat\',sans-serif;text-transform:uppercase;flex-shrink:0;width:auto;margin-top:0;">Remove</button>') +
+                  '</div>';
+                }).join('');
+          }
           var sel = document.getElementById('add-leader-email-' + b.code);
           if (!sel) return;
           var leaderEmails = {};
@@ -7398,6 +7422,21 @@
           setTimeout(loadBranchManagement, 900);
         } else { if(msg){msg.textContent=r.error||'Error.';msg.style.color='#b83232';} }
       } catch(e) { if(msg){msg.textContent='Network error.';msg.style.color='#b83232';} }
+    }
+
+    async function removeMember(email, name) {
+      if (!confirm('Remove ' + name + ' (' + email + ') from AFU?\n\nThey will be moved to the Removed Members sheet and blocked from signing in or registering again.')) return;
+      try {
+        var res = await fetch(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: 'action=removeMember&email=' + encodeURIComponent(email) +
+                '&removedBy=' + encodeURIComponent((window.volunteerProfile && window.volunteerProfile.email) || '')
+        });
+        var r = await res.json();
+        if (r.ok) loadBranchManagement();
+        else alert(r.error || 'Could not remove member.');
+      } catch(e) { alert('Network error.'); }
     }
 
     async function deleteBranch(code, name) {
@@ -7597,6 +7636,7 @@
     window.showAddBranchForm            = showAddBranchForm;
     window.submitAddBranch              = submitAddBranch;
     window.deleteBranch                 = deleteBranch;
+    window.removeMember                 = removeMember;
     window.approveBranchRequest         = approveBranchRequest;
     window.dismissBranchRequest         = dismissBranchRequest;
     window.showAddLeaderForm            = showAddLeaderForm;

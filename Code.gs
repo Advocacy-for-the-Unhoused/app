@@ -398,6 +398,9 @@ function doPost(e) {
     } else if (p.action === "addBranch") {
       result = addBranch_(p.code || '', p.name || '');
 
+    } else if (p.action === "removeMember") {
+      result = removeMember_(p.email || '', p.removedBy || '');
+
     } else if (p.action === "deleteBranch") {
       result = deleteBranch_(p.code || '');
 
@@ -451,6 +454,10 @@ function doPost(e) {
 
 // ── Roster lookup ─────────────────────────────────────────────────────────────
 function handleLookup(email) {
+  if (isRemovedMember_(email)) {
+    return ContentService.createTextOutput(JSON.stringify({ removed: true, error: REMOVED_MSG }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
   return ContentService.createTextOutput(JSON.stringify(getMemberInfo(email)))
     .setMimeType(ContentService.MimeType.JSON);
 }
@@ -486,6 +493,7 @@ function getMemberInfo(email) {
 function appleSignIn_(sub, email) {
   if (!sub) return { error: 'No Apple sub provided' };
   try {
+    if (isRemovedMember_(email, sub)) return { removed: true, error: REMOVED_MSG };
     const sheet = SpreadsheetApp.openById(ROSTER_SS_ID).getSheetByName('Roster');
     if (!sheet) return { error: 'Roster sheet not found' };
     const data = sheet.getDataRange().getValues();
@@ -586,6 +594,8 @@ function handleDonation(data) {
 // ── Volunteer Registration Handler ────────────────────────────────────────────
 // Pending Volunteers layout: A=Name | B=Phone | C=Email | D=Photo URL | E=Branch Code | F=Status | G=Apple Sub
 function handleVolunteerRegistration(formData) {
+  if (isRemovedMember_(formData.email, formData.appleSub)) return { removed: true, error: REMOVED_MSG };
+
   // "Starting a new branch" has no branch code yet — it's a request for Maanya
   // (Branch Coordinator) to review, not a pending volunteer under a branch.
   if (formData.branch === NEW_BRANCH_SENTINEL) {
@@ -1088,6 +1098,61 @@ function getRosterMembers() {
     return { error: err.message };
   }
 }
+
+// ── Removed members ───────────────────────────────────────────────────────────
+// Sheet "Removed Members" in ROSTER_SS_ID: the member's full Roster row
+// (email = D, Apple sub = J, as wide as the Roster was when this sheet was
+// created) plus Removed At | Removed By. Anyone listed here is refused at
+// sign-in and at re-registration.
+const REMOVED_SHEET = 'Removed Members';
+
+function getRemovedSheet_() {
+  const ss = SpreadsheetApp.openById(ROSTER_SS_ID);
+  let sheet = ss.getSheetByName(REMOVED_SHEET);
+  if (!sheet) {
+    sheet = ss.insertSheet(REMOVED_SHEET);
+    const roster    = ss.getSheetByName('Roster');
+    const width     = Math.max(10, roster.getLastColumn());
+    const rosterHdr = roster.getRange(1, 1, 1, width).getValues()[0];
+    sheet.getRange(1, 1, 1, width + 2)
+      .setValues([rosterHdr.concat(['Removed At', 'Removed By'])]).setFontWeight('bold');
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+function isRemovedMember_(email, appleSub) {
+  const sheet = SpreadsheetApp.openById(ROSTER_SS_ID).getSheetByName(REMOVED_SHEET);
+  if (!sheet) return false;
+  const lc   = String(email || '').toLowerCase().trim();
+  const sub  = String(appleSub || '').trim();
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (lc  && String(data[i][3] || '').toLowerCase().trim() === lc) return true;
+    if (sub && String(data[i][9] || '').trim() === sub) return true;
+  }
+  return false;
+}
+
+function removeMember_(email, removedBy) {
+  const lc = String(email || '').toLowerCase().trim();
+  if (!lc) return { error: 'Email required' };
+  if (lc === String(removedBy || '').toLowerCase().trim()) return { error: "You can't remove yourself" };
+
+  const roster = SpreadsheetApp.openById(ROSTER_SS_ID).getSheetByName('Roster');
+  if (!roster) return { error: 'Roster sheet not found' };
+  const rowNum = findRosterRowByEmail_(lc);
+  if (!rowNum) return { error: 'Member not found in roster' };
+
+  const removed = getRemovedSheet_();
+  const row     = roster.getRange(rowNum, 1, 1, removed.getLastColumn() - 2).getValues()[0];
+  removed.appendRow(row.concat([new Date(), String(removedBy || '')]));
+  roster.deleteRow(rowNum);
+  removeFcmTokens_(lc);
+  return { ok: true };
+}
+
+const REMOVED_MSG = 'This account has been removed from AFU. Contact a branch officer if you think this is a mistake.';
 
 // ── Hours admin ───────────────────────────────────────────────────────────────
 function getAllHours() {
