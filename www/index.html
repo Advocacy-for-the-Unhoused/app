@@ -2598,6 +2598,7 @@
   }
   #tabTasks .tb-task-edit-ta:focus { border-color: var(--orange); }
   #tabTasks .tb-task-edit-btn { width: 100%; justify-content: center; margin: 0 0 14px; }
+  #tabTasks .btn-ghost.tb-task-edit-btn { display: flex; padding: 12px; font-weight: 700; color: #9B2226; border-color: rgba(155,34,38,0.4); }
   /* DARK MODE — modals adapt to OS theme (rest of tab stays cream by design) */
   @media (prefers-color-scheme: dark) {
     #tabTasks .modal-box { background: #211815; border-color: rgba(249,246,240,0.4); }
@@ -2628,6 +2629,12 @@
     #tabTasks .tb-task-meta-label { color: rgba(249,246,240,0.5); }
     #tabTasks .tb-task-edit-ta { background: #2b211d; color: var(--cream); border-color: rgba(249,246,240,0.4); }
   }
+  #tabTasks .tb-section-label {
+    font-size: 0.62rem; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase;
+    color: rgba(26,19,17,0.6); padding: 6px 2px 0;
+  }
+  #tabTasks .tb-board-empty { padding: 14px; font-size: 0.8rem; color: rgba(26,19,17,0.6); background: white; }
+  #tabTasks .check-btn:disabled { cursor: default; opacity: 0.55; }
   /* COMPLETED TASK HIDING */
   #tabTasks .task-row.tb-task-done { display: none; }
   #tabTasks .team-card.show-done .task-row.tb-task-done { display: flex; }
@@ -6183,6 +6190,107 @@
     let tbSelectedColor = TB_COLORS[0];
     let tbRosterNames = null;
 
+    /* ── Branch boards + per-viewer visibility ──────────────
+       Every branch gets its own board, keyed "branch:<CODE>" in the change log.
+       Its president (P) — plus A/Z — adds and assigns tasks, and only to that
+       branch's members. Everyone else sees just their home branch's board and
+       the teams they lead, belong to, or hold a task on. A/Z see everything;
+       C (Branch Coord team) also sees every branch board. */
+    const TB_BRANCH_PREFIX = 'branch:';
+    const TB_BRANCH_FALLBACK = {
+      A: { name: 'Hopkinton', color: '#378ADD' }, W: { name: 'Westford',   color: '#1D9E75' },
+      H: { name: 'Holliston', color: '#D4537E' }, M: { name: 'Medway',     color: '#BA7517' },
+      S: { name: 'Shrewsbury', color: '#7F77DD' }
+    };
+    let tbBranchNames = {};     // code → name, filled from getBranches
+    let tbBranchMembers = null; // code → [names], from getRosterMembers
+
+    function tbMe() {
+      const p = window.volunteerProfile || {};
+      return {
+        name: String(p.fullName || '').trim().toLowerCase(),
+        branch: String(p.branchCode || '').trim().toUpperCase(),
+        branchName: p.branchName || '',
+        pos: p.position || ''
+      };
+    }
+    function tbIsOrgAdmin() { return /[AZ]/.test(tbMe().pos); }
+    function tbBranchKey(code) { return TB_BRANCH_PREFIX + String(code || '').toUpperCase(); }
+    function tbBranchName(code) {
+      const me = tbMe();
+      if (code === me.branch && me.branchName) return me.branchName;
+      return tbBranchNames[code] || (TB_BRANCH_FALLBACK[code] && TB_BRANCH_FALLBACK[code].name) || code;
+    }
+    function tbMakeBranchTeam(code) {
+      return {
+        name: tbBranchKey(code), branchCode: code,
+        displayName: tbBranchName(code) + ' Branch',
+        officer: '', color: (TB_BRANCH_FALLBACK[code] && TB_BRANCH_FALLBACK[code].color) || '#C8522D',
+        meetingDate: '', meetingTime: '', members: [], tasks: []
+      };
+    }
+    // Find a team by key; branch boards are created on demand.
+    function tbTeamByKey(key) {
+      let tm = tbTeams.find(t => t.name === key);
+      if (!tm && String(key || '').startsWith(TB_BRANCH_PREFIX)) {
+        const code = key.slice(TB_BRANCH_PREFIX.length).toUpperCase();
+        if (code) { tm = tbMakeBranchTeam(code); tbTeams.push(tm); }
+      }
+      return tm || null;
+    }
+    function tbTeamLabel(team) { return team.displayName || team.name; }
+
+    // Can the viewer add/assign/delete/edit tasks on this team?
+    // Leads (A/Z, the branch's president, or a team's officer) run the board.
+    // Everyone else can only claim open tasks for themselves.
+    function tbCanEditTeam(team) {
+      const me = tbMe();
+      if (tbIsOrgAdmin()) return true;
+      if (team.branchCode) return /P/.test(me.pos) && me.branch === team.branchCode;
+      return !!me.name && String(team.officer || '').trim().toLowerCase() === me.name;
+    }
+    function tbIsMine(task) {
+      const me = tbMe();
+      return !!me.name && String(task.assignee || '').trim().toLowerCase() === me.name;
+    }
+
+    function tbVisibleTeams() {
+      const me = tbMe();
+      if (tbIsOrgAdmin()) return tbTeams;
+      const seeAllBranches = /C/.test(me.pos);
+      return tbTeams.filter(team => {
+        if (team.branchCode) return seeAllBranches || team.branchCode === me.branch;
+        if (!me.name) return false;
+        if (String(team.officer || '').trim().toLowerCase() === me.name) return true;
+        if ((team.members || []).some(m => String(m.name || '').trim().toLowerCase() === me.name)) return true;
+        return team.tasks.some(tbIsMine);
+      });
+    }
+
+    async function tbLoadBranchMeta() {
+      try {
+        const r = await tbRun('getBranches');
+        (r && Array.isArray(r.branches) ? r.branches : []).forEach(b => {
+          if (b.code && b.name) tbBranchNames[String(b.code).toUpperCase()] = b.name;
+        });
+        tbTeams.forEach(tm => { if (tm.branchCode) tm.displayName = tbBranchName(tm.branchCode) + ' Branch'; });
+      } catch (e) {}
+    }
+
+    async function tbLoadBranchMembers() {
+      if (tbBranchMembers) return tbBranchMembers;
+      tbBranchMembers = {};
+      try {
+        const r = await window.gasFetch('action=getRosterMembers');
+        ((r && r.members) || []).forEach(m => {
+          const bc = String(m.branchCode || '').toUpperCase();
+          if (!bc) return;
+          (tbBranchMembers[bc] = tbBranchMembers[bc] || []).push(m.name);
+        });
+      } catch (e) {}
+      return tbBranchMembers;
+    }
+
     async function tbLoadRosterNames() {
       if (tbRosterNames !== null) return tbRosterNames;
       tbRosterNames = [];
@@ -6233,7 +6341,7 @@
     function tbLoadData() {
       tbRender(); tbSetStatus('syncing', 'Syncing…');
       tbRun('tbGetAllChanges')
-        .then(changes => { tbApplyChanges(changes); tbRender(); tbSetStatus('synced', 'Synced'); tbSanitizeAssignees(); })
+        .then(changes => { tbApplyChanges(changes); tbRender(); tbSetStatus('synced', 'Synced'); tbSanitizeAssignees(); tbLoadBranchMeta().then(tbRender); })
         .catch(err => { console.error(err); tbSetStatus('error', 'Offline'); tbToastError('⚠ Could not load saved state.'); });
     }
 
@@ -6298,18 +6406,18 @@
             break;
           }
           case 'teamMeetingDate': {
-            const tm = tbTeams.find(tm => tm.name === c.key);
+            const tm = tbTeamByKey(c.key);
             if (tm) tm.meetingDate = c.value || '';
             break;
           }
           case 'teamMeetingTime': {
-            const tm = tbTeams.find(tm => tm.name === c.key);
+            const tm = tbTeamByKey(c.key);
             if (tm) tm.meetingTime = c.value || '';
             break;
           }
           case 'newTask': {
             let ex = {}; try { ex = JSON.parse(c.extra || '{}'); } catch {}
-            const tm = tbTeams.find(tm => tm.name === ex.team);
+            const tm = tbTeamByKey(ex.team);
             if (tm && !tm.tasks.find(tk => tk.id === c.key))
               tm.tasks.push({ id: c.key, text: c.value, assignee: ex.assignee || '', dueDate: ex.dueDate || '', instructions: ex.instructions || '', done: false });
             break;
@@ -6412,7 +6520,7 @@
           if (!t.done && String(t.assignee || '').trim().toLowerCase() === target) {
             out.push({
               id: t.id, text: t.text || '', dueDate: t.dueDate || '',
-              teamName: team.name, teamColor: team.color,
+              teamName: tbTeamLabel(team), teamColor: team.color,
               dueClass: tbDueClass(t.dueDate), dueLabel: t.dueDate ? tbFmtDue(t.dueDate) : ''
             });
           }
@@ -6431,11 +6539,32 @@
     function tbRender() {
       const canvas = document.getElementById('tb-canvas');
       canvas.innerHTML = '';
-      if (!tbTeams.length) {
-        canvas.innerHTML = '<p class="empty-state">No teams yet — add one to get started</p>';
+      const me = tbMe();
+      if (me.branch) tbTeamByKey(tbBranchKey(me.branch)); // home board always exists
+      if (tbIsOrgAdmin() || /C/.test(me.pos))             // overseers see every branch, even empty ones
+        Object.keys(tbBranchNames).forEach(code => tbTeamByKey(tbBranchKey(code)));
+      const visible = tbVisibleTeams();
+      const branchBoards = visible.filter(t => t.branchCode)
+        .sort((a, b) => (b.branchCode === me.branch) - (a.branchCode === me.branch));
+      const teams = visible.filter(t => !t.branchCode);
+      if (!visible.length) {
+        canvas.innerHTML = '<p class="empty-state">You are not on any teams yet</p>';
         return;
       }
-      tbTeams.forEach(team => tbRenderTeam(team, canvas));
+      const section = label => {
+        const h = document.createElement('div');
+        h.className = 'tb-section-label';
+        h.textContent = label;
+        canvas.appendChild(h);
+      };
+      if (branchBoards.length) {
+        section(branchBoards.length > 1 ? 'Branches' : 'Your Branch');
+        branchBoards.forEach(team => tbRenderTeam(team, canvas));
+      }
+      if (teams.length) {
+        section(tbIsOrgAdmin() ? 'All Teams' : 'Your Teams');
+        teams.forEach(team => tbRenderTeam(team, canvas));
+      }
     }
 
     function tbRenderTeam(team, container) {
@@ -6458,27 +6587,38 @@
           })()
         : null;
 
+      const canEdit  = tbCanEditTeam(team);
+      const isBranch = !!team.branchCode;
+
       const card = document.createElement('div');
       card.className = 'team-card';
       card.dataset.team = team.name;
+
+      const meetingPill = canEdit
+        ? `<button class="meeting-pill${meetingDisplay ? ' set' : ''}" onclick="tbEditMeeting('${tbEsc(team.name)}')">
+              <i class="bi bi-calendar3"></i>${meetingDisplay || 'Meet'}
+            </button>`
+        : (meetingDisplay ? `<span class="meeting-pill set"><i class="bi bi-calendar3"></i>${meetingDisplay}</span>` : '');
 
       card.innerHTML = `
         <div class="team-header">
           <div class="team-header-top">
             <div class="team-color-swatch" style="background:${team.color}"></div>
-            <button class="team-name-btn" onclick="tbEditTeamName('${tbEsc(team.name)}')">${tbEsc(team.name)}</button>
+            ${isBranch
+              ? `<span class="team-name-btn">${tbEsc(tbTeamLabel(team))}</span>`
+              : `<button class="team-name-btn" onclick="tbEditTeamName('${tbEsc(team.name)}')">${tbEsc(team.name)}</button>
             <button class="delete-team-btn" onclick="tbConfirmDeleteTeam('${tbEsc(team.name)}')">
               <i class="bi bi-trash3"></i>
-            </button>
+            </button>`}
           </div>
-          ${team.officer ? `<div class="team-officer">${tbEsc(team.officer)}</div>` : ''}
+          ${isBranch
+            ? `<div class="team-officer">${canEdit ? 'Branch tasks · you manage this board' : 'Branch tasks · managed by your branch president'}</div>`
+            : (team.officer ? `<div class="team-officer">${tbEsc(team.officer)}</div>` : '')}
           <div class="team-header-bottom">
-            <button class="meeting-pill${meetingDisplay ? ' set' : ''}" onclick="tbEditMeeting('${tbEsc(team.name)}')">
-              <i class="bi bi-calendar3"></i>${meetingDisplay || 'Meet'}
-            </button>
-            <button class="meeting-pill" onclick="tbOpenTeamView('${tbEsc(team.name)}')">
+            ${meetingPill}
+            ${isBranch ? '' : `<button class="meeting-pill" onclick="tbOpenTeamView('${tbEsc(team.name)}')">
               <i class="bi bi-people"></i>View Team
-            </button>
+            </button>`}
           </div>
         </div>
         <div class="progress-track">
@@ -6492,8 +6632,9 @@
         <div class="tasks-list" id="tb-tl-${tbCssId(team.name)}">
           ${team.tasks.map(t => tbTaskHTML(team, t)).join('')}
         </div>
+        ${!total && isBranch ? `<p class="tb-board-empty">${canEdit ? 'No branch tasks yet — add one below.' : 'No branch tasks right now.'}</p>` : ''}
         ${done > 0 ? `<button class="show-done-btn" onclick="tbToggleShowDone(this)">Show ${done} completed</button>` : ''}
-        <div class="add-task-row">
+        ${canEdit ? `<div class="add-task-row">
           <div class="add-task-main">
             <input class="add-task-input" placeholder="Add a task…"
               onkeydown="tbAddTaskKey(event, '${tbEsc(team.name)}', this)" />
@@ -6506,7 +6647,7 @@
             <button type="button" class="btn-primary add-task-submit"
               onclick="tbAddTaskBtn(this, '${tbEsc(team.name)}')">Add task</button>
           </div>
-        </div>
+        </div>` : ''}
       `;
       container.appendChild(card);
     }
@@ -6529,13 +6670,15 @@
     }
 
     function tbTaskHTML(team, task) {
+      const canEdit  = tbCanEditTeam(team);
+      const canCheck = canEdit || tbIsMine(task);
       const tagClass = task.assignee ? '' : ' unset';
-      const tagText  = task.assignee ? tbEsc(task.assignee) : '+ assign';
+      const tagText  = task.assignee ? (tbIsMine(task) ? 'Yours' : tbEsc(task.assignee)) : (canEdit ? '+ assign' : 'Claim');
       const tagColor = task.assignee ? `border-color:${team.color};color:${team.color}` : '';
       const dueClass = tbDueClass(task.dueDate);
       const dueText  = tbFmtDue(task.dueDate);
       return `<div class="task-row${task.done ? ' tb-task-done' : ''}" id="tb-tr-${tbEsc(task.id)}">
-        <button class="check-btn${task.done ? ' done' : ''}" onclick="tbToggleDone('${tbEsc(task.id)}',${task.done})">
+        <button class="check-btn${task.done ? ' done' : ''}"${canCheck ? '' : ' disabled'} onclick="tbToggleDone('${tbEsc(task.id)}',${task.done})">
           <div class="check-inner"
             style="border-color:${team.color};background:${task.done ? team.color : 'transparent'}">
             ${task.done ? '<i class="bi bi-check-lg"></i>' : ''}
@@ -6544,15 +6687,18 @@
         <div class="task-body">
           <button class="task-text-btn${task.done ? ' done' : ''}"
             onclick="tbOpenTaskView('${tbEsc(task.id)}')">${task.instructions ? '<i class="bi bi-journal-text task-instr-ico"></i>' : ''}${tbEsc(task.text)}</button>
-          <span class="due-chip ${dueClass}" onclick="tbEditDueDate('${tbEsc(task.id)}')">${tbEsc(dueText)}</span>
+          ${canEdit
+            ? `<span class="due-chip ${dueClass}" onclick="tbEditDueDate('${tbEsc(task.id)}')">${tbEsc(dueText)}</span>`
+            : (task.dueDate ? `<span class="due-chip ${dueClass}">${tbEsc(dueText)}</span>` : '')}
         </div>
         <div class="task-assignee-col">
           <span class="assignee-tag${tagClass}" style="${tagColor}"
-            onclick="tbEditAssignee('${tbEsc(task.id)}')">${tagText}</span>
+            ${canEdit ? `onclick="tbEditAssignee('${tbEsc(task.id)}')"`
+              : (!task.assignee && !task.done ? `onclick="tbOpenTaskView('${tbEsc(task.id)}')"` : '')}>${tagText}</span>
         </div>
-        <button class="del-task-btn" onclick="tbDeleteTask('${tbEsc(task.id)}')">
+        ${canEdit ? `<button class="del-task-btn" onclick="tbDeleteTask('${tbEsc(task.id)}')">
           <i class="bi bi-x-lg"></i>
-        </button>
+        </button>` : ''}
       </div>`;
     }
 
@@ -6565,6 +6711,8 @@
     async function tbToggleDone(id, currentDone) {
       const task = tbFindTask(id);
       if (!task) return;
+      const owner = tbFindTeamForTask(id);
+      if (owner && !tbCanEditTeam(owner) && !tbIsMine(task)) return;
       const markingDone = !currentDone;
       task.done = markingDone; tbRender();
       await tbSaveChange('taskDone', id, String(markingDone));
@@ -6613,13 +6761,51 @@
         <div class="tb-task-instr-label">Instructions</div>
         <div class="tb-task-instr">${tbEsc(task.instructions)}</div>` : ''}
         <div class="tb-task-meta">
-          <div class="tb-task-meta-row"><span class="tb-task-meta-label">Team</span><span>${tbEsc(team.name)}</span></div>
+          <div class="tb-task-meta-row"><span class="tb-task-meta-label">Team</span><span>${tbEsc(tbTeamLabel(team))}</span></div>
           <div class="tb-task-meta-row"><span class="tb-task-meta-label">Assignee</span><span>${task.assignee ? tbEsc(task.assignee) : '—'}</span></div>
           <div class="tb-task-meta-row"><span class="tb-task-meta-label">Due</span><span>${task.dueDate ? tbEsc(tbFmtDue(task.dueDate)) : '—'}</span></div>
           <div class="tb-task-meta-row"><span class="tb-task-meta-label">Status</span><span>${task.done ? 'Completed' : 'Open'}</span></div>
         </div>
-        <button class="btn-primary tb-task-edit-btn" onclick="tbTaskViewEdit()"><i class="bi bi-pencil"></i> Edit Task</button>
+        ${tbCanEditTeam(team) ? '<button class="btn-primary tb-task-edit-btn" onclick="tbTaskViewEdit()"><i class="bi bi-pencil"></i> Edit Task</button>' : tbClaimButtons(task)}
       `;
+    }
+
+    function tbClaimButtons(task) {
+      if (tbIsMine(task)) {
+        return (task.done
+            ? `<button class="btn-primary tb-task-edit-btn" onclick="tbToggleDone('${tbEsc(task.id)}',true);tbRenderTaskView()"><i class="bi bi-arrow-counterclockwise"></i> Reopen</button>`
+            : `<button class="btn-primary tb-task-edit-btn" onclick="tbToggleDone('${tbEsc(task.id)}',false);tbCloseTaskView()"><i class="bi bi-check-lg"></i> Mark finished</button>
+               <button class="btn-ghost tb-task-edit-btn" onclick="tbReleaseTask()">Give this up</button>`);
+      }
+      if (!task.assignee && !task.done) {
+        return `<button class="btn-primary tb-task-edit-btn" onclick="tbClaimTask()"><i class="bi bi-hand-index"></i> Claim this</button>`;
+      }
+      return '';
+    }
+
+    // Re-read the log first so two people can't grab the same task.
+    async function tbClaimTask() {
+      const id = tbTaskViewId;
+      const p = window.volunteerProfile || {};
+      if (!id || !p.fullName) return;
+      try { tbApplyChanges(await tbRun('tbGetAllChanges')); } catch (e) {}
+      const task = tbFindTask(id);
+      if (!task) { tbRender(); tbRenderTaskView(); return; }
+      if (task.assignee) {
+        tbToastError('⚠ ' + task.assignee + ' already claimed this.');
+        tbRender(); tbRenderTaskView(); return;
+      }
+      task.assignee = p.fullName;
+      tbRender(); tbRenderTaskView(); tbToast('Claimed — it\'s yours');
+      await tbSaveChange('taskAssignee', id, p.fullName, task.text);
+    }
+
+    async function tbReleaseTask() {
+      const task = tbFindTask(tbTaskViewId);
+      if (!task || !tbIsMine(task) || task.done) return;
+      task.assignee = '';
+      tbRender(); tbRenderTaskView(); tbToast('Task released');
+      await tbSaveChange('taskAssignee', task.id, '', '');
     }
 
     function tbTaskViewEdit() {
@@ -6644,7 +6830,8 @@
 
     async function tbTaskViewSave() {
       const task = tbFindTask(tbTaskViewId);
-      if (!task) return;
+      const owner = tbFindTeamForTask(tbTaskViewId);
+      if (!task || (owner && !tbCanEditTeam(owner))) return;
       const ta = document.getElementById('tb-task-edit-ta');
       const val = (ta && ta.value.trim()) || '';
       if (!val) { tbToastError('⚠ Task text cannot be empty.'); return; }
@@ -6664,22 +6851,37 @@
       if (!row) return;
       const task = tbFindTask(id);
       if (!task) return;
+      const team = tbFindTeamForTask(id);
+      if (!team || !tbCanEditTeam(team)) return;
+      const bc = team.branchCode || '';
       const tag = row.querySelector('.assignee-tag');
       const inp = document.createElement('input');
       inp.className = 'assignee-input'; inp.value = task.assignee || ''; inp.placeholder = 'Name…';
-      inp.setAttribute('list', 'tb-roster-dl');
+      inp.setAttribute('list', bc ? 'tb-branch-dl-' + bc : 'tb-roster-dl');
       tag.replaceWith(inp); inp.focus(); inp.select();
-      tbLoadRosterNames();
+      // Branch boards only accept that branch's own members.
+      const loadNames = bc
+        ? () => tbLoadBranchMembers().then(map => {
+            const names = map[bc] || [];
+            let dl = document.getElementById('tb-branch-dl-' + bc);
+            if (!dl) { dl = document.createElement('datalist'); dl.id = 'tb-branch-dl-' + bc; document.body.appendChild(dl); }
+            dl.innerHTML = names.map(n => `<option value="${tbEsc(n)}">`).join('');
+            return names;
+          })
+        : tbLoadRosterNames;
+      loadNames();
       let committed = false;
       const save = async () => {
         if (committed) return; committed = true;
         let val = inp.value.trim();
         if (val) {
-          const roster = await tbLoadRosterNames();
+          const roster = await loadNames();
           if (roster.length) {
             const match = roster.find(n => n.toLowerCase() === val.toLowerCase());
             if (!match) {
-              tbToastError('⚠ "' + val + '" is not on the roster — pick a name from the list.');
+              tbToastError(bc
+                ? '⚠ "' + val + '" is not in the ' + tbBranchName(bc) + ' branch — pick a name from the list.'
+                : '⚠ "' + val + '" is not on the roster — pick a name from the list.');
               tbRender();
               return;
             }
@@ -6698,6 +6900,8 @@
       if (!row) return;
       const task = tbFindTask(id);
       if (!task) return;
+      const owner = tbFindTeamForTask(id);
+      if (owner && !tbCanEditTeam(owner)) return;
       const chip = row.querySelector('.due-chip');
       if (!chip) return;
       const inp = document.createElement('input');
@@ -6741,7 +6945,7 @@
       const instrTa = row.querySelector('.add-task-instr-input');
       const instructions = (instrTa && instrTa.value.trim()) || '';
       const team = tbTeams.find(tm => tm.name === teamName);
-      if (!team) return;
+      if (!team || !tbCanEditTeam(team)) return;
       const id = tbMkid();
       team.tasks.push({ id, text, assignee: '', dueDate: '', instructions, done: false });
       tbRender(); tbToast(instructions ? 'Task added with instructions' : 'Task added');
@@ -6752,7 +6956,7 @@
 
     async function tbDeleteTask(id) {
       const team = tbFindTeamForTask(id);
-      if (!team) return;
+      if (!team || !tbCanEditTeam(team)) return;
       team.tasks = team.tasks.filter(t => t.id !== id);
       tbRender(); tbToast('Task deleted');
       await tbSaveChange('deleteTask', id, '');
@@ -6802,6 +7006,8 @@
     }
 
     function tbEditMeeting(teamName) {
+      const owner = tbTeams.find(tm => tm.name === teamName);
+      if (owner && !tbCanEditTeam(owner)) return;
       const card = document.querySelector(`#tabTasks [data-team="${teamName}"]`);
       if (!card) return;
       const team = tbTeams.find(tm => tm.name === teamName);
@@ -6905,9 +7111,15 @@
       const name = document.getElementById('tb-modal-name').value.trim();
       if (!name) { document.getElementById('tb-modal-name').focus(); return; }
       tbCloseModal();
-      tbTeams.push({ name, officer: '', color: tbSelectedColor, meetingDate: '', meetingTime: '', tasks: [] });
+      if (tbTeams.some(tm => tm.name.toLowerCase() === name.toLowerCase()) || name.toLowerCase().startsWith(TB_BRANCH_PREFIX)) {
+        tbToastError('⚠ That team name is taken.'); return;
+      }
+      // Creator leads the new team, so it stays on their (filtered) board.
+      const officer = (window.volunteerProfile && window.volunteerProfile.fullName) || '';
+      tbTeams.push({ name, officer, color: tbSelectedColor, meetingDate: '', meetingTime: '', members: [], tasks: [] });
       tbRender(); tbToast('Team added');
       await tbSaveChange('newTeam', name, tbSelectedColor);
+      if (officer) await tbSaveChange('teamOfficer', name, officer);
     }
 
     /* ── View Team modal ─────────────────────── */
@@ -7102,6 +7314,8 @@
     window.tbCloseTaskView   = tbCloseTaskView;
     window.tbRenderTaskView  = tbRenderTaskView;
     window.tbTaskViewEdit    = tbTaskViewEdit;
+    window.tbClaimTask       = tbClaimTask;
+    window.tbReleaseTask     = tbReleaseTask;
     window.tbTaskViewSave    = tbTaskViewSave;
     window.tbEditAssignee    = tbEditAssignee;
     window.tbAddTaskKey      = tbAddTaskKey;
