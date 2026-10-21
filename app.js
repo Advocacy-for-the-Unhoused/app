@@ -136,6 +136,7 @@ window.onSignedIn = async function (preloadedPayload = null) {
       prefillRegistrationIdentity(payload.given_name, payload.family_name, volunteerEmail);
       document.getElementById("authScreen").classList.add("hidden");
       document.getElementById("registerCard").classList.remove("hidden");
+      loadBranchOptions();
       return;
     }
 
@@ -240,6 +241,7 @@ window.onAppleSignedIn = async function(sub, email, givenName, familyName) {
       prefillRegistrationIdentity(givenName, familyName, email);
       document.getElementById('authScreen').classList.add('hidden');
       document.getElementById('registerCard').classList.remove('hidden');
+      loadBranchOptions();
       return;
     }
 
@@ -1042,6 +1044,35 @@ function handleRegPhoto(e) {
     document.getElementById('regCamIcon').style.display = 'none';
   };
   reader.readAsDataURL(file);
+}
+
+// ===== DYNAMIC BRANCH DROPDOWN =====
+// The onboarding branch list comes from the backend (Branches sheet) so new
+// branches appear automatically without editing the app. The hardcoded <option>
+// list in index.html stays as a fallback if the request fails.
+async function loadBranchOptions() {
+  const sel = document.getElementById('regBranch');
+  if (!sel) return;
+  try {
+    const res = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'action=getBranches'
+    });
+    const data = await res.json();
+    const branches = (data && data.branches) || [];
+    if (!branches.length) return; // keep the hardcoded fallback options
+    sel.innerHTML = '<option value="" disabled selected>Select your branch</option>';
+    branches.forEach(b => {
+      const opt = document.createElement('option');
+      opt.value = b.name;
+      opt.textContent = b.name;
+      sel.appendChild(opt);
+    });
+  } catch (err) {
+    console.error('Failed to load branches:', err);
+    // leave the hardcoded options in place so registration still works
+  }
 }
 
 async function submitRegistration() {

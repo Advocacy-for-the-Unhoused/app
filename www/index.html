@@ -2734,12 +2734,17 @@
   <input type="tel" id="regPhone" placeholder="(508) 555-0100" />
 
   <label>Branch</label>
+  <!-- Populated dynamically from the Branches sheet by loadBranchOptions().
+       These options are only a fallback if that request fails. -->
   <select id="regBranch">
     <option value="" disabled selected>Select your branch</option>
     <option>Hopkinton</option>
-    <option>Westford</option>
     <option>Holliston</option>
+    <option>Westford</option>
+    <option>Shrewsbury</option>
     <option>Medway</option>
+    <option>UMass Amherst</option>
+    <option>Northborough</option>
   </select>
 
   <label>Profile Photo (Optional)</label>

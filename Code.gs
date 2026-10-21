@@ -414,7 +414,7 @@ function getMemberInfo(email) {
       const photoId   = (rawPhoto.match(/\/d\/([A-Za-z0-9_-]+)/) || rawPhoto.match(/[?&]id=([A-Za-z0-9_-]+)/) || [])[1] || "";
       const photoUrl  = photoId ? "https://drive.google.com/thumbnail?id=" + photoId + "&sz=w200" : "";
       Logger.log("Match at row " + (i + 1) + " | " + fullName + " | " + branchCode);
-      return { firstName, fullName, branchCode, branchName: BRANCH_NAMES[branchCode] || branchCode || "Unknown", position, photoUrl };
+      return { firstName, fullName, branchCode, branchName: resolveBranchName_(branchCode) || "Unknown", position, photoUrl };
     }
   }
 
@@ -527,9 +527,14 @@ function handleDonation(data) {
 function handleVolunteerRegistration(formData) {
   const ss     = SpreadsheetApp.openById(SHEET_ID);
   const sheet  = ss.getSheetByName(PENDING_SHEET) || ss.insertSheet(PENDING_SHEET);
-  const config = BRANCH_CONFIG[formData.branch];
 
-  if (!config) return { error: "Invalid branch: " + formData.branch };
+  // Resolve the branch against the dynamic Branches sheet (falling back to the
+  // hardcoded map) so branches added later register without code changes.
+  const branchCode = resolveBranchCode_(formData.branch);
+  if (!branchCode) return { error: "Invalid branch: " + formData.branch };
+
+  const config   = BRANCH_CONFIG[formData.branch] || null;
+  const folderId = getBranchPhotoFolderId_(branchCode, formData.branch);
 
   if (sheet.getLastRow() === 0) {
     sheet.appendRow(["Name", "Phone", "Email", "Photo URL", "Branch Code", "Status", "Apple Sub"]);
@@ -538,19 +543,17 @@ function handleVolunteerRegistration(formData) {
   }
 
   let photoUrl = "";
-  if (formData.photoBase64 && formData.photoMime) {
+  if (formData.photoBase64 && formData.photoMime && folderId) {
     try {
       const filename = formData.fname + "_" + formData.lname + "_profile";
       const blob     = Utilities.newBlob(Utilities.base64Decode(formData.photoBase64), formData.photoMime, filename);
-      const file     = DriveApp.getFolderById(config.folderId).createFile(blob);
+      const file     = DriveApp.getFolderById(folderId).createFile(blob);
       file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
       photoUrl = "https://drive.google.com/uc?export=view&id=" + file.getId();
     } catch (photoErr) {
       console.error("Photo upload failed:", photoErr.message);
     }
   }
-
-  const branchCode = BRANCH_CODES[formData.branch] || formData.branch;
 
   sheet.appendRow([
     formData.fname + " " + formData.lname,
@@ -579,7 +582,9 @@ function handleVolunteerRegistration(formData) {
   // Notification emails are best-effort: the volunteer is already saved above,
   // so a Gmail permission/quota error must NOT abort registration.
   try {
-    GmailApp.sendEmail(config.presidentEmail, `New volunteer registration — ${formData.branch}`, "", { htmlBody: emailHtml });
+    if (config && config.presidentEmail) {
+      GmailApp.sendEmail(config.presidentEmail, `New volunteer registration — ${formData.branch}`, "", { htmlBody: emailHtml });
+    }
     GmailApp.sendEmail(NOTIFY_ALL, `[All branches] New volunteer — ${formData.fname} ${formData.lname} (${formData.branch})`, "", { htmlBody: emailHtml });
   } catch (mailErr) {
     console.warn('Notification email failed (registerVolunteer):', mailErr.message);
@@ -587,13 +592,13 @@ function handleVolunteerRegistration(formData) {
 
   // Push to branch P (role code) + fallback to hardcoded president email + all Z
   try {
-    const bc = BRANCH_CODES[formData.branch] || formData.branch;
+    const bc = branchCode;
     const pTokens = getFcmTokensByBranchAndCode_(bc, 'P');
     if (pTokens.length) {
       sendPushToMany_(pTokens, 'New Volunteer Registration',
         `${formData.fname} ${formData.lname} from ${formData.branch} is awaiting your approval.`);
-    } else {
-      // Fallback: president by hardcoded email
+    } else if (config && config.presidentEmail) {
+      // Fallback: president by hardcoded email (only for hardcoded branches)
       const presToken = getFcmToken_(config.presidentEmail);
       if (presToken) sendPush_(presToken, 'New Volunteer Registration',
         `${formData.fname} ${formData.lname} from ${formData.branch} is awaiting your approval.`);
@@ -1797,7 +1802,10 @@ function checkMeetingNotifications() {
   const nowM   = parseInt(Utilities.formatDate(now, tz, 'm'));
   const days   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
-  ['A','H','W','S','M'].forEach(function(bc) {
+  // Iterate the dynamic Branches sheet so branches added later (e.g. UMass
+  // Amherst, Northborough) get meeting reminders without a code change.
+  getBranches_().forEach(function(b) {
+    const bc = b.code;
     const meetingDay  = parseInt(config['meetingDay_'  + bc] || config.meetingDay  || '1');
     const meetingTime = config['meetingTime_' + bc] || config.meetingTime || '17:00';
     const parts   = meetingTime.split(':');
@@ -1873,6 +1881,58 @@ function getBranches_() {
     if (code && name) branches.push({ code, name });
   }
   return branches;
+}
+
+// Resolve a branch NAME to its code, hardcoded map first then the Branches
+// sheet, so branches added later (e.g. UMass Amherst) resolve correctly.
+function resolveBranchCode_(name) {
+  name = String(name || '').trim();
+  if (!name) return '';
+  if (BRANCH_CODES[name]) return BRANCH_CODES[name];
+  const hit = getBranches_().find(function(b) {
+    return b.name.toLowerCase() === name.toLowerCase();
+  });
+  return hit ? hit.code : '';
+}
+
+// Resolve a branch CODE to its display name, hardcoded map first then the sheet.
+function resolveBranchName_(code) {
+  code = String(code || '').trim().toUpperCase();
+  if (!code) return '';
+  if (BRANCH_NAMES[code]) return BRANCH_NAMES[code];
+  const hit = getBranches_().find(function(b) { return b.code === code; });
+  return hit ? hit.name : code;
+}
+
+// Returns a Drive folder ID for a branch's profile photos. Hardcoded branches
+// keep their configured folder; any other branch gets a folder created once and
+// remembered in Script Properties — no manual setup or extra sheet columns.
+function getBranchPhotoFolderId_(code, name) {
+  const cfg = BRANCH_CONFIG[name];
+  if (cfg && cfg.folderId) return cfg.folderId;
+
+  const propKey = 'photoFolderId_' + code;
+  const props   = PropertiesService.getScriptProperties();
+  const stored  = props.getProperty(propKey);
+  if (stored) {
+    try { DriveApp.getFolderById(stored); return stored; } catch (e) { /* stale — recreate */ }
+  }
+
+  // Create the new folder alongside an existing branch folder when possible,
+  // otherwise at the Drive root.
+  let parent = null;
+  try {
+    const sampleId = (Object.values(BRANCH_CONFIG)[0] || {}).folderId;
+    if (sampleId) {
+      const parents = DriveApp.getFolderById(sampleId).getParents();
+      if (parents.hasNext()) parent = parents.next();
+    }
+  } catch (e) { /* fall back to root */ }
+
+  const folder = (parent || DriveApp.getRootFolder())
+    .createFolder(name + ' — Volunteer Photos');
+  props.setProperty(propKey, folder.getId());
+  return folder.getId();
 }
 
 function isOfficerCode_(code) {
