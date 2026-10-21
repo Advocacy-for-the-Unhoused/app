@@ -12,6 +12,19 @@ const SHEET_ID          = "1hcKgLSqLw1Fn4S7kOtBXXwt2ZL307WK1JTH-1jsMHaM";
 const PENDING_SHEET = "Pending Volunteers";
 const NOTIFY_ALL    = "maanya.shettigar@gmail.com";
 
+// New-branch requests: the dropdown sentinel the app sends, the sheet that
+// stores them, and the Branch Coordinator who reviews them (Maanya).
+const NEW_BRANCH_SENTINEL   = "__new_branch__";
+const BRANCH_REQUESTS_SHEET = "Branch Requests";
+const BRANCH_COORDINATOR_EMAIL = NOTIFY_ALL;
+
+// Holding branch for members who requested a brand-new branch. They're added to
+// the Roster under this code so sign-in lookups resolve; on approval their row
+// is moved to the real branch as President. Kept out of the Branches sheet so it
+// never appears in the onboarding dropdown.
+const TEMP_BRANCH_CODE = "NEW";
+const TEMP_BRANCH_NAME = "Pending New Branch";
+
 const BRANCH_CONFIG = {
   "Hopkinton":  { presidentEmail: "dilpreet.whjr@gmail.com",        folderId: "1VT5CX3h0GfCWiNrksW7kXEqMe5KPCbDc" },
   "Westford":   { presidentEmail: "aradhyaak11@gmail.com",           folderId: "1muPAyc8bxzLzuxiBPOcPNP0CZwf5bmWk" },
@@ -68,6 +81,23 @@ function removeFcmTokens_(email) {
   } catch (e) { /* non-fatal — roster wipe already succeeded */ }
 }
 
+// ── Email diagnostic ──────────────────────────────────────────────────────────
+// Run this from the editor (pick testMaanyaEmail in the function dropdown, click
+// Run). The editor's inline Execution log shows either a success message or the
+// exact error (e.g. a Gmail quota message). If it prompts for authorization,
+// approve it — re-authorizing can itself fix a stuck mail permission.
+function testMaanyaEmail() {
+  var to = BRANCH_COORDINATOR_EMAIL;
+  try {
+    GmailApp.sendEmail(to, 'AFU test email', 'If you received this, GmailApp email is working.');
+    Logger.log('SUCCESS — sent test email to ' + to);
+    return 'SUCCESS — sent to ' + to;
+  } catch (err) {
+    Logger.log('FAILED — ' + err.message);
+    return 'FAILED — ' + err.message;
+  }
+}
+
 // ── doGet ─────────────────────────────────────────────────────────────────────
 function doGet(e) {
   if (e.parameter.lookupEmail) {
@@ -97,7 +127,9 @@ function doPost(e) {
         fname: p.fname, lname: p.lname, email: p.email,
         phone: p.phone, branch: p.branch,
         photoBase64: p.photoBase64, photoMime: p.photoMime,
-        appleSub: p.appleSub || ''
+        appleSub: p.appleSub || '',
+        newBranchLocation: p.newBranchLocation || '',
+        newBranchType: p.newBranchType || ''
       });
 
     } else if (p.action === "updateProfilePhoto") {
@@ -356,6 +388,12 @@ function doPost(e) {
     } else if (p.action === "setBranchLeaderRole") {
       result = setBranchLeaderRole_(p.email || '', p.roleCode || '');
 
+    } else if (p.action === "approveBranchRequest") {
+      result = approveBranchRequest_(p.id || '', p.code || '');
+
+    } else if (p.action === "denyBranchRequest") {
+      result = denyBranchRequest_(p.id || '');
+
     // ── Compensation / Reimbursement Requests ──────────────────────────────────
     } else if (p.action === "submitCompRequest") {
       result = submitCompRequest_(p.email || '', p.amount || '0', p.description || '', p.payMethod || 'Cash', p.payHandle || '', p.imageBase64 || '', p.imageMime || '');
@@ -525,6 +563,12 @@ function handleDonation(data) {
 // ── Volunteer Registration Handler ────────────────────────────────────────────
 // Pending Volunteers layout: A=Name | B=Phone | C=Email | D=Photo URL | E=Branch Code | F=Status | G=Apple Sub
 function handleVolunteerRegistration(formData) {
+  // "Starting a new branch" has no branch code yet — it's a request for Maanya
+  // (Branch Coordinator) to review, not a pending volunteer under a branch.
+  if (formData.branch === NEW_BRANCH_SENTINEL) {
+    return handleNewBranchRequest_(formData);
+  }
+
   const ss     = SpreadsheetApp.openById(SHEET_ID);
   const sheet  = ss.getSheetByName(PENDING_SHEET) || ss.insertSheet(PENDING_SHEET);
 
@@ -609,6 +653,222 @@ function handleVolunteerRegistration(formData) {
   } catch(pushErr) { console.warn('Push failed (registerVolunteer):', pushErr.message); }
 
   return { success: true };
+}
+
+// ── New Branch Requests ─────────────────────────────────────────────────────
+// Someone picked "Starting a new branch" during onboarding. We record the
+// request, surface it in the Branch Management panel, and open a task for the
+// Branch Coordinator (Maanya) to review it.
+// Layout: A=Id | B=Timestamp | C=Location | D=Type | E=Requester | F=Email | G=Phone | H=Status | I=Apple Sub
+function getBranchRequestsSheet_() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  let sheet = ss.getSheetByName(BRANCH_REQUESTS_SHEET);
+  if (!sheet) {
+    sheet = ss.insertSheet(BRANCH_REQUESTS_SHEET);
+    sheet.appendRow(['Id', 'Timestamp', 'Location', 'Type', 'Requester', 'Email', 'Phone', 'Status', 'Apple Sub']);
+    sheet.getRange(1, 1, 1, 9).setFontWeight('bold');
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+function handleNewBranchRequest_(formData) {
+  const location = String(formData.newBranchLocation || '').trim();
+  const type     = String(formData.newBranchType || '').trim() || 'High School';
+  if (!location) return { error: 'Branch location is required.' };
+
+  const requester = (String(formData.fname || '').trim() + ' ' + String(formData.lname || '').trim()).trim();
+  const email     = String(formData.email || '').trim();
+  const phone     = String(formData.phone || '').trim();
+  const id        = 'br_' + Date.now();
+
+  const sheet = getBranchRequestsSheet_();
+  sheet.appendRow([id, new Date(), location, type, requester, email, phone, 'Pending', String(formData.appleSub || '')]);
+
+  // Add the requester to the Roster under the holding branch so their sign-in
+  // lookup resolves (otherwise every later login bounces them to registration).
+  // On approval this same row is moved to the real branch as President.
+  if (email) {
+    try {
+      if (!findRosterRowByEmail_(email)) {
+        addRosterMember_(requester, phone, email, TEMP_BRANCH_CODE, 'V', formData.appleSub);
+      }
+    } catch (rosterErr) { console.warn('Temp roster add failed:', rosterErr.message); }
+  }
+
+  // Open a review task for the Branch Coordinator (Maanya).
+  const taskText = 'Review new branch request: ' + location + ' (' + type + ') — from ' +
+    (requester || email || 'a new member');
+  try { createCoordinatorTask_(taskText); }
+  catch (taskErr) { console.warn('New branch task failed:', taskErr.message); }
+
+  // Best-effort notification email to the coordinator.
+  try {
+    const emailHtml =
+      '<p style="font-family:sans-serif;font-size:14px;">A member wants to <strong>start a new branch</strong> and is awaiting your review.</p>' +
+      '<table cellpadding="8" style="border-collapse:collapse;font-family:sans-serif;font-size:14px;border:1px solid #eee;">' +
+        '<tr style="background:#f9f9f9;"><td><b>Location</b></td><td>' + location + '</td></tr>' +
+        '<tr><td><b>Type</b></td><td>' + type + '</td></tr>' +
+        '<tr style="background:#f9f9f9;"><td><b>Requester</b></td><td>' + (requester || '—') + '</td></tr>' +
+        '<tr><td><b>Email</b></td><td>' + (email || '—') + '</td></tr>' +
+        '<tr style="background:#f9f9f9;"><td><b>Phone</b></td><td>' + (phone || '—') + '</td></tr>' +
+      '</table>' +
+      '<br><p style="font-family:sans-serif;font-size:14px;">Review it in the app under <b>Admin → Branch Management → Pending Branch Requests</b>.</p>';
+    GmailApp.sendEmail(BRANCH_COORDINATOR_EMAIL, 'New branch request — ' + location, '', { htmlBody: emailHtml });
+  } catch (mailErr) {
+    console.warn('New branch email failed:', mailErr.message);
+  }
+
+  return { success: true, newBranchRequest: true };
+}
+
+// Create a Team Board task assigned to the Branch Coordinator and push them.
+function createCoordinatorTask_(text) {
+  // Resolve the coordinator's roster name so the task is assigned to them.
+  let assigneeName = '';
+  try {
+    const roster = SpreadsheetApp.openById(ROSTER_SS_ID).getSheetByName('Roster');
+    if (roster) {
+      const data = roster.getDataRange().getValues();
+      const lc   = BRANCH_COORDINATOR_EMAIL.toLowerCase().trim();
+      for (let i = 1; i < data.length; i++) {
+        if ((data[i][3] || '').toString().toLowerCase().trim() === lc) {
+          assigneeName = (data[i][1] || '').toString().trim();
+          break;
+        }
+      }
+    }
+  } catch (e) { /* assignee is best-effort */ }
+
+  const taskId = 'task_' + Date.now();
+  tbSaveChange('newTask', taskId, text, JSON.stringify({ assignee: assigneeName }));
+
+  try {
+    const token = getFcmToken_(BRANCH_COORDINATOR_EMAIL);
+    if (token) sendPush_(token, 'New Branch Request', text);
+  } catch (pushErr) { console.warn('Coordinator push failed:', pushErr.message); }
+}
+
+// Pending (and recently resolved) branch requests for the management panel.
+function getBranchRequests_() {
+  const sheet = getBranchRequestsSheet_();
+  const last  = sheet.getLastRow();
+  if (last < 2) return [];
+  const data = sheet.getRange(2, 1, last - 1, 9).getValues();
+  return data.map(function(row) {
+    return {
+      id:        String(row[0] || ''),
+      location:  String(row[2] || ''),
+      type:      String(row[3] || ''),
+      requester: String(row[4] || ''),
+      email:     String(row[5] || ''),
+      phone:     String(row[6] || ''),
+      status:    String(row[7] || 'Pending'),
+      appleSub:  String(row[8] || '')
+    };
+  }).filter(function(r) { return r.id; });
+}
+
+function setBranchRequestStatus_(id, status) {
+  id = String(id || '').trim();
+  if (!id) return { error: 'Missing request id' };
+  const sheet = getBranchRequestsSheet_();
+  const last  = sheet.getLastRow();
+  if (last < 2) return { error: 'Request not found' };
+  const ids = sheet.getRange(2, 1, last - 1, 1).getValues();
+  for (let i = 0; i < ids.length; i++) {
+    if (String(ids[i][0] || '').trim() === id) {
+      sheet.getRange(i + 2, 8).setValue(status);
+      return { ok: true };
+    }
+  }
+  return { error: 'Request not found' };
+}
+
+// Insert a member into the Roster, grouped after the last row of their branch.
+// Roster: A=role code, B=name, C=phone, D=email, E=position, F=branchCode,
+// G=photoUrl, H=Active, I=DoB, J=Apple Sub. Returns the new 1-based row.
+function addRosterMember_(name, phone, email, branchCode, roleCode, appleSub) {
+  const ss     = SpreadsheetApp.openById(ROSTER_SS_ID);
+  const roster = ss.getSheetByName('Roster') || ss.insertSheet('Roster');
+  const allRows = roster.getDataRange().getValues();
+  let insertAfter = allRows.length;
+  for (let i = 0; i < allRows.length; i++) {
+    if ((allRows[i][5] || '').toString().trim().toUpperCase() === String(branchCode).toUpperCase()) {
+      insertAfter = i + 1;
+    }
+  }
+  roster.insertRowAfter(insertAfter);
+  roster.getRange(insertAfter + 1, 1, 1, 10)
+        .setValues([[roleCode, name, phone, email, '', branchCode, '', 'Yes', '', appleSub || '']]);
+  return insertAfter + 1;
+}
+
+// Find a Roster row (1-based) by email, or 0 if not present.
+function findRosterRowByEmail_(email) {
+  const lc = String(email || '').toLowerCase().trim();
+  if (!lc) return 0;
+  const sheet = SpreadsheetApp.openById(ROSTER_SS_ID).getSheetByName('Roster');
+  if (!sheet) return 0;
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if ((data[i][3] || '').toString().toLowerCase().trim() === lc) return i + 1;
+  }
+  return 0;
+}
+
+// Approve a request → create the branch (name = location), promote the requester
+// to that branch's President, then mark the request Approved.
+function approveBranchRequest_(id, code) {
+  const req = getBranchRequests_().find(function(r) { return r.id === id; });
+  if (!req) return { error: 'Request not found' };
+
+  code = String(code || '').trim().toUpperCase();
+  const added = addBranch_(code, req.location);
+  if (added.error) return added;
+
+  // Promote the requester to President of the new branch. They were already
+  // added to the Roster (under the holding branch) when they requested, so
+  // move that row to the real branch; fall back to inserting if it's missing.
+  if (req.email) {
+    try {
+      const sheet = SpreadsheetApp.openById(ROSTER_SS_ID).getSheetByName('Roster');
+      const rowNum = findRosterRowByEmail_(req.email);
+      if (rowNum) {
+        sheet.getRange(rowNum, 1).setValue('P');  // col A — role code
+        sheet.getRange(rowNum, 6).setValue(code); // col F — branch code
+      } else {
+        addRosterMember_(req.requester, req.phone, req.email, code, 'P', req.appleSub);
+      }
+    } catch (rosterErr) {
+      console.warn('Promoting president failed:', rosterErr.message);
+    }
+    try {
+      const token = getFcmToken_(req.email);
+      if (token) sendPush_(token, 'Branch Approved!',
+        'Your ' + req.location + ' branch is approved — you\'re set up as its President. Welcome to AFU!');
+    } catch (pushErr) { console.warn('President push failed:', pushErr.message); }
+  }
+
+  setBranchRequestStatus_(id, 'Approved');
+  return { ok: true };
+}
+
+function denyBranchRequest_(id) {
+  const req = getBranchRequests_().find(function(r) { return r.id === id; });
+  // Remove the holding-branch roster row created at request time (only if still
+  // under the temp code — never touch someone already placed in a real branch).
+  if (req && req.email) {
+    try {
+      const sheet  = SpreadsheetApp.openById(ROSTER_SS_ID).getSheetByName('Roster');
+      const rowNum = findRosterRowByEmail_(req.email);
+      if (rowNum && sheet) {
+        const bc = (sheet.getRange(rowNum, 6).getValue() || '').toString().trim().toUpperCase();
+        if (bc === TEMP_BRANCH_CODE) sheet.deleteRow(rowNum);
+      }
+    } catch (rosterErr) { console.warn('Removing temp member failed:', rosterErr.message); }
+  }
+  return setBranchRequestStatus_(id, 'Denied');
 }
 
 // ── Volunteer Approvals ────────────────────────────────────────────────────────
@@ -1899,6 +2159,7 @@ function resolveBranchCode_(name) {
 function resolveBranchName_(code) {
   code = String(code || '').trim().toUpperCase();
   if (!code) return '';
+  if (code === TEMP_BRANCH_CODE) return TEMP_BRANCH_NAME;
   if (BRANCH_NAMES[code]) return BRANCH_NAMES[code];
   const hit = getBranches_().find(function(b) { return b.code === code; });
   return hit ? hit.name : code;
@@ -1991,7 +2252,13 @@ function getBranchManagement() {
       };
     });
 
-    return { branches: result };
+    // Pending new-branch requests (shown to coordinators in the panel).
+    let branchRequests = [];
+    try {
+      branchRequests = getBranchRequests_().filter(function(r) { return r.status === 'Pending'; });
+    } catch (reqErr) { /* non-fatal — panel still renders branches */ }
+
+    return { branches: result, branchRequests: branchRequests };
   } catch (err) {
     return { error: err.message };
   }
