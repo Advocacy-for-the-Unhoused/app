@@ -3157,7 +3157,7 @@
     <div class="admin-section" id="boston-section">
       <div class="admin-section-hdr" onclick="toggleAdminSection('boston-section')">
         <div>
-          <div class="admin-eyebrow">July 2026</div>
+          <div class="admin-eyebrow js-trip-month">Boston Trip</div>
           <div class="admin-title">Boston <span>Trip</span></div>
         </div>
         <i class="bi bi-chevron-down admin-section-chev"></i>
@@ -3192,7 +3192,7 @@
     <div class="admin-section" id="qual-section">
       <div class="admin-section-hdr" onclick="toggleAdminSection('qual-section'); if(this.parentElement.classList.contains('open')) loadQualifiedPersons()">
         <div>
-          <div class="admin-eyebrow">Boston Trip 2026</div>
+          <div class="admin-eyebrow js-trip-label">Boston Trip</div>
           <div class="admin-title">Qualified <span>Persons</span></div>
         </div>
         <div style="display:flex;align-items:center;gap:10px;">
@@ -3213,7 +3213,7 @@
     <div class="admin-section" id="reg-section">
       <div class="admin-section-hdr" onclick="toggleAdminSection('reg-section')">
         <div>
-          <div class="admin-eyebrow">Boston Trip 2026</div>
+          <div class="admin-eyebrow js-trip-label">Boston Trip</div>
           <div class="admin-title">Trip <span>Registrations</span></div>
         </div>
         <div style="display:flex;align-items:center;gap:12px;">
@@ -3422,7 +3422,7 @@
     <div class="boston-sub-header">
       <div class="boston-sub-header-left">
         <div class="wordmark">Advocacy for the <span>Unhoused</span></div>
-        <div class="bsub">Boston Trip 2026</div>
+        <div class="bsub js-trip-label">Boston Trip</div>
       </div>
 
     </div>
@@ -3555,7 +3555,7 @@
     <!-- ── VIEW: ITINERARY ── -->
     <div id="view-itinerary" style="display:none;flex-direction:column;gap:0;">
       <div class="itin-header">
-        <div class="itin-header-eyebrow">Boston Trip 2026</div>
+        <div class="itin-header-eyebrow js-trip-label">Boston Trip</div>
         <div class="itin-header-title">Trip Itinerary</div>
         <div class="itin-header-sub">See you in Boston!</div>
       </div>
@@ -3850,6 +3850,7 @@
     } else if (tab === 'boston') {
       document.getElementById('tabBoston').classList.remove('hidden');
       if (typeof window.initBostonTrip === 'function') window.initBostonTrip();
+      initBostonBanner();
 
     } else if (tab === 'admin') {
       document.getElementById('tabAdmin').classList.remove('hidden');
@@ -3859,6 +3860,7 @@
       document.getElementById('admin-lock').classList.toggle('hidden', isAdmin);
       document.getElementById('admin-content').classList.toggle('hidden', !isAdmin);
       if (isAdmin && typeof window.loadAdmin === 'function') window.loadAdmin();
+      initBostonBanner();
 
     } else if (tab === 'tasks') {
       document.getElementById('tabTasks').classList.remove('hidden');
@@ -3899,6 +3901,21 @@
     return d && !isNaN(d) ? new Date(d.getFullYear(), d.getMonth(), d.getDate()) : null;
   }
 
+  // "Boston Trip 2027" from the stored trip date; plain "Boston Trip" until it's known.
+  function bostonTripLabel() {
+    var trip = parseTripDate(bostonTripDate);
+    return trip ? 'Boston Trip ' + trip.getFullYear() : 'Boston Trip';
+  }
+  window.bostonTripLabel = bostonTripLabel;
+
+  function fillTripLabels() {
+    var trip = parseTripDate(bostonTripDate);
+    document.querySelectorAll('.js-trip-label').forEach(function(el) { el.textContent = bostonTripLabel(); });
+    document.querySelectorAll('.js-trip-month').forEach(function(el) {
+      el.textContent = trip ? trip.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'No date set';
+    });
+  }
+
   function toIsoDate(d) {
     return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
   }
@@ -3911,6 +3928,7 @@
     var newTripBtn = document.getElementById('bostonNewTripBtn');
     if (newTripBtn) newTripBtn.classList.toggle('hidden', !/[AZ]/.test((window.volunteerProfile && window.volunteerProfile.position) || ''));
     var trip = parseTripDate(bostonTripDate);
+    fillTripLabels();
     if (input && document.activeElement !== input) input.value = trip ? toIsoDate(trip) : '';
 
     var manuallyHidden = localStorage.getItem('bostonBannerHidden') === '1';
@@ -4846,13 +4864,13 @@
       target.style.display = 'flex';
       target.classList.add('open');
       const subtitles = {
-        lookup:       'Boston Trip 2026',
+        lookup:       window.bostonTripLabel(),
         registration: 'Boston Trip · Permission Form',
         payment:      'Boston Trip · Your Bill',
 
       };
       const _hdrSub = document.getElementById('header-subtitle');
-      if (_hdrSub) _hdrSub.textContent = subtitles[name] || 'Boston Trip 2026';
+      if (_hdrSub) _hdrSub.textContent = subtitles[name] || window.bostonTripLabel();
     }
 
     function backToLookup() {
@@ -5075,7 +5093,7 @@
         <div class="bill-header">
           <div class="bill-eyebrow">Advocacy for the Unhoused, Inc.</div>
           <div class="bill-title">Pay My <span>Bill</span></div>
-          <div class="bill-sub">Boston Trip 2026 &middot; What you owe AFU</div>
+          <div class="bill-sub">${window.bostonTripLabel()} &middot; What you owe AFU</div>
         </div>
         <div class="bill-to-strip">
           <div class="micro">Volunteer</div>
@@ -5127,7 +5145,7 @@
           <div class="paid-check-circle"><i class="bi bi-check-lg"></i></div>
           <div class="paid-header-eyebrow">Advocacy for the Unhoused, Inc.</div>
           <div class="paid-header-title">All <span>Paid!</span></div>
-          <div class="paid-header-sub">Boston Trip 2026 &middot; Payment Received</div>
+          <div class="paid-header-sub">${window.bostonTripLabel()} &middot; Payment Received</div>
         </div>
         <div class="bill-to-strip" style="background:white;">
           <div class="micro">Volunteer</div>
