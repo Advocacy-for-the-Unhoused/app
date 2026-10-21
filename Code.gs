@@ -398,11 +398,8 @@ function doPost(e) {
     } else if (p.action === "addBranch") {
       result = addBranch_(p.code || '', p.name || '');
 
-    } else if (p.action === "removeMember") {
-      result = removeMember_(p.email || '', p.removedBy || '');
-
     } else if (p.action === "deleteBranch") {
-      result = deleteBranch_(p.code || '');
+      result = deleteBranch_(p.code || '', p.removedBy || '');
 
     } else if (p.action === "getBranches") {
       result = { branches: getBranches_() };
@@ -1134,22 +1131,24 @@ function isRemovedMember_(email, appleSub) {
   return false;
 }
 
-function removeMember_(email, removedBy) {
-  const lc = String(email || '').toLowerCase().trim();
-  if (!lc) return { error: 'Email required' };
-  if (lc === String(removedBy || '').toLowerCase().trim()) return { error: "You can't remove yourself" };
-
+// Moves every Roster row in the branch to Removed Members. Returns the count.
+function removeBranchMembers_(code, removedBy) {
   const roster = SpreadsheetApp.openById(ROSTER_SS_ID).getSheetByName('Roster');
-  if (!roster) return { error: 'Roster sheet not found' };
-  const rowNum = findRosterRowByEmail_(lc);
-  if (!rowNum) return { error: 'Member not found in roster' };
-
+  if (!roster) return 0;
   const removed = getRemovedSheet_();
-  const row     = roster.getRange(rowNum, 1, 1, removed.getLastColumn() - 2).getValues()[0];
-  removed.appendRow(row.concat([new Date(), String(removedBy || '')]));
-  roster.deleteRow(rowNum);
-  removeFcmTokens_(lc);
-  return { ok: true };
+  const width   = removed.getLastColumn() - 2;
+  const data    = roster.getRange(1, 1, roster.getLastRow(), width).getValues();
+  const now     = new Date();
+  let moved = 0;
+  for (let i = data.length - 1; i >= 2; i--) {   // rows 1–2 are banner + headers
+    if (String(data[i][5] || '').trim().toUpperCase() !== code) continue;
+    removed.appendRow(data[i].concat([now, String(removedBy || '')]));
+    roster.deleteRow(i + 1);
+    const email = String(data[i][3] || '').trim();
+    if (email) removeFcmTokens_(email);
+    moved++;
+  }
+  return moved;
 }
 
 const REMOVED_MSG = 'This account has been removed from AFU. Contact a branch officer if you think this is a mistake.';
@@ -2538,11 +2537,18 @@ function addBranch_(code, name) {
   return { ok: true };
 }
 
-// Removes the branch row and its Meeting Config keys. Roster members and
-// historical hours/donations keep their branch code untouched.
-function deleteBranch_(code) {
+// Removes the branch row and its Meeting Config keys, and moves the branch's
+// members to Removed Members (blocking their sign-in). Historical
+// hours/donations keep their branch code untouched.
+function deleteBranch_(code, removedBy) {
   code = String(code || '').trim().toUpperCase();
   if (!code) return { error: 'Code required' };
+  const me = findRosterRowByEmail_(removedBy);
+  if (me) {
+    const myBc = String(SpreadsheetApp.openById(ROSTER_SS_ID).getSheetByName('Roster')
+      .getRange(me, 6).getValue() || '').trim().toUpperCase();
+    if (myBc === code) return { error: "You can't delete your own branch" };
+  }
 
   const sheet = getBranchesSheet_();
   const data  = sheet.getDataRange().getValues();
@@ -2562,7 +2568,7 @@ function deleteBranch_(code) {
     if (keys.indexOf(String(cfgData[i][0])) !== -1) cfg.deleteRow(i + 1);
   }
 
-  return { ok: true };
+  return { ok: true, membersRemoved: removeBranchMembers_(code, removedBy) };
 }
 
 function setBranchLeaderRole_(email, roleCode) {
