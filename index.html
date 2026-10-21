@@ -4003,6 +4003,12 @@
   function qualActorEmail() {
     return ((window.volunteerProfile && window.volunteerProfile.email) || '').toLowerCase();
   }
+  // A President (P without A/Z) only sees their own branch; null = all branches.
+  function qualBranchScope() {
+    var pos = (window.volunteerProfile && window.volunteerProfile.position) || '';
+    if (/[AZ]/.test(pos) || pos.indexOf('P') === -1) return null;
+    return ((window.volunteerProfile && window.volunteerProfile.branchCode) || '').toUpperCase() || null;
+  }
   function qualIsHq() {
     return /[AZ]/.test((window.volunteerProfile && window.volunteerProfile.position) || '');
   }
@@ -4015,7 +4021,7 @@
 
     Promise.all([
       window.gasFetch('action=getRosterMembers'),
-      window.gasFetch('action=getQualifiedNames'),
+      window.gasFetch('action=getQualifiedNames&actorEmail=' + encodeURIComponent(qualActorEmail())),
       window.gasFetch('action=getBranchQuotas').catch(function() { return {}; })
     ]).then(function(results) {
       var members  = (results[0] && results[0].members) || [];
@@ -4048,6 +4054,8 @@
   }
 
   function renderQualList(body, members) {
+    var scope = qualBranchScope();
+    if (scope) members = members.filter(function(m) { return (m.branchCode || '').toUpperCase() === scope; });
     if (!members.length) { body.innerHTML = '<div style="padding:20px;text-align:center;font-size:0.65rem;color:rgba(26,19,17,0.3);">No roster members found.</div>'; return; }
 
     var qualCount = members.filter(function(m) { return qualSheetEmails[m.email.toLowerCase()]; }).length;
@@ -4782,6 +4790,8 @@
     /* Replacement for google.script.run — uses the same SCRIPT_URL fetch pattern as the rest of the app */
     function gasCall(method, params, onSuccess, onFailure) {
       var body = 'action=' + encodeURIComponent(method);
+      var actor = (window.volunteerProfile && window.volunteerProfile.email) || '';
+      if (actor && !(params && params.actorEmail)) body += '&actorEmail=' + encodeURIComponent(actor);
       if (params) {
         Object.keys(params).forEach(function(k) {
           body += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(String(params[k]));
@@ -7519,10 +7529,11 @@
         var res = await fetch(GAS_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: 'action=sendBostonPaymentReminder&email=' + encodeURIComponent(email)
+          body: 'action=sendBostonPaymentReminder&email=' + encodeURIComponent(email) +
+                '&actorEmail=' + encodeURIComponent((window.volunteerProfile && window.volunteerProfile.email) || '')
         });
         var r = await res.json();
-        alert(r.ok ? 'Reminder sent!' : (r.error || 'Failed to send.'));
+        alert(r.ok || r.success ? 'Reminder sent!' : (r.error || 'Failed to send.'));
       } catch(e) { alert('Failed to send.'); }
     }
 
@@ -7532,10 +7543,11 @@
         var res = await fetch(GAS_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: 'action=sendBostonDeadlineReminder'
+          body: 'action=sendBostonDeadlineReminder' +
+                '&actorEmail=' + encodeURIComponent((window.volunteerProfile && window.volunteerProfile.email) || '')
         });
         var r = await res.json();
-        alert(r.ok ? 'Notifications sent to all registrants!' : (r.error || 'Failed to send.'));
+        alert(r.ok || r.success ? 'Notifications sent to all registrants!' : (r.error || 'Failed to send.'));
       } catch(e) { alert('Failed to send.'); }
     }
 

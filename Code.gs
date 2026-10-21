@@ -264,7 +264,7 @@ function doPost(e) {
 
     // ── Boston Trip actions ────────────────────────────────────────────────────
     } else if (p.action === "getQualifiedNames") {
-      result = getQualifiedNames();
+      result = bostonFilterByScope_(p.actorEmail, getQualifiedNames());
 
     } else if (p.action === "addQualifiedPerson") {
       result = withBostonQuotaCheck_(p.actorEmail || '', p.email || '', true,
@@ -303,25 +303,31 @@ function doPost(e) {
       result = getVolunteerBill(p.email || '');
 
     } else if (p.action === "getAllVolunteers") {
-      result = getAllVolunteers();
+      result = bostonFilterByScope_(p.actorEmail, getAllVolunteers());
 
     } else if (p.action === "updateVolunteerPaid") {
-      result = updateVolunteerPaid(p.email || '', p.paid === 'true');
+      result = bostonCheckEdit_(p.actorEmail, p.email) ||
+               updateVolunteerPaid(p.email || '', p.paid === 'true');
 
     } else if (p.action === "updateVolunteerTrainPaid") {
-      result = updateVolunteerTrainPaid(p.email || '', p.paid === 'true');
+      result = bostonCheckEdit_(p.actorEmail, p.email) ||
+               updateVolunteerTrainPaid(p.email || '', p.paid === 'true');
 
     } else if (p.action === "updateVolunteerFixed") {
-      result = updateVolunteerFixed(p.email || '', p.key || '', p.val || '0');
+      result = bostonCheckEdit_(p.actorEmail, p.email) ||
+               updateVolunteerFixed(p.email || '', p.key || '', p.val || '0');
 
     } else if (p.action === "updateFoodItem") {
-      result = updateFoodItem(p.id || '', p.item || '', p.cost || '0');
+      result = bostonCheckEdit_(p.actorEmail, bostonFoodItemEmail_(p.id)) ||
+               updateFoodItem(p.id || '', p.item || '', p.cost || '0');
 
     } else if (p.action === "deleteFoodItem") {
-      result = deleteFoodItem(p.id || '');
+      result = bostonCheckEdit_(p.actorEmail, bostonFoodItemEmail_(p.id)) ||
+               deleteFoodItem(p.id || '');
 
     } else if (p.action === "addFoodItem") {
-      result = addFoodItem(p.email || '', p.item || '', p.cost || '0');
+      result = bostonCheckEdit_(p.actorEmail, p.email) ||
+               addFoodItem(p.email || '', p.item || '', p.cost || '0');
 
     } else if (p.action === "getItineraryData") {
       result = getItineraryData();
@@ -360,13 +366,16 @@ function doPost(e) {
 
     // ── Boston Push Actions ────────────────────────────────────────────────────
     } else if (p.action === "sendBostonPaymentReminder") {
-      const pToken = getFcmToken_(p.email || '');
-      if (pToken) sendPush_(pToken, 'Boston Trip Payment',
-        'Your Boston trip payment is still outstanding. Please settle up soon!');
-      result = { success: true };
+      result = bostonCheckEdit_(p.actorEmail, p.email);
+      if (!result) {
+        const pToken = getFcmToken_(p.email || '');
+        if (pToken) sendPush_(pToken, 'Boston Trip Payment',
+          'Your Boston trip payment is still outstanding. Please settle up soon!');
+        result = { success: true };
+      }
 
     } else if (p.action === "sendBostonDeadlineReminder") {
-      const qNames = getQualifiedNames();
+      const qNames = bostonFilterByScope_(p.actorEmail, getQualifiedNames());
       const dTokens = qNames.map(q => getFcmToken_(q.email)).filter(Boolean);
       sendPushToMany_(dTokens, 'Boston Trip Deadline',
         'Reminder: the permission form deadline is approaching. Open the app to complete your form!');
@@ -1441,6 +1450,46 @@ function setBranchQuota(actorEmail, branchCode, quota) {
   const q = String(quota).trim();
   if (q !== '' && !/^\d+$/.test(q)) return { error: 'Quota must be a whole number.' };
   return saveItineraryData(JSON.stringify({ ['quota_' + bc]: q }));
+}
+
+// Branch scope for Boston admin data: a President (P without A/Z) is limited to
+// their own branch; everyone else is unrestricted (null).
+function bostonScope_(roster, actorEmail) {
+  const actor = roster[(actorEmail || '').trim().toLowerCase()];
+  if (!actor || isBostonHq_(actor.position) || actor.position.indexOf('P') === -1) return null;
+  return actor.branchCode;
+}
+
+// Trim a list of {email, ...} records to the caller's branch.
+function bostonFilterByScope_(actorEmail, list) {
+  if (!Array.isArray(list) || !actorEmail) return list;
+  const roster = rosterIndex_();
+  const scope  = bostonScope_(roster, actorEmail);
+  if (!scope) return list;
+  return list.filter(r => {
+    const m = roster[(r.email || '').toString().trim().toLowerCase()];
+    return m && m.branchCode === scope;
+  });
+}
+
+// Returns an error object if the caller may not edit this member's Boston data,
+// or null when the edit is allowed.
+function bostonCheckEdit_(actorEmail, memberEmail) {
+  const roster = rosterIndex_();
+  if (!roster[(actorEmail || '').trim().toLowerCase()]) return { success: false, error: 'Sign in again — we could not confirm your role.' };
+  const scope = bostonScope_(roster, actorEmail);
+  if (!scope) return null;
+  const member = roster[(memberEmail || '').trim().toLowerCase()];
+  if (!member || member.branchCode !== scope) return { success: false, error: 'You can only manage members of your own branch.' };
+  return null;
+}
+
+function bostonFoodItemEmail_(id) {
+  const data = bostonGetFoodSheet_().getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(id)) return String(data[i][1] || '');
+  }
+  return '';
 }
 
 // Gate add/remove of a qualified person: HQ can edit any branch with no quota
