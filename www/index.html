@@ -3164,6 +3164,75 @@
       </div>
       <div class="admin-section-body">
 
+    <!-- Trip date & Home banner settings -->
+    <div class="boston-trip-settings" style="padding:4px 16px 16px;">
+        <div class="admin-toggle-row">
+          <div class="admin-toggle-label">
+            Boston Trip Banner
+            <small>Show banner on Home dashboard</small>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="bostonBannerToggle" checked onchange="adminSetBostonBanner(this.checked)">
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+        <div class="hrs-assign-form" style="margin-top:14px;">
+          <div>
+            <label for="bostonTripDateInput">Next Trip Date</label>
+            <input type="date" id="bostonTripDateInput" onchange="adminSetBostonTripDate(this.value)">
+          </div>
+          <small id="bostonTripDateStatus" style="font-size:0.7rem;opacity:0.7;">Shown to everyone · banner hides a week after the trip</small>
+        </div>
+        <button id="bostonNewTripBtn" class="btn-ghost hidden" style="width:100%;justify-content:center;margin-top:14px;" onclick="adminStartNewBostonTrip()">
+          <i class="bi bi-archive"></i> Start New Trip
+        </button>
+    </div>
+
+    <!-- Qualified Persons (collapsible) -->
+    <div class="admin-section" id="qual-section">
+      <div class="admin-section-hdr" onclick="toggleAdminSection('qual-section'); if(this.parentElement.classList.contains('open')) loadQualifiedPersons()">
+        <div>
+          <div class="admin-eyebrow">Boston Trip 2026</div>
+          <div class="admin-title">Qualified <span>Persons</span></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="reg-pill" id="qual-count-pill">--</span>
+          <i class="bi bi-chevron-down admin-section-chev"></i>
+        </div>
+      </div>
+      <div class="admin-section-body">
+        <div id="qual-list-body">
+          <div style="padding:20px;text-align:center;font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(26,19,17,0.3);">
+            Open section to load
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Trip Registrations (collapsible, collapsed by default) -->
+    <div class="admin-section" id="reg-section">
+      <div class="admin-section-hdr" onclick="toggleAdminSection('reg-section')">
+        <div>
+          <div class="admin-eyebrow">Boston Trip 2026</div>
+          <div class="admin-title">Trip <span>Registrations</span></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="display:flex;gap:6px;align-items:center;">
+            <span class="reg-pill submitted" id="reg-pill-submitted">--</span>
+            <span class="reg-pill" id="reg-pill-total">--</span>
+          </div>
+          <i class="bi bi-chevron-down admin-section-chev"></i>
+        </div>
+      </div>
+      <div class="admin-section-body">
+        <div id="reg-list-body" style="padding:0 16px 16px;">
+          <div style="padding:20px 0;text-align:center;font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(26,19,17,0.3);">
+            <i class="bi bi-hourglass-split spinner"></i> Loading&hellip;
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Finance Panel (collapsible, collapsed by default) -->
     <div class="admin-section" id="finance-section">
       <div class="admin-section-hdr" onclick="toggleAdminSection('finance-section')">
@@ -3212,84 +3281,6 @@
           </div>
         </div>
         <div id="vol-roster" style="padding:0 16px 16px;"></div>
-      </div>
-    </div>
-
-    <!-- Trip Registrations (collapsible, collapsed by default) -->
-    <div class="admin-section" id="reg-section">
-      <div class="admin-section-hdr" onclick="toggleAdminSection('reg-section')">
-        <div>
-          <div class="admin-eyebrow">Boston Trip 2026</div>
-          <div class="admin-title">Trip <span>Registrations</span></div>
-        </div>
-        <div style="display:flex;align-items:center;gap:12px;">
-          <div style="display:flex;gap:6px;align-items:center;">
-            <span class="reg-pill submitted" id="reg-pill-submitted">--</span>
-            <span class="reg-pill" id="reg-pill-total">--</span>
-          </div>
-          <i class="bi bi-chevron-down admin-section-chev"></i>
-        </div>
-      </div>
-      <div class="admin-section-body">
-        <div id="reg-list-body" style="padding:0 16px 16px;">
-          <div style="padding:20px 0;text-align:center;font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(26,19,17,0.3);">
-            <i class="bi bi-hourglass-split spinner"></i> Loading&hellip;
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Qualified Persons (collapsible) -->
-    <div class="admin-section" id="qual-section">
-      <div class="admin-section-hdr" onclick="toggleAdminSection('qual-section'); if(this.parentElement.classList.contains('open')) loadQualifiedPersons()">
-        <div>
-          <div class="admin-eyebrow">Boston Trip 2026</div>
-          <div class="admin-title">Qualified <span>Persons</span></div>
-        </div>
-        <div style="display:flex;align-items:center;gap:10px;">
-          <span class="reg-pill" id="qual-count-pill">--</span>
-          <i class="bi bi-chevron-down admin-section-chev"></i>
-        </div>
-      </div>
-      <div class="admin-section-body">
-        <div id="qual-list-body">
-          <div style="padding:20px;text-align:center;font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(26,19,17,0.3);">
-            Open section to load
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- App Settings (banner toggle) -->
-    <div class="admin-section" id="settings-section">
-      <div class="admin-section-hdr" onclick="toggleAdminSection('settings-section')">
-        <div>
-          <div class="admin-eyebrow">Dashboard</div>
-          <div class="admin-title">Trip <span>Banner</span></div>
-        </div>
-        <i class="bi bi-chevron-down admin-section-chev"></i>
-      </div>
-      <div class="admin-section-body">
-        <div class="admin-toggle-row">
-          <div class="admin-toggle-label">
-            Boston Trip Banner
-            <small>Show banner on Home dashboard</small>
-          </div>
-          <label class="toggle-switch">
-            <input type="checkbox" id="bostonBannerToggle" checked onchange="adminSetBostonBanner(this.checked)">
-            <span class="toggle-track"></span>
-          </label>
-        </div>
-        <div class="hrs-assign-form" style="margin-top:14px;">
-          <div>
-            <label for="bostonTripDateInput">Next Trip Date</label>
-            <input type="date" id="bostonTripDateInput" onchange="adminSetBostonTripDate(this.value)">
-          </div>
-          <small id="bostonTripDateStatus" style="font-size:0.7rem;opacity:0.7;">Shown to everyone · banner hides a week after the trip</small>
-        </div>
-        <button id="bostonNewTripBtn" class="btn-ghost hidden" style="width:100%;justify-content:center;margin-top:14px;" onclick="adminStartNewBostonTrip()">
-          <i class="bi bi-archive"></i> Start New Trip
-        </button>
       </div>
     </div>
 
@@ -5232,7 +5223,7 @@
       body.innerHTML = '<div style="padding:20px 0;text-align:center;font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(26,19,17,0.3);"><i class="bi bi-hourglass-split spinner"></i> Loading…</div>';
       gasCall('getQualifiedNames', {}, function(people) {
         if (!people || people.error) {
-          body.innerHTML = '<div style="padding:16px;color:#b83232;font-size:0.7rem;font-weight:700;">Failed to load registrations.</div>';
+          body.innerHTML = '<div style="padding:20px 0;text-align:center;font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(26,19,17,0.3);">No registrations</div>';
           return;
         }
         var total     = people.length;

@@ -1,4 +1,4 @@
-const CACHE_NAME = "afu-cache-v16";
+const CACHE_NAME = "afu-cache-v17";
 const ASSETS = [
   "/",
   "/index.html",
