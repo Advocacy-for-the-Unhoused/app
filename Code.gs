@@ -267,10 +267,21 @@ function doPost(e) {
       result = getQualifiedNames();
 
     } else if (p.action === "addQualifiedPerson") {
-      result = addQualifiedPerson(p.name || '', p.email || '', p.phone || '', p.dob || '');
+      result = withBostonQuotaCheck_(p.actorEmail || '', p.email || '', true,
+        () => addQualifiedPerson(p.name || '', p.email || '', p.phone || '', p.dob || ''));
 
     } else if (p.action === "removeQualifiedPerson") {
-      result = removeQualifiedPerson(p.email || '');
+      result = withBostonQuotaCheck_(p.actorEmail || '', p.email || '', false,
+        () => removeQualifiedPerson(p.email || ''));
+
+    } else if (p.action === "getBranchQuotas") {
+      result = getBranchQuotas();
+
+    } else if (p.action === "setBranchQuota") {
+      result = setBranchQuota(p.actorEmail || '', p.branchCode || '', p.quota || '');
+
+    } else if (p.action === "startNewBostonTrip") {
+      result = startNewBostonTrip(p.actorEmail || '');
 
     } else if (p.action === "bostonSubmitForm") {
       result = submitForm({
@@ -1357,6 +1368,132 @@ function addQualifiedPerson(name, email, phone, dob) {
     return { success: true, appendedRow: newRow };
   } catch (err) {
     console.error('addQualifiedPerson error:', err.message, err.stack);
+    return { error: err.message };
+  }
+}
+
+// ── BRANCH QUOTAS ─────────────────────────────────────────────────────────────
+// HQ (A/Z) sets a per-branch quota for the current trip; each branch President
+// (P) picks qualified persons from their own branch until the quota is full.
+// Quotas live in the Itinerary key/value store as quota_<BRANCHCODE>.
+// NOTE: the caller is identified by the actorEmail the app sends (no token check).
+
+function rosterIndex_() {
+  const sheet = SpreadsheetApp.openById(ROSTER_SS_ID).getSheetByName('Roster');
+  const byEmail = {};
+  if (!sheet) return byEmail;
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    const email = (data[i][3] || '').toString().trim().toLowerCase();
+    if (email) byEmail[email] = {
+      position:   (data[i][0] || '').toString().trim(),
+      branchCode: (data[i][5] || '').toString().trim().toUpperCase()
+    };
+  }
+  return byEmail;
+}
+
+function isBostonHq_(position) { return /[AZ]/.test(position || ''); }
+
+// Count current-trip qualified persons per branch code.
+function bostonBranchCounts_(roster) {
+  const counts = {};
+  const sheet = SpreadsheetApp.openById(BOSTON_SHEET_ID).getSheetByName(BOSTON_REG_SHEET);
+  if (!sheet) return counts;
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    const email = (data[i][1] || '').toString().trim().toLowerCase();
+    const bc = (roster[email] && roster[email].branchCode) || 'X';
+    if (email) counts[bc] = (counts[bc] || 0) + 1;
+  }
+  return counts;
+}
+
+function bostonQuotas_() {
+  const vals = getItineraryData();
+  const quotas = {};
+  Object.keys(vals).forEach(k => {
+    if (k.indexOf('quota_') === 0 && vals[k] !== '') quotas[k.slice(6)] = parseInt(vals[k], 10) || 0;
+  });
+  return quotas;
+}
+
+function getBranchQuotas() {
+  try {
+    const roster = rosterIndex_();
+    const counts = bostonBranchCounts_(roster);
+    const quotas = bostonQuotas_();
+    const result = {};
+    Object.keys(counts).concat(Object.keys(quotas)).forEach(bc => {
+      result[bc] = { quota: quotas.hasOwnProperty(bc) ? quotas[bc] : null, used: counts[bc] || 0 };
+    });
+    return { branches: result, tripDate: getItineraryData().nextTripDate || '' };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+function setBranchQuota(actorEmail, branchCode, quota) {
+  const actor = rosterIndex_()[(actorEmail || '').trim().toLowerCase()];
+  if (!actor || !isBostonHq_(actor.position)) return { error: 'Only HQ can set branch quotas.' };
+  const bc = (branchCode || '').trim().toUpperCase();
+  if (!bc) return { error: 'Missing branch.' };
+  const q = String(quota).trim();
+  if (q !== '' && !/^\d+$/.test(q)) return { error: 'Quota must be a whole number.' };
+  return saveItineraryData(JSON.stringify({ ['quota_' + bc]: q }));
+}
+
+// Gate add/remove of a qualified person: HQ can edit any branch with no quota
+// limit; a President only their own branch, and adds stop at the branch quota.
+function withBostonQuotaCheck_(actorEmail, memberEmail, isAdd, fn) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(20000);
+    const roster = rosterIndex_();
+    const actor  = roster[(actorEmail || '').trim().toLowerCase()];
+    const member = roster[(memberEmail || '').trim().toLowerCase()];
+    if (!actor) return { error: 'Sign in again — we could not confirm your role.' };
+    if (!isBostonHq_(actor.position)) {
+      if (actor.position.indexOf('P') === -1) return { error: 'Only branch presidents and HQ can register members.' };
+      if (!member || member.branchCode !== actor.branchCode) return { error: 'You can only register members of your own branch.' };
+      if (isAdd) {
+        const quota = bostonQuotas_()[actor.branchCode];
+        if (quota == null) return { error: 'HQ has not set a quota for your branch yet.' };
+        const used = bostonBranchCounts_(roster)[actor.branchCode] || 0;
+        if (used >= quota) return { error: 'Your branch quota is full (' + used + '/' + quota + ').' };
+      }
+    }
+    return fn();
+  } catch (err) {
+    return { error: err.message };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Archive the current trip: copy the registration and Costs sheets to
+// "<name> <tripDate>" snapshots, then clear their data rows (headers kept).
+// Quotas are cleared too so HQ sets fresh ones for the next trip.
+function startNewBostonTrip(actorEmail) {
+  const actor = rosterIndex_()[(actorEmail || '').trim().toLowerCase()];
+  if (!actor || !isBostonHq_(actor.position)) return { error: 'Only HQ can start a new trip.' };
+  try {
+    const ss  = SpreadsheetApp.openById(BOSTON_SHEET_ID);
+    const tag = getItineraryData().nextTripDate ||
+                Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+    [BOSTON_REG_SHEET, 'Costs'].forEach(name => {
+      const sheet = ss.getSheetByName(name);
+      if (!sheet) return;
+      let archiveName = name + ' ' + tag, n = 2;
+      while (ss.getSheetByName(archiveName)) archiveName = name + ' ' + tag + ' (' + (n++) + ')';
+      sheet.copyTo(ss).setName(archiveName);
+      if (sheet.getLastRow() > 1) sheet.deleteRows(2, sheet.getLastRow() - 1);
+    });
+    const cleared = {};
+    Object.keys(bostonQuotas_()).forEach(bc => { cleared['quota_' + bc] = ''; });
+    if (Object.keys(cleared).length) saveItineraryData(JSON.stringify(cleared));
+    return { success: true, archivedAs: tag };
+  } catch (err) {
     return { error: err.message };
   }
 }
