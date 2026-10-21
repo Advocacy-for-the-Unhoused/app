@@ -1113,7 +1113,7 @@ function getRemovedSheet_() {
     sheet = ss.insertSheet(REMOVED_SHEET);
     const roster    = ss.getSheetByName('Roster');
     const width     = Math.max(10, roster.getLastColumn());
-    const rosterHdr = roster.getRange(1, 1, 1, width).getValues()[0];
+    const rosterHdr = roster.getRange(2, 1, 1, width).getValues()[0]; // row 1 is a title banner
     sheet.getRange(1, 1, 1, width + 2)
       .setValues([rosterHdr.concat(['Removed At', 'Removed By'])]).setFontWeight('bold');
     sheet.setFrozenRows(1);
