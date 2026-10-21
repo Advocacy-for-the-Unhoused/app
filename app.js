@@ -163,6 +163,8 @@ window.onSignedIn = async function (preloadedPayload = null) {
       hasRosterPhoto: !!info.photoUrl,   // false → prompt to add a photo on Home
       position: info.position || '',
     };
+    // Admin tab is only useful to A/Z/P/C — hide the nav button from everyone else.
+    document.getElementById('navAdmin').classList.toggle('hidden', !/[AZPC]/.test(info.position || ''));
 
     await storeAuthForBiometric(payload);
     await registerPushNotifications();
@@ -272,6 +274,8 @@ window.onAppleSignedIn = async function(sub, email, givenName, familyName) {
       hasRosterPhoto: !!info.photoUrl,   // false → prompt to add a photo on Home
       position: info.position || '',
     };
+    // Admin tab is only useful to A/Z/P/C — hide the nav button from everyone else.
+    document.getElementById('navAdmin').classList.toggle('hidden', !/[AZPC]/.test(info.position || ''));
 
     await storeAuthForBiometric({ email: volunteerEmail, given_name: givenName || '', family_name: familyName || '', picture: '' });
     await registerPushNotifications();
