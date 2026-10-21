@@ -2635,6 +2635,13 @@
   }
   #tabTasks .tb-board-empty { padding: 14px; font-size: 0.8rem; color: rgba(26,19,17,0.6); background: white; }
   #tabTasks .check-btn:disabled { cursor: default; opacity: 0.55; }
+  #tabTasks .team-card.collapsed > :not(.team-header) { display: none; }
+  #tabTasks .team-card.collapsed .team-header-bottom,
+  #tabTasks .team-card.collapsed .team-officer { display: none; }
+  #tabTasks .tb-collapse-btn {
+    order: 99; margin-left: auto; background: none; border: none; cursor: pointer;
+    color: var(--cream); opacity: 0.8; font-size: 0.85rem; padding: 4px 6px;
+  }
   /* COMPLETED TASK HIDING */
   #tabTasks .task-row.tb-task-done { display: none; }
   #tabTasks .team-card.show-done .task-row.tb-task-done { display: flex; }
@@ -6189,6 +6196,7 @@
     let tbTeams = tbDeepCopy(HARDCODED_TEAMS);
     let tbSelectedColor = TB_COLORS[0];
     let tbRosterNames = null;
+    const tbExpanded = new Set(); // empty boards the viewer opened this session
 
     /* ── Branch boards + per-viewer visibility ──────────────
        Every branch gets its own board, keyed "branch:<CODE>" in the change log.
@@ -6246,6 +6254,12 @@
     function tbCanEditTeam(team) {
       const me = tbMe();
       if (tbIsOrgAdmin()) return true;
+      if (team.branchCode) return /P/.test(me.pos) && me.branch === team.branchCode;
+      return !!me.name && String(team.officer || '').trim().toLowerCase() === me.name;
+    }
+    // The board's own leader: a team's officer, or the president of a branch board.
+    function tbIsLeader(team) {
+      const me = tbMe();
       if (team.branchCode) return /P/.test(me.pos) && me.branch === team.branchCode;
       return !!me.name && String(team.officer || '').trim().toLowerCase() === me.name;
     }
@@ -6567,6 +6581,11 @@
       }
     }
 
+    function tbToggleCollapse(teamName) {
+      if (tbExpanded.has(teamName)) tbExpanded.delete(teamName); else tbExpanded.add(teamName);
+      tbRender();
+    }
+
     function tbRenderTeam(team, container) {
       const done  = team.tasks.filter(t => t.done).length;
       const total = team.tasks.length;
@@ -6591,7 +6610,9 @@
       const isBranch = !!team.branchCode;
 
       const card = document.createElement('div');
-      card.className = 'team-card';
+      // Empty boards start collapsed to just their header; tapping it opens them.
+      const collapsed = !total && !tbExpanded.has(team.name) && !tbIsLeader(team);
+      card.className = 'team-card' + (!total ? ' tb-collapsible' : '') + (collapsed ? ' collapsed' : '');
       card.dataset.team = team.name;
 
       const meetingPill = canEdit
@@ -6603,6 +6624,8 @@
       card.innerHTML = `
         <div class="team-header">
           <div class="team-header-top">
+            ${!total ? `<button class="tb-collapse-btn" aria-label="${collapsed ? 'Expand' : 'Collapse'}"
+              onclick="tbToggleCollapse('${tbEsc(team.name)}')"><i class="bi bi-chevron-${collapsed ? 'down' : 'up'}"></i></button>` : ''}
             <div class="team-color-swatch" style="background:${team.color}"></div>
             ${isBranch
               ? `<span class="team-name-btn">${tbEsc(tbTeamLabel(team))}</span>`
@@ -7174,7 +7197,7 @@
 
       // Officer row — always first
       html += `<div class="tb-member-row">
-        <div class="tb-member-main">
+        <div class="tb-member-main" id="tb-officer-main">
           <span class="tb-member-name">${team.officer ? tbEsc(team.officer) : '<em>No officer set</em>'}</span>
           <span class="tb-member-badge" style="background:${team.color}">Officer</span>
         </div>
@@ -7259,23 +7282,38 @@
       await tbSaveChange('memberOversees', tbMemberKey(team.name, name), branch);
     }
 
-    async function tbEditOfficer() {
+    function tbEditOfficer() {
       const team = tbTeams.find(tm => tm.name === tbTeamViewName);
-      if (!team) return;
-      let val = prompt('Team officer (roster name):', team.officer || '');
-      if (val === null) return;
-      val = val.trim();
-      if (val) {
-        const roster = await tbLoadRosterNames();
-        if (roster.length) {
-          const match = roster.find(n => n.toLowerCase() === val.toLowerCase());
-          if (!match) { tbToastError('⚠ "' + val + '" is not on the roster.'); return; }
-          val = match;
+      const main = document.getElementById('tb-officer-main');
+      if (!team || !main) return;
+      tbLoadRosterNames();
+      main.innerHTML = `<input type="text" id="tb-officer-input" list="tb-roster-dl"
+        placeholder="Team leader (roster name)…" style="flex:1;min-width:0;margin:0;" />`;
+      const inp = document.getElementById('tb-officer-input');
+      inp.value = team.officer || '';
+      inp.focus(); inp.select();
+      let committed = false;
+      const save = async () => {
+        if (committed) return; committed = true;
+        let val = inp.value.trim();
+        if (val) {
+          const roster = await tbLoadRosterNames();
+          if (roster.length) {
+            const match = roster.find(n => n.toLowerCase() === val.toLowerCase());
+            if (!match) { tbToastError('⚠ "' + val + '" is not on the roster.'); tbRenderTeamView(); return; }
+            val = match;
+          }
         }
-      }
-      team.officer = val;
-      tbRenderTeamView(); tbRender();
-      await tbSaveChange('teamOfficer', team.name, val);
+        if (val === (team.officer || '')) { tbRenderTeamView(); return; }
+        team.officer = val;
+        tbRenderTeamView(); tbRender();
+        await tbSaveChange('teamOfficer', team.name, val);
+      };
+      inp.onblur = save;
+      inp.onkeydown = e => {
+        if (e.key === 'Enter') inp.blur();
+        if (e.key === 'Escape') { committed = true; tbRenderTeamView(); }
+      };
     }
 
     document.getElementById('tb-team-modal-bg').addEventListener('click', e => {
@@ -7314,6 +7352,7 @@
     window.tbCloseTaskView   = tbCloseTaskView;
     window.tbRenderTaskView  = tbRenderTaskView;
     window.tbTaskViewEdit    = tbTaskViewEdit;
+    window.tbToggleCollapse  = tbToggleCollapse;
     window.tbClaimTask       = tbClaimTask;
     window.tbReleaseTask     = tbReleaseTask;
     window.tbTaskViewSave    = tbTaskViewSave;
