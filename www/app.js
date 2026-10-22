@@ -87,7 +87,7 @@ function prefillRegistrationIdentity(fname, lname, email) {
   if (haveName || haveEmail) {
     idEl.innerHTML =
       (haveName ? `<div style="font-weight:800;font-size:0.95rem;">${escHtml(fname + ' ' + lname)}</div>` : '') +
-      (haveEmail ? `<div style="font-size:0.82rem;color:#777;overflow-wrap:anywhere;">${escHtml(email)}</div>` : '');
+      (haveEmail ? `<div style="font-size:0.82rem;color: #6B6B6B;overflow-wrap:anywhere;">${escHtml(email)}</div>` : '');
     idEl.classList.remove('hidden');
   } else {
     idEl.innerHTML = '';
@@ -1334,7 +1334,7 @@ function injectWelcomeStyles() {
     .afu-welcome-body {
       font-size: 0.92rem; line-height: 1.55; margin: 0; opacity: 0.82; max-width: 280px;
     }
-    .afu-welcome-body b { color: var(--camp-orange, #C8522D); font-weight: 800; }
+    .afu-welcome-body b { color: var(--camp-orange, #B84A27); font-weight: 800; }
     .afu-welcome-dots { display: flex; gap: 7px; justify-content: center; margin: 22px 0 20px; }
     .afu-welcome-dot {
       width: 7px; height: 7px; border-radius: 50%;
@@ -1342,7 +1342,7 @@ function injectWelcomeStyles() {
       transition: opacity 0.2s, width 0.2s, background 0.2s;
     }
     .afu-welcome-dot.active {
-      opacity: 1; width: 20px; border-radius: 4px; background: var(--camp-orange, #C8522D);
+      opacity: 1; width: 20px; border-radius: 4px; background: var(--camp-orange, #B84A27);
     }
     .afu-welcome-actions { display: flex; gap: 10px; align-items: center; }
     .afu-welcome-back {
@@ -1353,7 +1353,7 @@ function injectWelcomeStyles() {
     }
     .afu-welcome-back:hover { opacity: 0.9; }
     .afu-welcome-next {
-      flex: 1; min-height: 48px; background: var(--camp-orange, #C8522D); color: #fff;
+      flex: 1; min-height: 48px; background: var(--camp-orange, #B84A27); color: #fff;
       border: none; border-radius: 14px; cursor: pointer; font-family: 'Montserrat', sans-serif;
       font-size: 0.95rem; font-weight: 800; letter-spacing: 0.3px;
       box-shadow: 0 6px 18px rgba(200,82,45,0.35); transition: transform 0.12s, box-shadow 0.12s;
