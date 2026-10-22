@@ -451,6 +451,26 @@
 
     #udiPanel.open { max-height: 4000px; }
 
+    /* Record tab help — white box, fixed dark text so it reads in both themes */
+    .rec-help-row { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .rec-help-row h3 { margin:0; }
+    .rec-help-btn { width:auto; flex:0 0 auto; margin:0; padding:6px 12px; font-size:0.8rem; background:transparent; color:#1A1311; border:2px solid #1A1311; border-radius:999px; box-shadow:none; }
+    .rec-help-bg { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:10000; align-items:center; justify-content:center; padding:16px; }
+    .rec-help-bg.open { display:flex; }
+    .rec-help-box { position:relative; background:#fff; color:#1A1311; width:100%; max-width:420px; border-radius:14px; padding:24px 20px 18px; box-shadow:0 10px 40px rgba(0,0,0,0.35); }
+    .rec-help-box h3 { color:#1A1311; margin:4px 0 10px; }
+    .rec-help-step-count { font-size:0.72rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:#8a4a12; }
+    .rec-help-body { font-size:0.92rem; line-height:1.6; color:#333; min-height:130px; }
+    .rec-help-body p { margin:0 0 10px; }
+    .rec-help-body code { background:#f3ece6; color:#1A1311; padding:1px 6px; border-radius:4px; font-weight:700; }
+    .rec-help-note { font-size:0.82rem; color:#555; font-style:italic; }
+    .rec-help-dots { display:flex; justify-content:center; gap:6px; margin:8px 0 14px; }
+    .rec-help-dots span { width:8px; height:8px; border-radius:50%; background:#d6ccc4; }
+    .rec-help-dots span.on { background:#1A1311; }
+    .rec-help-nav { display:flex; gap:10px; }
+    .rec-help-nav button { flex:1; margin:0; }
+    .rec-help-nav .rec-help-sec { background:transparent; color:#1A1311; border:2px solid #1A1311; box-shadow:none; }
+    .rec-help-close { position:absolute; top:8px; right:8px; width:34px; height:34px; padding:0; margin:0; background:transparent; color:#555; border:none; box-shadow:none; font-size:1rem; }
     #udiPanel .card {
       margin-top: 16px;
       overflow: visible;
@@ -2804,7 +2824,7 @@
       <br><br>
       <strong>3. Organize.</strong> Gather at least 5 members and a teacher sponsor (any subject). Some schools also ask for a short club constitution — a sample is available if yours does.
       <br><br>
-      Submit this form to let the Branch Coordination team know you're getting started.
+      Submit this form to let the Branch Coordination team know you’re getting started.
     </div>
   </div>
 
@@ -2978,7 +2998,10 @@
     <div id="welcomeMessage" class="welcome"></div>
 
     <div id="step2" class="card">
-      <h3>Record a Donation</h3>
+      <div class="rec-help-row">
+        <h3>Record a Donation</h3>
+        <button type="button" class="rec-help-btn" onclick="openRecordHelp()" aria-label="How recording donations works">? Help</button>
+      </div>
       <p style="font-size:0.85rem;color:#555;line-height:1.6;margin-bottom:6px;">
         Volunteer record-keeping only: log a cash donation you collected in person
         at an AFU fundraiser. No money is collected, processed, or transferred in this app.
@@ -3056,6 +3079,48 @@
         </div>
       </div>
     </div>
+
+    <!-- ── Record help / tutorial ── -->
+    <div id="recHelpBg" class="rec-help-bg" onclick="if(event.target===this)closeRecordHelp()">
+      <div class="rec-help-box" role="dialog" aria-modal="true" aria-labelledby="recHelpTitle">
+        <div class="rec-help-step-count" id="recHelpCount"></div>
+        <h3 id="recHelpTitle"></h3>
+        <div class="rec-help-body" id="recHelpBody"></div>
+        <div class="rec-help-dots" id="recHelpDots"></div>
+        <div class="rec-help-nav">
+          <button type="button" class="rec-help-sec" id="recHelpPrev" onclick="recHelpGo(-1)">← Back</button>
+          <button type="button" id="recHelpNext" onclick="recHelpGo(1)">Next →</button>
+        </div>
+        <button type="button" class="rec-help-close" onclick="closeRecordHelp()" aria-label="Close help">✕</button>
+      </div>
+    </div>
+    <script>
+    (function () {
+      const STEPS = [
+        { t: 'What is a UDI?', b: '<p>A <strong>UDI</strong> (Unique Donation Identifier) is the code printed on each donor slip, like <code>A001</code> or <code>W042</code>.</p><p>It is your <strong>branch letter</strong> + a <strong>3-digit number</strong>. It lets donors track their donation and keeps every record unique.</p>' },
+        { t: '1. Print slips first', b: '<p>Before the fundraiser, open <strong>🖨 Print UDI Slips</strong> at the bottom of this page.</p><p>Pick the fundraiser date and tap <strong>Generate Slips</strong> (~30 sec). Print at <strong>16 pages per sheet, double-sided</strong>, then cut them out.</p>' },
+        { t: '2. Hand a slip to each donor', b: '<p>When someone gives a cash donation in person, give them one slip. Keep note of the slip number so you can record it.</p><p class="rec-help-note">This app never collects or moves money — it only keeps the ledger.</p>' },
+        { t: '3. Enter the UDI number', b: '<p>Type <strong>only the number</strong> (1–999). Your branch letter is added automatically — typing <code>42</code> saves <code>' + 'X042</code> for branch X.</p><p>Or tap <strong>📷</strong> to scan the slip’s code with your camera; the last 3 digits fill in for you.</p>' },
+        { t: '4. Amount & fundraiser', b: '<p>Enter the dollar amount received and choose the fundraiser (Candle, 5k, School Sale).</p><p>Tap <strong>Save Record</strong>. Records save offline first and sync when you’re online.</p>' },
+        { t: 'Duplicates & mistakes', b: '<p>Each UDI can be recorded <strong>only once</strong>. If you see <em>"already recorded"</em>, double-check the slip number — nothing new was saved.</p><p>Made a mistake on a saved record? Contact your branch coordinator to fix it.</p>' }
+      ];
+      let i = 0;
+      function render() {
+        const s = STEPS[i];
+        const letter = (typeof branchLetter !== 'undefined' && branchLetter) ? branchLetter : 'X';
+        document.getElementById('recHelpCount').textContent = (i + 1) + ' of ' + STEPS.length;
+        document.getElementById('recHelpTitle').textContent = s.t;
+        document.getElementById('recHelpBody').innerHTML = s.b.replace(/X042<\/code> for branch X/, letter + '042</code> for branch ' + letter);
+        document.getElementById('recHelpDots').innerHTML = STEPS.map((_, n) => '<span class="' + (n === i ? 'on' : '') + '"></span>').join('');
+        document.getElementById('recHelpPrev').style.visibility = i === 0 ? 'hidden' : 'visible';
+        document.getElementById('recHelpNext').textContent = i === STEPS.length - 1 ? 'Got it' : 'Next →';
+      }
+      window.openRecordHelp = function () { i = 0; render(); document.getElementById('recHelpBg').classList.add('open'); };
+      window.closeRecordHelp = function () { document.getElementById('recHelpBg').classList.remove('open'); };
+      window.recHelpGo = function (d) { if (i + d >= STEPS.length) { closeRecordHelp(); return; } i = Math.max(0, i + d); render(); };
+      document.addEventListener('keydown', e => { if (e.key === 'Escape') closeRecordHelp(); });
+    })();
+    </script>
 
   </div>
   <!-- ── End Donations Tab ── -->
@@ -5222,7 +5287,7 @@
         <div class="paid-footer">
           <i class="bi bi-heart-fill"></i>
           <div class="paid-footer-text">
-            <strong>Thank you, ${esc(data.name.split(' ')[0])}!</strong> Your payment has been received and you're all squared away for the Boston trip. See you there!
+            <strong>Thank you, ${esc(data.name.split(' ')[0])}!</strong> Your payment has been received and you’re all squared away for the Boston trip. See you there!
           </div>
         </div>`;
     }
