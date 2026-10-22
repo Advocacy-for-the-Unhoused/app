@@ -153,6 +153,29 @@ function prefillRegistrationIdentity(fname, lname, email) {
 }
 
 // ===== SIGN-IN HANDLER =====
+// ===== REVIEWER / DEMO SIGN-IN =====
+// App Review cannot complete a real Google sign-in: Google blocks the demo
+// account's login from an unrecognized location (a "verify it's you" challenge
+// that is independent of 2FA), so the reviewer never reaches the app and the
+// submission is rejected under Guideline 2.1. This path signs the reviewer in
+// as a seeded, already-approved demo volunteer with NO external OAuth round-trip
+// (it reuses the same preloaded-payload entry as biometric replay), which is the
+// demo-mode allowance Apple describes in Guideline 2.1(a).
+//
+// DEMO_REVIEWER_EMAIL must exist on the Roster sheet (col D) with a branch code
+// (col F) and a BLANK position (col E) so the reviewer sees the full
+// approved-volunteer app (Home, Hours, Donations, Tasks, Boston) while the Admin
+// tab stays hidden, exactly like any ordinary volunteer.
+const DEMO_REVIEWER_EMAIL = 'appreview@advocacyfortheunhoused.org';
+window.demoSignIn = function () {
+  window.onSignedIn({
+    email: DEMO_REVIEWER_EMAIL,
+    given_name: 'App',
+    family_name: 'Review',
+    picture: ''
+  });
+};
+
 window.onSignedIn = async function (preloadedPayload = null) {
   console.log("onSignedIn called!");
 
