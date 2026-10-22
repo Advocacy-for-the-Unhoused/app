@@ -214,8 +214,7 @@ window.onSignedIn = async function (preloadedPayload = null) {
     document.getElementById("appContent").classList.remove("hidden");
     document.getElementById("mainNav").classList.remove("hidden");
 
-    document.getElementById("udiBranchDisplay").value =
-      `${branchLetter} — ${branchName}`;
+    loadSlipBranchOptions();
 
     switchTab('home');
     maybeShowWelcome();
@@ -316,7 +315,7 @@ window.onAppleSignedIn = async function(sub, email, givenName, familyName) {
     document.getElementById('authScreen').classList.add('hidden');
     document.getElementById('appContent').classList.remove('hidden');
     document.getElementById('mainNav').classList.remove('hidden');
-    document.getElementById('udiBranchDisplay').value = `${branchLetter} — ${branchName}`;
+    loadSlipBranchOptions();
 
     switchTab('home');
     maybeShowWelcome();
@@ -595,7 +594,8 @@ async function runGenerateSlips() {
   const dateVal = document.getElementById("udiDate").value;
 
   if (!dateVal) { alert("Please select a fundraiser date."); return; }
-  if (!branchLetter) { alert("Branch not detected. Please sign in first."); return; }
+  const slipBranch = document.getElementById("udiBranchSelect").value || branchLetter;
+  if (!slipBranch) { alert("Please choose a branch."); return; }
 
   const loadingEl  = document.getElementById("udiLoading");
   const resultEl   = document.getElementById("udiResult");
@@ -630,7 +630,7 @@ async function runGenerateSlips() {
     const body = [
       `action=generateSlips`,
       `dateString=${encodeURIComponent(dateVal)}`,
-      `branchCode=${encodeURIComponent(branchLetter)}`
+      `branchCode=${encodeURIComponent(slipBranch)}`
     ].join("&");
 
     const res  = await fetch(SCRIPT_URL, {
@@ -1065,6 +1065,35 @@ function handleRegPhoto(e) {
 // ===== DYNAMIC BRANCH DROPDOWN =====
 // The onboarding branch list comes from the backend (Branches sheet) so new
 // branches appear automatically without editing the app. The hardcoded <option>
+// Print Slips branch picker: any branch can be printed, defaulting to the
+// volunteer's own. The hardcoded options stay if getBranches fails.
+async function loadSlipBranchOptions() {
+  const sel = document.getElementById('udiBranchSelect');
+  if (!sel) return;
+  const ensureOwn = () => {
+    if (branchLetter && ![...sel.options].some(o => o.value === branchLetter)) {
+      sel.add(new Option(`${branchLetter} — ${branchName || branchLetter}`, branchLetter));
+    }
+    if (branchLetter) sel.value = branchLetter;
+  };
+  ensureOwn();
+  try {
+    const res = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'action=getBranches'
+    });
+    const data = await res.json();
+    const branches = ((data && data.branches) || []).filter(b => b.code);
+    if (!branches.length) return;
+    const keep = sel.value;
+    sel.innerHTML = '';
+    branches.forEach(b => sel.add(new Option(`${b.code} — ${b.name || b.code}`, b.code)));
+    sel.value = keep;
+    ensureOwn();
+  } catch (e) { console.warn('Slip branch list unavailable:', e); }
+}
+
 // list in index.html stays as a fallback if the request fails.
 async function loadBranchOptions() {
   const sel = document.getElementById('regBranch');

@@ -3045,14 +3045,20 @@
         <div class="card">
           <h3>Generate Slips</h3>
           <p style="font-size:0.85rem;color:#555;line-height:1.6;margin-bottom:6px;">
-            Generates 16 donor slips for your branch. Takes ~30 seconds.
+            Generates 16 donor slips for the branch below (defaults to yours). Takes ~30 seconds.
           </p>
 
           <label for="udiDate">Fundraiser Date</label>
           <input id="udiDate" type="date">
 
           <label>Branch</label>
-          <input id="udiBranchDisplay" type="text" readonly>
+          <select id="udiBranchSelect">
+            <option value="A">A — Hopkinton</option>
+            <option value="H">H — Holliston</option>
+            <option value="M">M — Medway</option>
+            <option value="S">S — Shrewsbury</option>
+            <option value="W">W — Westford</option>
+          </select>
 
           <button id="udiGenBtn" onclick="runGenerateSlips()">Generate Slips</button>
 
@@ -4886,7 +4892,7 @@
   });
 </script>
 
-<script src="app.js?v=18"></script>
+<script src="app.js?v=19"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 
 <script>
@@ -6338,12 +6344,31 @@
       return !!me.name && String(task.assignee || '').trim().toLowerCase() === me.name;
     }
 
+    // Branch codes I've been assigned to oversee on the Branch Coord team
+    // (stored as branch names), so a rep sees that branch's board as well.
+    function tbOverseenBranches() {
+      const me = tbMe();
+      if (!me.name) return [];
+      const codes = new Set();
+      tbTeams.filter(tbIsBranchCoord).forEach(team => {
+        (team.members || []).forEach(m => {
+          if (String(m.name || '').trim().toLowerCase() !== me.name || !m.oversees) return;
+          const want = String(m.oversees).trim().toLowerCase();
+          const all = Object.assign({}, ...Object.keys(TB_BRANCH_FALLBACK).map(c => ({ [c]: TB_BRANCH_FALLBACK[c].name })), tbBranchNames);
+          const code = Object.keys(all).find(c => String(all[c]).toLowerCase() === want || c.toLowerCase() === want);
+          if (code) codes.add(code);
+        });
+      });
+      return [...codes];
+    }
+
     function tbVisibleTeams() {
       const me = tbMe();
       if (tbIsOrgAdmin()) return tbTeams;
       const seeAllBranches = /C/.test(me.pos);
+      const overseen = tbOverseenBranches();
       return tbTeams.filter(team => {
-        if (team.branchCode) return seeAllBranches || team.branchCode === me.branch;
+        if (team.branchCode) return seeAllBranches || team.branchCode === me.branch || overseen.includes(team.branchCode);
         if (!me.name) return false;
         if (String(team.officer || '').trim().toLowerCase() === me.name) return true;
         if ((team.members || []).some(m => String(m.name || '').trim().toLowerCase() === me.name)) return true;
@@ -6625,6 +6650,7 @@
       canvas.innerHTML = '';
       const me = tbMe();
       if (me.branch) tbTeamByKey(tbBranchKey(me.branch)); // home board always exists
+      tbOverseenBranches().forEach(code => tbTeamByKey(tbBranchKey(code))); // and any branch I oversee
       if (tbIsOrgAdmin() || /C/.test(me.pos))             // overseers see every branch, even empty ones
         Object.keys(tbBranchNames).forEach(code => tbTeamByKey(tbBranchKey(code)));
       const visible = tbVisibleTeams();
@@ -7446,6 +7472,7 @@
     window.tbAddMemberCommit = tbAddMemberCommit;
     window.tbRemoveMember    = tbRemoveMember;
     window.tbSetOversees     = tbSetOversees;
+    window.tbOverseenBranches = tbOverseenBranches;
     window.tbEditOfficer     = tbEditOfficer;
   })();
 </script>
