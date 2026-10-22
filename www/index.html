@@ -5249,7 +5249,19 @@
 </script>
 
 <script src="app.js?v=21"></script>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+  // Load Google Identity Services only on the web / PWA. The native app signs in
+  // through the Capacitor SocialLogin plugin, so it must not pull this remote
+  // script (self-contained app — Guideline 2.5.2). window.Capacitor is injected
+  // by the native bridge before web content loads, so it's safe to check here.
+  if (!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())) {
+    var gsi = document.createElement('script');
+    gsi.src = 'https://accounts.google.com/gsi/client';
+    gsi.async = true;
+    gsi.defer = true;
+    document.head.appendChild(gsi);
+  }
+</script>
 
 <script>
   /* ── Boston Trip JS ── */
