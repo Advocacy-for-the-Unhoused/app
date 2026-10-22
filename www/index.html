@@ -2912,7 +2912,7 @@
       <button class="dash-tile" onclick="switchTab('hours')">
         <span class="dash-tile-icon">⏱</span>
         <div class="dash-tile-title">My Hours</div>
-        <div class="dash-tile-desc">View history & submit for approval</div>
+        <div class="dash-tile-desc">Log an event & view history</div>
       </button>
 
       <button class="dash-tile" onclick="switchTab('tasks')">
@@ -2921,10 +2921,10 @@
         <div class="dash-tile-desc">Branch to-dos & assignments</div>
       </button>
 
-      <button class="dash-tile" onclick="switchTab('admin')">
-        <span class="dash-tile-icon">⚙️</span>
-        <div class="dash-tile-title">Admin Tools</div>
-        <div class="dash-tile-desc">Reports & coordinator view</div>
+      <button class="dash-tile" onclick="switchTab('reimburse')">
+        <span class="dash-tile-icon">🧾</span>
+        <div class="dash-tile-title">Reimbursement</div>
+        <div class="dash-tile-desc">Get paid back for AFU purchases</div>
       </button>
 
     </div>
@@ -3112,14 +3112,6 @@
   <div id="tabHours" class="tab-view hidden">
 
     <div class="card">
-      <h3>My History</h3>
-      <div id="hoursTotalBadge"></div>
-      <div id="hoursHistoryList">
-        <p class="hours-empty">Loading your history…</p>
-      </div>
-    </div>
-
-    <div class="card">
       <h3>Log an Event</h3>
       <p style="font-size:0.85rem;color:#555;line-height:1.6;margin-bottom:6px;">
         Submit your hours after an event. A coordinator will review and approve.
@@ -3145,6 +3137,23 @@
 
       <div id="hoursSubmitMsg" class="hours-msg"></div>
     </div>
+
+    <div class="card">
+      <h3>My History</h3>
+      <div id="hoursTotalBadge"></div>
+      <div id="hoursHistoryList">
+        <p class="hours-empty">Loading your history…</p>
+      </div>
+    </div>
+
+  </div>
+  <!-- ── End Hours Tab ── -->
+
+
+  <!-- ────────────────────────────────────────────────
+       REIMBURSEMENTS (opened from Home quick action)
+  ──────────────────────────────────────────────── -->
+  <div id="tabReimburse" class="tab-view hidden">
 
     <div class="card" id="expense-form-card">
       <h3>Request Reimbursement</h3>
@@ -3199,7 +3208,7 @@
     </div>
 
   </div>
-  <!-- ── End Hours Tab ── -->
+  <!-- ── End Reimbursements ── -->
 
 
   <!-- ────────────────────────────────────────────────
@@ -3909,6 +3918,9 @@
       document.getElementById('tabHours').classList.remove('hidden');
       document.getElementById('navHours').classList.add('active');
       if (typeof loadMyHours === 'function') loadMyHours();
+
+    } else if (tab === 'reimburse') {
+      document.getElementById('tabReimburse').classList.remove('hidden');
       if (typeof loadMyCompRequests === 'function') loadMyCompRequests();
 
     } else if (tab === 'boston') {
