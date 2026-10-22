@@ -1161,6 +1161,14 @@
       box-sizing: border-box;
     }
 
+    /* Light mode: stat tiles match the white cards around them */
+    @media (prefers-color-scheme: light) {
+      html:not([data-theme="dark"]) .boston-banner { background: var(--camp-dark); }
+      html:not([data-theme="dark"]) .dash-stat { background: white; border: 3px solid var(--camp-dark); box-shadow: 4px 4px 0 var(--camp-orange); }
+    }
+    html[data-theme="light"] .boston-banner { background: var(--camp-dark); }
+    html[data-theme="light"] .dash-stat { background: white; border: 3px solid var(--camp-dark); box-shadow: 4px 4px 0 var(--camp-orange); }
+
     .dash-stat-num {
       font-family: 'Abril Fatface', serif;
       font-size: 2rem;
@@ -1178,47 +1186,20 @@
     }
 
     /* Fundraising goal */
-    .dash-goal {
-      background: white;
-      border: 3px solid var(--card-border);
-      box-shadow: 8px 8px 0 var(--camp-orange);
-      padding: 18px 22px 20px;
-      margin-bottom: 16px;
-      box-sizing: border-box;
-    }
-
-    .dash-goal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      margin-bottom: 4px;
-    }
-
-    .dash-goal-title {
-      font-family: 'Abril Fatface', serif;
-      font-size: 1rem;
-      color: var(--camp-dark);
-    }
-
-    .dash-goal-amount {
-      font-family: 'Abril Fatface', serif;
-      font-size: 1.4rem;
-      color: var(--camp-orange);
-    }
-
     .dash-goal-sub {
-      font-size: 0.68rem;
+      font-size: 0.62rem;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 1px;
-      color: #aaa;
-      margin-bottom: 10px;
+      color: var(--stat-label);
+      margin-top: 6px;
     }
 
     .dash-progress-track {
       width: 100%;
-      height: 10px;
-      background: #eee;
+      height: 6px;
+      margin-top: 10px;
+      background: var(--stat-border);
       overflow: hidden;
     }
 
@@ -1228,7 +1209,7 @@
       transition: width 0.6s ease;
     }
 
-    /* Your Tasks card (mirrors the fundraising-goal card shell) */
+    /* Your Tasks card  */
     .my-tasks-card {
       background: white;
       border: 3px solid var(--card-border);
@@ -1632,7 +1613,6 @@
         --toggle-knob-x: 24px;
       }
       html:not([data-theme="dark"]) .hours-total-badge { background: var(--camp-dark); }
-      html:not([data-theme="dark"]) .boston-banner { background: var(--camp-dark); }
       html:not([data-theme="dark"]) .native-push-toast { background: rgba(26,19,17,0.97); }
       html:not([data-theme="dark"]) .dash-chip { background: var(--camp-dark); }
       html:not([data-theme="dark"]) .admin-section-hdr { background: white; border-left: 4px solid var(--orange); }
@@ -1669,7 +1649,6 @@
       --toggle-knob-x: 24px;
     }
     html[data-theme="light"] .hours-total-badge { background: var(--camp-dark); }
-    html[data-theme="light"] .boston-banner { background: var(--camp-dark); }
     html[data-theme="light"] .native-push-toast { background: rgba(26,19,17,0.97); }
     html[data-theme="light"] .dash-chip { background: var(--camp-dark); }
     html[data-theme="light"] .admin-section-hdr { background: white; border-left: 4px solid var(--orange); }
@@ -2890,28 +2869,14 @@
         <div class="dash-stat-num" id="dashHours">—</div>
         <div class="dash-stat-label">Hours Logged</div>
       </div>
-    </div>
-
-    <!-- Branch fundraising goal -->
-    <div class="dash-goal">
-      <div class="dash-goal-header">
-        <span class="dash-goal-title">Branch Fundraising Goal</span>
-        <span class="dash-goal-amount" id="dashGoalRaised">—</span>
+      <div class="dash-stat">
+        <div class="dash-stat-num" id="dashGoalRaised">—</div>
+        <div class="dash-stat-label">Branch Goal</div>
+        <div class="dash-progress-track">
+          <div class="dash-progress-fill" id="dashGoalBar" style="width:0%"></div>
+        </div>
+        <div class="dash-goal-sub" id="dashGoalOf">Loading…</div>
       </div>
-      <div class="dash-goal-sub" id="dashGoalOf">Loading…</div>
-      <div class="dash-progress-track">
-        <div class="dash-progress-fill" id="dashGoalBar" style="width:0%"></div>
-      </div>
-    </div>
-
-    <!-- Boston Trip Banner (date-aware, admin-toggleable) -->
-    <div class="boston-banner hidden" id="bostonBanner" onclick="switchTab('boston')">
-      <span class="boston-banner-icon">🚌</span>
-      <div class="boston-banner-body">
-        <div class="boston-banner-title">Boston Trip <span id="bostonBannerYear"></span></div>
-        <div class="boston-banner-sub" id="bostonBannerSub"></div>
-      </div>
-      <span class="boston-banner-arrow"><i class="bi bi-chevron-right"></i></span>
     </div>
 
     <!-- Your Tasks (personal, pulled live from the Task Board) -->
@@ -2922,6 +2887,16 @@
       </div>
       <div id="myTasksList"></div>
       <button class="my-tasks-viewall" onclick="switchTab('tasks')">Open Task Board <i class="bi bi-chevron-right"></i></button>
+    </div>
+
+    <!-- Boston Trip Banner (date-aware, admin-toggleable) -->
+    <div class="boston-banner hidden" id="bostonBanner" onclick="switchTab('boston')">
+      <span class="boston-banner-icon">🚌</span>
+      <div class="boston-banner-body">
+        <div class="boston-banner-title">Boston Trip <span id="bostonBannerYear"></span></div>
+        <div class="boston-banner-sub" id="bostonBannerSub"></div>
+      </div>
+      <span class="boston-banner-arrow"><i class="bi bi-chevron-right"></i></span>
     </div>
 
     <!-- Feature tiles -->
@@ -4023,22 +3998,21 @@
 
     var manuallyHidden = bostonBannerHidden;
     if (toggle) toggle.checked = !manuallyHidden;
-    if (!trip) { banner.classList.add('hidden'); return; }
-
-    var hideAfter = new Date(trip.getFullYear(), trip.getMonth(), trip.getDate() + 1 + BANNER_HIDE_DAYS);
     var now = new Date();
-    banner.classList.toggle('hidden', manuallyHidden || now >= hideAfter);
+    var hideAfter = trip && new Date(trip.getFullYear(), trip.getMonth(), trip.getDate() + 1 + BANNER_HIDE_DAYS);
+    var hide = !trip || manuallyHidden || now >= hideAfter;
+    banner.classList.toggle('hidden', hide);
+    if (hide) return;
 
-    var label = trip.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    var days = Math.round((trip - today) / 86400000);
     var year = document.getElementById('bostonBannerYear');
     if (year) year.textContent = trip.getFullYear();
     var sub = document.getElementById('bostonBannerSub');
-    if (sub) {
-      var tripOver = now >= new Date(trip.getFullYear(), trip.getMonth(), trip.getDate() + 1);
-      sub.textContent = tripOver
-        ? 'Pay your balance · Trip was ' + label
-        : label + ' · Register & pay your balance';
-    }
+    if (sub) sub.textContent = days > 1 ? days + ' days away · Register & pay your balance'
+      : days === 1 ? 'Tomorrow · Register & pay your balance'
+      : days === 0 ? 'Today · Register & pay your balance'
+      : 'Pay your balance · Trip was ' + trip.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
 
   function initBostonBanner() {

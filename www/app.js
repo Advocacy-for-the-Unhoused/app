@@ -191,7 +191,7 @@ window.onSignedIn = async function (preloadedPayload = null) {
         if (stats.goalRaised != null && stats.goalTarget != null) {
           const pct = stats.goalTarget > 0 ? Math.round(stats.goalRaised / stats.goalTarget * 100) : 0;
           document.getElementById('dashGoalRaised').textContent = '$' + stats.goalRaised.toLocaleString();
-          document.getElementById('dashGoalOf').textContent = 'of $' + stats.goalTarget.toLocaleString() + ' Goal — ' + pct + '%';
+          document.getElementById('dashGoalOf').textContent = pct + '% of $' + stats.goalTarget.toLocaleString();
           document.getElementById('dashGoalBar').style.width = Math.min(100, pct) + '%';
         }
 
@@ -296,7 +296,7 @@ window.onAppleSignedIn = async function(sub, email, givenName, familyName) {
         if (stats.goalRaised != null && stats.goalTarget != null) {
           const pct = stats.goalTarget > 0 ? Math.round(stats.goalRaised / stats.goalTarget * 100) : 0;
           document.getElementById('dashGoalRaised').textContent = '$' + stats.goalRaised.toLocaleString();
-          document.getElementById('dashGoalOf').textContent = 'of $' + stats.goalTarget.toLocaleString() + ' Goal — ' + pct + '%';
+          document.getElementById('dashGoalOf').textContent = pct + '% of $' + stats.goalTarget.toLocaleString();
           document.getElementById('dashGoalBar').style.width = Math.min(100, pct) + '%';
         }
         if (Array.isArray(stats.recentActivity) && stats.recentActivity.length > 0) {
