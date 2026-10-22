@@ -424,6 +424,8 @@ function scrubTaskBoardName_(fullName) {
     }
     if (changed) rng.setValues(data);
   } catch (e) { console.warn('scrubTaskBoardName_ failed: ' + e.message); }
+  try { scrubTaskBoardBaselineName_(name); }
+  catch (e) { console.warn('scrubTaskBoardBaselineName_ failed: ' + e.message); }
 }
 
 // Remove the user's push tokens so a deleted account stops receiving pushes.
@@ -703,6 +705,13 @@ function doPost(e) {
     } else if (p.action === "tbGetAllChanges") {
       result = tbGetAllChanges();
 
+    } else if (p.action === "tbGetBaseline") {
+      result = tbGetBaseline_();
+
+    } else if (p.action === "tbSetBaseline") {
+      result = requireRole_(p.actorEmail, /[AZ]/, 'Only A/Z officers can replace the Task Board baseline.') ||
+               tbSetBaseline_(p.data || '');
+
     } else if (p.action === "tbSaveChange") {
       result = tbSaveChange(p.type || '', p.key || '', p.value || '', p.extra || '');
 
@@ -838,8 +847,44 @@ function handleLookup(email) {
     return ContentService.createTextOutput(JSON.stringify({ removed: true, error: REMOVED_MSG }))
       .setMimeType(ContentService.MimeType.JSON);
   }
-  return ContentService.createTextOutput(JSON.stringify(getMemberInfo(email)))
+  let info = getMemberInfo(email);
+  // Not on the roster yet but already registered → report the pending
+  // registration so the app shows its pending state instead of asking the
+  // volunteer to register again on every launch.
+  if (info.branchCode === "X") info = findPendingRegistration_(email, '') || info;
+  return ContentService.createTextOutput(JSON.stringify(info))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+// Looks up a registration still awaiting approval in Pending Volunteers
+// (A=Name, C=Email, E=Branch Code, F=Status, G=Apple Sub). Matches by email,
+// or by Apple sub when given. Returns a member-shaped result flagged
+// `pending: true`, or null when there's no pending registration.
+function findPendingRegistration_(email, sub) {
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(PENDING_SHEET);
+  if (!sheet || sheet.getLastRow() < 2) return null;
+  const lc   = (email || '').toString().trim().toLowerCase();
+  const data = sheet.getDataRange().getValues();
+  for (let i = data.length - 1; i >= 1; i--) {  // newest registration wins
+    if ((data[i][5] || '').toString().trim().toLowerCase() !== 'pending') continue;
+    const rowEmail = (data[i][2] || '').toString().trim().toLowerCase();
+    const rowSub   = (data[i][6] || '').toString().trim();
+    if ((lc && rowEmail === lc) || (sub && rowSub === sub)) {
+      const fullName   = (data[i][0] || '').toString().trim();
+      const branchCode = (data[i][4] || '').toString().trim().toUpperCase();
+      return {
+        pending: true,
+        firstName: fullName.split(' ')[0] || '',
+        fullName,
+        branchCode,
+        branchName: resolveBranchName_(branchCode) || branchCode,
+        position: '',
+        photoUrl: '',
+        email: (data[i][2] || '').toString().trim()
+      };
+    }
+  }
+  return null;
 }
 
 function getMemberInfo(email) {
@@ -914,6 +959,9 @@ function appleSignIn_(authorizationCode) {
         }
       }
     }
+
+    const pendingReg = findPendingRegistration_(email, sub);
+    if (pendingReg) return pendingReg;
 
     return { error: 'Not found in roster' };
   } catch (err) {
@@ -2429,6 +2477,56 @@ function tbGetAllChanges() {
         extra: String(row[3])
       };
     });
+}
+
+// The board's starting teams/tasks, stored as one JSON array in cell A1 of the
+// "Task Board Baseline" sheet (kept out of the app bundle so member names don't
+// ship in it). Changes from tbGetAllChanges are replayed on top client-side.
+const TB_BASELINE_SHEET = 'Task Board Baseline';
+
+function tbBaselineSheet_() {
+  const ss = SpreadsheetApp.openById(ROSTER_SS_ID);
+  return ss.getSheetByName(TB_BASELINE_SHEET) || ss.insertSheet(TB_BASELINE_SHEET);
+}
+
+function tbGetBaseline_() {
+  const sheet = SpreadsheetApp.openById(ROSTER_SS_ID).getSheetByName(TB_BASELINE_SHEET);
+  if (!sheet) return [];
+  try {
+    const teams = JSON.parse(String(sheet.getRange(1, 1).getValue() || '[]'));
+    return Array.isArray(teams) ? teams : [];
+  } catch (e) {
+    console.warn('Task Board Baseline is not valid JSON: ' + e.message);
+    return [];
+  }
+}
+
+// A/Z only (checked in doPost). Replaces the whole baseline.
+function tbSetBaseline_(json) {
+  let teams;
+  try { teams = JSON.parse(json || ''); } catch (e) { return { error: 'Baseline must be valid JSON.' }; }
+  if (!Array.isArray(teams) || teams.some(t => !t || !t.name || !Array.isArray(t.tasks))) {
+    return { error: 'Baseline must be an array of teams with a name and a tasks list.' };
+  }
+  tbBaselineSheet_().getRange(1, 1).setNumberFormat('@').setValue(JSON.stringify(teams));
+  return { success: true, teams: teams.length };
+}
+
+// Account deletion: blank a deleted member's name everywhere it appears in the
+// baseline (task assignee, team officer, team member list).
+function scrubTaskBoardBaselineName_(name) {
+  const teams = tbGetBaseline_();
+  if (!teams.length) return;
+  const is = v => String(v || '').trim().toLowerCase() === name;
+  let changed = false;
+  teams.forEach(t => {
+    if (is(t.officer)) { t.officer = ''; changed = true; }
+    const before = (t.members || []).length;
+    t.members = (t.members || []).filter(m => !is(m && m.name));
+    if (t.members.length !== before) changed = true;
+    (t.tasks || []).forEach(k => { if (is(k.assignee)) { k.assignee = ''; changed = true; } });
+  });
+  if (changed) tbBaselineSheet_().getRange(1, 1).setValue(JSON.stringify(teams));
 }
 
 function tbSaveChange(type, key, value, extra) {

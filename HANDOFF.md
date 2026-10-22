@@ -87,7 +87,9 @@ git config --global user.email "your-github-email@example.com"
 #!/bin/sh
 cp index.html www/index.html
 cp app.js www/app.js
-git add www/index.html www/app.js
+cp privacy.html www/privacy.html
+cp -r vendor/. www/vendor/
+git add www/index.html www/app.js www/privacy.html www/vendor
 ```
 
 Then `chmod +x .git/hooks/pre-commit`. See §6 for why this matters.

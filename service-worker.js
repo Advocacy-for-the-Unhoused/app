@@ -1,9 +1,12 @@
-const CACHE_NAME = "afu-cache-v20";
+const CACHE_NAME = "afu-cache-v21";
 const ASSETS = [
   "/",
   "/index.html",
   "/app.js",
-  "/manifest.json"
+  "/manifest.json",
+  "/privacy.html",
+  "/vendor/bootstrap-icons/bootstrap-icons.min.css",
+  "/vendor/html5-qrcode.min.js"
 ];
 
 self.addEventListener("install", event => {

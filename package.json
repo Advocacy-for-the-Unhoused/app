@@ -21,6 +21,8 @@
     "@capacitor/preferences": "^8.0.1",
     "@capacitor/status-bar": "^8.0.2",
     "@capawesome/capacitor-apple-sign-in": "^0.1.0",
-    "@capgo/capacitor-social-login": "^8.3.33"
+    "@capgo/capacitor-social-login": "^8.3.33",
+    "bootstrap-icons": "1.11.0",
+    "html5-qrcode": "2.3.8"
   }
 }

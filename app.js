@@ -62,7 +62,21 @@ function toggleTheme() {
     html.dataset.theme = 'light';
     localStorage.setItem('afu-theme', 'light');
   }
+  syncStatusBar();
 }
+
+// Keep the iOS status bar (clock, battery) readable: light text on the dark
+// theme, dark text on the light theme. Capacitor's 'DARK' style = light text.
+function syncStatusBar() {
+  if (!window.Capacitor?.isNativePlatform()) return;
+  const { StatusBar } = window.Capacitor.Plugins;
+  if (!StatusBar) return;
+  const t = document.documentElement.dataset.theme;
+  const dark = t === 'dark' || (!t && !window.matchMedia('(prefers-color-scheme: light)').matches);
+  StatusBar.setStyle({ style: dark ? 'DARK' : 'LIGHT' }).catch(() => {});
+}
+window.syncStatusBar = syncStatusBar;
+window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', syncStatusBar);
 
 // ===== HAPTICS =====
 function haptic(type = 'medium') {
@@ -149,7 +163,6 @@ window.onSignedIn = async function (preloadedPayload = null) {
   }
 
   volunteerEmail = payload.email;
-  console.log("Signed in as:", volunteerEmail);
 
   const body = `lookupEmail=${encodeURIComponent(volunteerEmail)}`;
   console.log("Sending lookup request");
@@ -163,14 +176,24 @@ window.onSignedIn = async function (preloadedPayload = null) {
 
     console.log("Response status:", res.status);
     const responseText = await res.text();
-    console.log("Raw response:", responseText);
 
     const info = JSON.parse(responseText);
-    console.log("Parsed info:", info);
 
     if (info.removed) {
       await clearStoredAuth();
       alert(info.error);
+      return;
+    }
+
+    // Registered but not approved yet (or waiting on a new-branch request)
+    if (info.pending || info.branchCode === "NEW") {
+      await enterPendingMode({
+        firstName: info.firstName || payload.given_name || '',
+        fullName: info.fullName || '',
+        branchName: info.pending ? info.branchName : '',
+        email: volunteerEmail,
+        newBranch: info.branchCode === "NEW"
+      }, payload);
       return;
     }
 
@@ -189,7 +212,6 @@ window.onSignedIn = async function (preloadedPayload = null) {
     branchLetter  = info.branchCode;
     branchName    = info.branchName;
 
-    console.log("Set variables:", { volunteerName, branchLetter, branchName });
 
     // Expose profile so the dashboard stub can read it
     window.volunteerProfile = {
@@ -264,7 +286,7 @@ window.onSignedIn = async function (preloadedPayload = null) {
 
   } catch (err) {
     console.error("Error during lookup:", err);
-    alert("Could not connect to server. Please check your internet connection and try again.\n\nError: " + (err.message || String(err)));
+    alert("Could not connect to AFU. Please check your internet connection and try again.");
   }
 };
 
@@ -295,6 +317,18 @@ window.onAppleSignedIn = async function(sub, email, givenName, familyName, autho
     if (info.removed) {
       await clearStoredAuth();
       alert(info.error);
+      return;
+    }
+
+    if (info.pending || info.branchCode === 'NEW') {
+      const pendingEmail = info.email || email || '';
+      await enterPendingMode({
+        firstName: info.firstName || givenName || '',
+        fullName: info.fullName || '',
+        branchName: info.pending ? info.branchName : '',
+        email: pendingEmail,
+        newBranch: info.branchCode === 'NEW'
+      }, { email: pendingEmail, given_name: givenName || '', family_name: familyName || '', picture: '' });
       return;
     }
 
@@ -376,7 +410,7 @@ window.onAppleSignedIn = async function(sub, email, givenName, familyName, autho
 
   } catch (err) {
     console.error('Apple sign-in error:', err);
-    alert('Could not connect to server. Please check your internet connection and try again.\n\nError: ' + (err.message || String(err)));
+    alert('Could not connect to AFU. Please check your internet connection and try again.');
   }
 };
 
@@ -469,6 +503,8 @@ window.addEventListener('online', syncDonations);
 // ===== DONATION UI =====
 function submitDonation() {
   if (!volunteerEmail) { alert("Please sign in first."); return; }
+  // UDIs are prefixed with the branch letter — pending volunteers don't have one yet
+  if (!branchLetter) { alert("Recording donations unlocks once your Branch President approves your profile."); return; }
 
   const digits    = parseInt(document.getElementById("udiDigits").value);
   const amount    = document.getElementById("amount").value;
@@ -531,7 +567,9 @@ function loadQRScanner() {
   return new Promise((resolve, reject) => {
     if (window.Html5Qrcode) { resolve(); return; }
     const script = document.createElement('script');
-    script.src = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
+    // Bundled with the app (vendor/) — App Review 2.5.2 forbids downloading
+    // executable code at runtime, and a CDN copy wouldn't work offline.
+    script.src = 'vendor/html5-qrcode.min.js';
     script.onload  = () => { console.log("html5-qrcode library loaded"); resolve(); };
     script.onerror = () => reject(new Error("Failed to load scanner library"));
     document.head.appendChild(script);
@@ -582,7 +620,7 @@ async function startScan() {
     statusEl.textContent = "Camera error: " + err.message;
     isScanning = false;
     setTimeout(() => {
-      alert("Could not start camera. Please:\n1. Grant camera permission\n2. Make sure you're using HTTPS\n3. Try entering UDI manually");
+      alert("Could not start the camera. Allow camera access for AFU in Settings, or type the UDI number instead.");
       stopScan();
     }, 100);
   }
@@ -997,7 +1035,7 @@ async function biometricSignIn(auto = false) {
 
     await BiometricAuth.authenticate({
       reason: 'Verify your identity to sign in to AFU',
-      cancelTitle: 'Use Google Sign-In',
+      cancelTitle: 'Sign In Another Way',
       allowDeviceCredential: false,
       iosFallbackTitle: ''
     });
@@ -1063,6 +1101,9 @@ async function registerPushNotifications() {
   try {
     let perm = await FirebaseMessaging.checkPermissions();
     if (perm.receive === 'prompt' || perm.receive === 'prompt-with-rationale') {
+      // Say why before iOS asks; if they decline here we can ask again next sign-in
+      const wants = confirm('Turn on notifications?\n\nAFU will let you know when your hours or registration are approved, when you\'re assigned a task, and about meetings and trip deadlines.');
+      if (!wants) return;
       perm = await FirebaseMessaging.requestPermissions();
     }
     if (perm.receive !== 'granted') return;
@@ -1199,6 +1240,11 @@ async function submitRegistration() {
     alert('Please fill in all required fields.');
     return;
   }
+  // The app is for volunteers 13+; we don't collect data from younger children (COPPA)
+  if (!document.getElementById('regAgeConfirm').checked) {
+    alert('Please confirm you are 13 or older. Volunteers under 13 can’t create an account.');
+    return;
+  }
 
   // When starting a new branch, collect the location and type instead of an
   // existing branch code. The backend creates the branch from these fields.
@@ -1251,6 +1297,14 @@ async function submitRegistration() {
     if (data.success) {
       window._pendingAppleSub = null;
       window._pendingAppleAuthCode = null;
+      // Carried into the pending-state app by proceedAfterRegistration().
+      registeredProfile = {
+        firstName: fname,
+        fullName: fname + ' ' + lname,
+        branchName: isNewBranch ? '' : branch,
+        email: emailToSubmit,
+        newBranch: isNewBranch
+      };
       document.getElementById('registerCard').classList.add('hidden');
       document.getElementById('registerSuccess').classList.remove('hidden');
     } else {
@@ -1290,6 +1344,7 @@ async function deleteAccount() {
     branchLetter   = null;
     branchName     = null;
     window.volunteerProfile = null;
+    document.body.classList.remove('is-pending');
     document.getElementById('appContent').classList.add('hidden');
     document.getElementById('mainNav').classList.add('hidden');
     document.getElementById('authScreen').classList.remove('hidden');
@@ -1299,17 +1354,72 @@ async function deleteAccount() {
   }
 }
 
+let registeredProfile = null;
+
+// Signs out on this device: forgets the Face ID / Touch ID login, stops push
+// notifications to this device, signs out of Google, then reloads so no
+// signed-in state survives. The account itself is untouched.
+async function signOut() {
+  if (!confirm('Sign out of AFU on this device?')) return;
+  await clearStoredAuth();
+  const plugins = (window.Capacitor?.isNativePlatform() && window.Capacitor.Plugins) || {};
+  try { if (plugins.FirebaseMessaging) await plugins.FirebaseMessaging.deleteToken(); } catch (e) {}
+  try { if (plugins.SocialLogin) await plugins.SocialLogin.logout({ provider: 'google' }); } catch (e) {}
+  try { window.google?.accounts?.id?.disableAutoSelect(); } catch (e) {}
+  window.location.reload();
+}
+window.signOut = signOut;
+
 function proceedAfterRegistration() {
-  // Grant access with a pending-state welcome message.
-  // branchLetter/branchName remain null until approved and re-verified next login.
   document.getElementById('registerSuccess').classList.add('hidden');
-  document.getElementById('welcomeMessage').innerText = `Welcome! Your profile is pending Branch President approval.`;
-  document.getElementById('welcomeMessage').style.display = 'block';
+  const p = registeredProfile || { email: volunteerEmail };
+  enterPendingMode(p, { email: p.email, given_name: p.firstName, family_name: '' });
+}
+
+// ===== PENDING (NOT YET APPROVED) STATE =====
+// A volunteer who registered but isn't on the roster yet. They can use Hours,
+// Tasks and their account settings; anything that needs a branch code (recording
+// donations, printing slips) shows an "available after approval" note instead.
+// Used right after registering AND on every later sign-in while still pending,
+// so the app never sends them back to the registration form.
+async function enterPendingMode(p, authPayload) {
+  volunteerEmail = p.email || volunteerEmail;
+  volunteerName  = p.firstName || '';
+  branchLetter   = null;
+  branchName     = p.branchName || '';
+
+  window.volunteerProfile = {
+    firstName: volunteerName,
+    fullName: p.fullName || volunteerName,
+    branchName,
+    branchCode: '',
+    email: volunteerEmail,
+    photoUrl: null,
+    hasRosterPhoto: true,   // photo uploads need a roster row — don't prompt yet
+    position: '',
+    pending: true,
+  };
+  document.body.classList.add('is-pending');
+  document.getElementById('navAdmin').classList.add('hidden');
+
+  const status = p.newBranch ? 'New branch request · Pending review'
+    : (branchName ? branchName + ' Branch · Pending approval' : 'Pending approval');
+  window.loadDashboard = function() {
+    document.getElementById('dashName').textContent = volunteerName || 'Volunteer';
+    document.getElementById('dashBranch').textContent = status;
+    document.getElementById('dashGoalOf').textContent = 'Available after approval';
+  };
+
+  if (authPayload) await storeAuthForBiometric(authPayload);
+  await registerPushNotifications();   // so the "approved" push reaches them
+
+  document.getElementById('authScreen').classList.add('hidden');
+  document.getElementById('registerCard').classList.add('hidden');
   document.getElementById('appContent').classList.remove('hidden');
   document.getElementById('mainNav').classList.remove('hidden');
-  // UDI slip generation requires branchLetter — hide that section for pending users
-  const udiSection = document.getElementById('udiSection');
-  if (udiSection) udiSection.style.display = 'none';
+  switchTab('home');
+  maybeShowWelcome();
+  loadEventTypes();
 }
 
 // =====================================================

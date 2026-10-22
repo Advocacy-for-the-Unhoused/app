@@ -6,7 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#B84A27">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet" />
+  <!-- Bundled (not CDN) so icons work offline and no code is fetched at runtime -->
+  <link href="vendor/bootstrap-icons/bootstrap-icons.min.css" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Montserrat:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
   <script>
     (function() {
@@ -371,7 +372,7 @@
       transition: top 0.32s cubic-bezier(.22,.68,0,1.2);
       max-width: 460px; margin: 0 auto;
     }
-    .native-push-toast.visible { top: 54px; }
+    .native-push-toast.visible { top: calc(env(safe-area-inset-top, 0px) + 10px); }
     .native-toast-title { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
     .native-toast-body  { font-size: 13px; opacity: 0.85; }
 
@@ -1526,6 +1527,11 @@
     .hrs-tab { min-height: 44px; display: flex; align-items: center; justify-content: center; }
     .hrs-dropdown-item { padding: 13px 10px; }
 
+    /* ── Pending (not yet approved) volunteers ── */
+    .pending-only { display: none; }
+    body.is-pending .pending-only { display: block; }
+    body.is-pending .approved-only { display: none !important; }
+
     /* ── Privacy policy modal ── */
     .privacy-modal-overlay {
       position: fixed; inset: 0; background: rgba(26,19,17,0.7);
@@ -1539,14 +1545,18 @@
       padding: 28px 24px calc(28px + env(safe-area-inset-bottom, 0px));
       box-sizing: border-box;
     }
-    .privacy-modal h3 {
-      font-family: 'Abril Fatface', serif; font-size: 1.4rem;
-      color: var(--camp-dark); margin: 0 0 16px;
+    .privacy-modal h1 {
+      font-family: 'Abril Fatface', serif; font-size: 1.4rem; font-weight: 400;
+      color: #1A1311; margin: 0 0 4px;
     }
     .privacy-modal p, .privacy-modal li {
       font-size: 0.88rem; color: #444; line-height: 1.7; margin-bottom: 10px;
     }
-    .privacy-modal h4 {
+    .privacy-modal ul { padding-left: 18px; margin: 0 0 10px; }
+    .privacy-modal li { margin-bottom: 6px; }
+    .privacy-modal .effective { font-size: 0.78rem; color: #5A4F4B; }
+    .privacy-modal a { color: #B84A27; }
+    .privacy-modal h2 {
       font-family: 'Montserrat', sans-serif; font-size: 0.82rem;
       font-weight: 800; text-transform: uppercase; letter-spacing: 1px;
       color: var(--camp-dark); margin: 16px 0 6px;
@@ -1584,6 +1594,21 @@
       width: auto; margin: 0; transition: border-color 0.2s, color 0.2s;
       border-radius: 0; box-shadow: none; transform: none; min-height: 44px;
     }
+    .reg-age-row {
+      display: flex; align-items: center; gap: 10px; min-height: 44px;
+      margin: 14px 0 4px; font-size: 0.9rem; font-weight: 700; cursor: pointer;
+      text-transform: none; letter-spacing: 0;
+    }
+    .reg-age-row input { width: 22px; height: 22px; margin: 0; flex: 0 0 auto; }
+    .sign-out-btn {
+      display: block; margin: 0 auto 12px; width: auto; min-height: 44px;
+      background: transparent; border: 1.5px solid currentColor; border-radius: 0;
+      color: var(--page-text); font-family: 'Montserrat', sans-serif;
+      font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1px; padding: 13px 28px; cursor: pointer;
+      box-shadow: none; transform: none;
+    }
+    .sign-out-btn:hover, .sign-out-btn:active { background: rgba(127,127,127,0.1); transform: none; box-shadow: none; }
     .delete-account-btn:hover, .delete-account-btn:active {
       border-color: #b83232; color: #b83232;
       background: rgba(184,50,50,0.05);
@@ -2200,6 +2225,25 @@
       text-transform: uppercase; color: #B84A27;
       padding: 8px 0 2px; border-bottom: 1px solid rgba(200,82,45,0.2);
     }
+  /* ── Apple HIG minimums: text at least 11px, touch targets at least 44px ──
+     Kept last so it wins over the per-tab rules above. */
+  /* "html body" outranks the per-tab rules, which live in later style blocks */
+  html body .admin-eyebrow,
+  html body #tabBoston .boston-sub-header .bsub,
+  html body #tabTasks .tb-subtitle,
+  html body #tabTasks .sync-label,
+  html body #tabTasks .tb-section-label,
+  html body .dash-goal-sub,
+  html body .cr-pay-method-opt label,
+  html body .cr-photo-placeholder { font-size: 0.6875rem; }
+  html body .rec-help-btn { min-height: 44px; }
+  html body #tabTasks .tb-collapse-btn { min-width: 44px; min-height: 44px; }
+  html body #tabTasks .site-header .btn-primary { min-height: 44px; }
+  /* The pill stays 28px tall visually; this widens what a finger can hit */
+  html body .theme-toggle-pill::after { content: ''; position: absolute; inset: -9px -4px; }
+  /* In-app copy of the Privacy Policy link sits on the page background, not the
+     white sign-in card, so it follows the theme's text color */
+  html body .delete-account-section .privacy-link { color: var(--page-text); opacity: 0.8; }
   </style>
 
   <style>
@@ -3034,7 +3078,7 @@
   </button>
   <!-- Biometric button — shown on native only if a previous session is stored -->
   <div id="biometricSignInOr" class="hidden" style="text-align:center;color: #6B6B6B;font-size:13px;margin:10px 0 4px;">— or —</div>
-  <button class="privacy-link" onclick="document.getElementById('privacyModal').classList.remove('hidden')">Privacy Policy</button>
+  <button class="privacy-link" onclick="openPrivacyPolicy()">Privacy Policy</button>
   <button id="biometricSignInBtn" class="hidden btn-biometric-native" onclick="biometricSignIn()">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right:9px;vertical-align:middle;">
       <!-- Face ID icon -->
@@ -3134,6 +3178,11 @@
   </div>
   <input type="file" id="regFileInput" accept="image/*" style="display:none;" onchange="handleRegPhoto(event)" />
 
+  <label class="reg-age-row" for="regAgeConfirm">
+    <input type="checkbox" id="regAgeConfirm" />
+    <span>I'm 13 or older.</span>
+  </label>
+
   <button id="regSubmitBtn" onclick="submitRegistration()">Register as a Volunteer</button>
 
   <div id="regMsg" class="hours-msg"></div>
@@ -3149,7 +3198,7 @@
   <div class="reg-pending-chip">⏳ Pending Branch President Approval</div>
   <p style="font-size:0.85rem;line-height:1.7;color:#666;">
     Your Branch President will review and approve your volunteer profile before it appears on the team page.
-    You have full access to the portal in the meantime.
+    While you wait, you can log volunteer hours and see your team's tasks. Recording donations unlocks once you're approved.
   </p>
   <button onclick="proceedAfterRegistration()">Continue to App →</button>
 </div>
@@ -3262,7 +3311,7 @@
           <span class="theme-toggle-label">App tour</span>
         </div>
         <button onclick="showWelcome(true)" aria-label="Replay welcome tour"
-          style="background:var(--camp-orange);color:#fff;border:none;border-radius:12px;font-family:'Montserrat',sans-serif;font-weight:800;font-size:0.78rem;letter-spacing:0.3px;padding:10px 18px;min-height:40px;width:auto;box-shadow:0 4px 12px rgba(200,82,45,0.3);cursor:pointer;">Replay</button>
+          style="background:var(--camp-orange);color:#fff;border:none;border-radius:12px;font-family:'Montserrat',sans-serif;font-weight:800;font-size:0.78rem;letter-spacing:0.3px;padding:10px 18px;min-height:44px;width:auto;box-shadow:0 4px 12px rgba(200,82,45,0.3);cursor:pointer;">Replay</button>
       </div>
       <div class="theme-toggle-row">
         <div class="theme-toggle-icons">
@@ -3275,7 +3324,9 @@
         </button>
       </div>
       <div class="delete-account-label">Account</div>
+      <button class="sign-out-btn" onclick="signOut()">Sign Out</button>
       <button class="delete-account-btn" onclick="deleteAccount()">Delete My Account</button>
+      <button class="privacy-link" onclick="openPrivacyPolicy()">Privacy Policy</button>
     </div>
 
   </div>
@@ -3289,7 +3340,16 @@
 
     <div id="welcomeMessage" class="welcome"></div>
 
-    <div id="step2" class="card">
+    <!-- Shown instead of the record form while the volunteer awaits approval -->
+    <div class="card pending-only">
+      <h3>Pending Approval</h3>
+      <p style="font-size:0.85rem;line-height:1.6;margin-bottom:0;">
+        Recording donations and printing slips unlock once your Branch President approves your profile —
+        donation IDs start with your branch's letter. You'll get a notification when you're approved.
+      </p>
+    </div>
+
+    <div id="step2" class="card approved-only">
       <div class="rec-help-row">
         <h3>Record a Donation</h3>
         <button type="button" class="rec-help-btn" onclick="openRecordHelp()" aria-label="How recording donations works">? Help</button>
@@ -3321,7 +3381,7 @@
     </div>
 
     <!-- ── Print Slips (collapsible) ── -->
-    <div id="udiSection">
+    <div id="udiSection" class="approved-only">
       <div class="udi-divider"><span>Print Slips</span></div>
 
       <button id="udiToggle" onclick="toggleUDIPanel()">
@@ -3367,7 +3427,7 @@
             <div class="udi-links" id="udiLinks"></div>
             <div class="udi-next">
               <strong>Next steps:</strong><br><br>
-              Print with <strong>Ctrl + P</strong> (or Share → Print on mobile).<br>
+              Open the PDF, then tap <strong>Share → Print</strong>.<br>
               Set to <strong>16 pages per sheet, double-sided</strong>.<br><br>
               Cut the slips and hand to donors so they can track their donation.
               <div class="udi-tip">Tip: print on cardstock for higher-quality slips.</div>
@@ -3823,7 +3883,7 @@
     <div id="view-lookup" style="display:flex;flex-direction:column;gap:16px;align-items:center;padding:40px 0;">
       <div id="boston-loading-spinner" style="text-align:center;">
         <div style="font-size:2rem;margin-bottom:12px;"><i class="bi bi-hourglass-split spinner"></i></div>
-        <div style="font-size:0.65rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color: var(--text-secondary);">Loading your info&hellip;</div>
+        <div style="font-size:0.6875rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color: var(--text-secondary);">Loading your info&hellip;</div>
       </div>
       <div id="boston-not-found" style="display:none;text-align:center;max-width:320px;">
         <div style="font-size:2rem;margin-bottom:12px;">&#x1F6AB;</div>
@@ -4167,6 +4227,8 @@
   };
 
   window.openProfilePhotoPicker = function () {
+    // Photo uploads attach to the roster row, which pending volunteers don't have yet
+    if (window.volunteerProfile && window.volunteerProfile.pending) return;
     var input = document.getElementById('profilePhotoInput');
     if (input) input.click();
   };
@@ -5190,11 +5252,8 @@
     const { StatusBar } = window.Capacitor.Plugins;
     const { Network }   = window.Capacitor.Plugins;
 
-    // Style status bar to match dark app header
-    if (StatusBar) {
-      StatusBar.setStyle({ style: 'DARK' });
-      StatusBar.setBackgroundColor({ color: '#1A1311' });
-    }
+    // Status bar text follows the app's light/dark theme
+    if (StatusBar && typeof window.syncStatusBar === 'function') window.syncStatusBar();
 
     // Offline banner
     if (Network) {
@@ -5204,7 +5263,7 @@
       offlineBanner.style.cssText = [
         'display:none', 'position:fixed', 'top:0', 'left:0', 'right:0',
         'background:#b91c1c', 'color:#fff', 'text-align:center',
-        'padding:8px', 'font-size:13px', 'font-weight:600',
+        'padding:calc(env(safe-area-inset-top, 0px) + 8px) 8px 8px', 'font-size:13px', 'font-weight:600',
         'z-index:9999', 'letter-spacing:0.5px'
       ].join(';');
       document.body.prepend(offlineBanner);
@@ -5220,7 +5279,7 @@
   });
 </script>
 
-<script src="app.js?v=20"></script>
+<script src="app.js?v=21"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 
 <script>
@@ -6534,70 +6593,13 @@
       '#D4537E','#BA7517','#639922','#888780','#1A1311'
     ];
 
-    const HARDCODED_TEAMS = [
-      {
-        name: 'Web Dev', officer: 'Sanya Bhagat', color: '#378ADD', meetingDate: '2026-06-09', meetingTime: '15:30',
-        members: [ { name:'Pranav Warrier', oversees:'' }, { name:'Dharshna Karthick', oversees:'' } ],
-        tasks: [
-          { id:'wd-1', text:'Web Dev team meeting 3:30pm tues (remember the tutorial idea)', assignee:'Sanya Bhagat',    done:true  },
-          { id:'wd-2', text:'fix camp blog on site',                                          assignee:'Pranav Warrier',  done:false },
-          { id:'wd-3', text:'get footer on every page',                                       assignee:'Pranav Warrier',  done:false },
-          { id:'wd-5', text:'Get NP verified on Apple dev program',                           assignee:'Sanya Bhagat',    done:true  },
-          { id:'wd-6', text:'Launch app on Apple and Android store',                          assignee:'Sanya Bhagat',    done:false },
-          { id:'wd-7', text:'New team page: no nested menus',                                 assignee:'Dharshna Karthick', done:true  },
-          { id:'umq66569vjtr', text:'Send Permission & Shirt Form',                           assignee:'Dharshna Karthick', done:false },
-          { id:'umq71q3sgcgo', text:'Shift domain from Namecheap to Porkbun',                 assignee:'Sanya Bhagat',    done:true  },
-          { id:'umq72xp8szk9', text:'shift google workspace from zoho',                       assignee:'Sanya Bhagat',    done:false },
-        ]
-      },
-      {
-        name: 'Social Media', officer: 'Sreenidhi Rajesh', color: '#7F77DD', meetingDate: '2026-06-09', meetingTime: '17:00',
-        members: [ { name:'Priyanka Jagannath', oversees:'' }, { name:'Evalynn Ashley', oversees:'' }, { name:'Maanya Shettigar', oversees:'' }, { name:'Sreenisha Rajesh', oversees:'' }, { name:'Akshaya Mavalur', oversees:'' } ],
-        tasks: [
-          { id:'sm-1', text:'Make media packet for BT: insta, linkedin, tiktok',           assignee:'Priyanka Jagannath', done:false },
-          { id:'sm-2', text:'Send media packet to local newspapers to get published again', assignee:'Evalynn Ashley',     done:false },
-          { id:'sm-3', text:'Launch Camp details — need flyer for repeaters w/discount',   assignee:'Evalynn Ashley',     done:false },
-          { id:'sm-4', text:'Finish poster for club fair',                                 assignee:'Maanya Shettigar',   done:false },
-          { id:'sm-5', text:'Make Facebook account',                                       assignee:'Priyanka Jagannath', done:false },
-          { id:'sm-6', text:'Talk to Nisha about the Award + help w/club form',            assignee:'Sreenisha Rajesh',   done:false },
-          { id:'umq5u7xitgpn', text:'Email blast for Boston trip',                         assignee:'Akshaya Mavalur',    done:false },
-        ]
-      },
-      {
-        name: 'Finance', officer: 'Yaashwanth Narendran', color: '#1D9E75', meetingDate: '', meetingTime: '',
-        members: [ { name:'Madhav Warrier', oversees:'' } ],
-        tasks: [
-          { id:'fi-1', text:'Finance team meeting for IPS asap',                   assignee:'Yaashwanth Narendran', done:false },
-          { id:'fi-2', text:'Send impact report day of Boston trip — all donors',  assignee:'Madhav Warrier',       done:false },
-        ]
-      },
-      {
-        name: 'Branch Coord', officer: 'Maanya Shettigar', color: '#B84A27', meetingDate: '2026-06-09', meetingTime: '16:30',
-        members: [ { name:'Lakshya Chauhan', oversees:'' } ],
-        tasks: [
-          { id:'bc-2', text:'Go D2D @ all branches this week',                assignee:'Maanya Shettigar',  done:true  },
-          { id:'bc-3', text:'Incorporate branch members into departments',    assignee:'Lakshya Chauhan',   done:false },
-          { id:'bc-4', text:'Find new branch prez on LinkedIn',               assignee:'Maanya Shettigar',  done:false },
-        ]
-      },
-      {
-        name: 'Admin Tasks', officer: 'Madhav Saxena', color: '#888780', meetingDate: '', meetingTime: '',
-        members: [ { name:'Yaashwanth Narendran', oversees:'' }, { name:'Sreenidhi Rajesh', oversees:'' }, { name:'Maanya Shettigar', oversees:'' }, { name:'Dilpreet Gill', oversees:'' } ],
-        tasks: [
-          { id:'at-1',        text:'Send leadership transfer email',                            assignee:'Madhav Saxena',        done:false },
-          { id:'at-2',        text:"Schedule OM @ Yaash's",                                    assignee:'Yaashwanth Narendran', done:false },
-          { id:'at-3',        text:'Email Theis for 5k tentative',                             assignee:'Sreenidhi Rajesh',     done:false },
-          { id:'bt-1',        text:'Get Wagamama group menu',                                  assignee:'Maanya Shettigar',     done:false },
-          { id:'bt-2',        text:'Send Boston Trip itinerary',                               assignee:'Yaashwanth Narendran', done:false },
-          { id:'bt-4',        text:'Finalize shirt design and place order',                    assignee:'Maanya Shettigar',     done:false },
-          { id:'umq61c3rfj1l',text:"submit tax records for FY'26",                            assignee:'Dilpreet Gill',        done:false },
-          { id:'umq665j068zt',text:'Rosies confirmed — waiting on Brookline and St. Francis',  assignee:'Yaashwanth Narendran', done:false },
-          { id:'umq665wlx7ju',text:'Introduce Finn to new team, register for Club fair',       assignee:'Dilpreet Gill',        done:false },
-        ]
-      },
-    ];
+    // The board's starting teams/tasks live on the server ("Task Board Baseline"
+    // sheet) rather than in the app, so no member names ship in the app bundle.
+    // Saved changes (tbGetAllChanges) are replayed on top of it.
+    let tbBaseline = [];
+    let tbBaselineLoaded = false;
 
-    let tbTeams = tbDeepCopy(HARDCODED_TEAMS);
+    let tbTeams = [];
     let tbSelectedColor = TB_COLORS[0];
     let tbRosterNames = null;
     const tbCollapsed = new Map(); // team → collapsed, once the viewer toggles it this session
@@ -6776,9 +6778,20 @@
       _tbErrTimer = setTimeout(() => el.classList.remove('show'), 10000);
     }
 
+    // Loads the server baseline once per session, then the change log.
+    // Returns the changes for tbApplyChanges.
+    async function tbFetchState() {
+      if (!tbBaselineLoaded) {
+        const base = await tbRun('tbGetBaseline');
+        tbBaseline = Array.isArray(base) ? base : [];
+        tbBaselineLoaded = true;
+      }
+      return tbRun('tbGetAllChanges');
+    }
+
     function tbLoadData() {
       tbRender(); tbSetStatus('syncing', 'Syncing…');
-      tbRun('tbGetAllChanges')
+      tbFetchState()
         .then(changes => { tbApplyChanges(changes); tbRender(); tbSetStatus('synced', 'Synced'); tbSanitizeAssignees(); tbLoadBranchMeta().then(tbRender); })
         .catch(err => { console.error(err); tbSetStatus('error', 'Offline'); tbToastError('⚠ Could not load saved state.'); });
     }
@@ -6822,7 +6835,7 @@
     }
 
     function tbApplyChanges(rawChanges) {
-      tbTeams = tbDeepCopy(HARDCODED_TEAMS);
+      tbTeams = tbDeepCopy(tbBaseline);
       const changes = tbDeduplicateChanges(rawChanges || []);
       changes.forEach(c => {
         switch (c.type) {
@@ -6949,7 +6962,7 @@
       const target = String(fullName || '').trim().toLowerCase();
       if (!target) return [];
       try {
-        const changes = await tbRun('tbGetAllChanges');
+        const changes = await tbFetchState();
         tbApplyChanges(changes);
       } catch (e) { /* fall back to whatever tbTeams already holds */ }
       const out = [];
@@ -7153,7 +7166,7 @@
       </div>`;
     }
 
-    // "Pranav Warrier" → "Pranav W." so chips fit; the task view shows the full name.
+    // "Jane Smith" → "Jane S." so chips fit; the task view shows the full name.
     function tbShortName(n) {
       const parts = String(n || '').trim().split(/\s+/);
       return parts.length > 1 ? parts[0] + ' ' + parts[parts.length - 1][0] + '.' : parts[0] || '';
@@ -8321,28 +8334,33 @@
 
 <!-- ═══════════════ Privacy Policy Modal ═══════════════ -->
 <div id="privacyModal" class="privacy-modal-overlay hidden" onclick="if(event.target===this)this.classList.add('hidden')">
-  <div class="privacy-modal">
-    <h3>Privacy Policy</h3>
-    <p><strong>Effective June 17, 2026</strong></p>
-
-    <h4>What We Collect</h4>
-    <p>When you sign in and use AFU, we collect your name and email address (via Google Sign-In or Sign in with Apple), volunteer hours and donation records you submit, task assignments, expense reimbursement requests, and push notification tokens to send you updates. If you enable Face ID / Touch ID sign-in, biometric data never leaves your device and is never sent to us — we only store your account email on your device for re-authentication.</p>
-
-    <h4>How We Use Your Data</h4>
-    <p>Your information is used solely to coordinate volunteer activities within Advocacy for the Unhoused (AFU). Data is visible to AFU officers and branch coordinators as needed to manage volunteer operations.</p>
-
-    <h4>Third-Party Services</h4>
-    <p>We use Google and Apple for authentication, Firebase for push notifications, and Google Apps Script for data storage. We do not sell or share your data with any other parties.</p>
-
-    <h4>Data Retention</h4>
-    <p>Your data is retained while you are an active volunteer. You may delete your account at any time from the app dashboard. Deletion is permanent and complete: we erase your roster entry, volunteer hours, Boston trip forms (including parent details and signature), reimbursement requests, any photos or receipts you uploaded, your date of birth, and your sign-in credentials, and we delete your push notification tokens. No personal records are retained after deletion.</p>
-
-    <h4>Contact</h4>
-    <p>Questions? Contact AFU leadership through the app or at maanya.shettigar@gmail.com.</p>
-
+  <div class="privacy-modal" role="dialog" aria-modal="true" aria-label="Privacy Policy">
+    <!-- Filled from privacy.html (bundled with the app and hosted publicly) so the
+         in-app and public policy are always the same text. -->
+    <div id="privacyContent"><p>Loading…</p></div>
     <button class="privacy-close-btn" onclick="document.getElementById('privacyModal').classList.add('hidden')">Close</button>
   </div>
 </div>
+<script>
+  window.openPrivacyPolicy = function () {
+    var modal = document.getElementById('privacyModal');
+    var box   = document.getElementById('privacyContent');
+    modal.classList.remove('hidden');
+    if (box.dataset.loaded) return;
+    fetch('privacy.html')
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+      .then(function (html) {
+        var policy = new DOMParser().parseFromString(html, 'text/html').getElementById('policy');
+        if (!policy) throw new Error('policy section missing');
+        box.innerHTML = policy.innerHTML;
+        box.dataset.loaded = '1';
+      })
+      .catch(function () {
+        box.innerHTML = '<p>The privacy policy could not be loaded. Read it at ' +
+          '<a href="https://app.hauhelps.org/privacy.html" target="_blank" rel="noopener">app.hauhelps.org/privacy.html</a>.</p>';
+      });
+  };
+</script>
 
 </body>
 </html>
