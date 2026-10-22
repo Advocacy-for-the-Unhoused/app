@@ -408,6 +408,11 @@ function doPost(e) {
       setMeetingConfigKey_('goal_' + (p.branchCode || '').toUpperCase(), p.goal || '0');
       result = { ok: true };
 
+    } else if (p.action === "resetBranchGoal") {
+      // Yearly reset: donations before this timestamp stop counting toward the goal.
+      setMeetingConfigKey_('goalReset_' + (p.branchCode || '').toUpperCase(), new Date().toISOString());
+      result = { ok: true };
+
     } else if (p.action === "setBranchLeaderRole") {
       result = setBranchLeaderRole_(p.email || '', p.roleCode || '');
 
@@ -1292,7 +1297,7 @@ function handleGetDashboard(email, branchCode) {
         ddata.forEach(row => {
           const rowBranch = String(row[5] || "").trim().toUpperCase();
           const amount    = Number(row[1] || 0);
-          if (rowBranch === (branchCode || "").trim().toUpperCase()) {
+          if (rowBranch === (branchCode || "").trim().toUpperCase() && countsTowardGoal_(config, rowBranch, row[6])) {
             goalRaised += amount;
           }
         });
@@ -2327,6 +2332,15 @@ function getMeetingConfigSheet_() {
   return sheet;
 }
 
+// True if a donation logged at `ts` counts toward branch `bc`'s goal (i.e. after its last reset).
+function countsTowardGoal_(config, bc, ts) {
+  const reset = config['goalReset_' + bc];
+  if (!reset) return true;
+  const t = ts instanceof Date ? ts : new Date(ts);
+  if (isNaN(t.getTime())) return false;
+  return t.getTime() > new Date(reset).getTime();
+}
+
 function getMeetingConfig_() {
   const sheet  = getMeetingConfigSheet_();
   const data   = sheet.getDataRange().getValues();
@@ -2511,7 +2525,7 @@ function getBranchManagement() {
         ddata.forEach(function(row) {
           const bc  = String(row[5] || '').trim().toUpperCase();
           const amt = Number(row[1] || 0);
-          if (bc) raisedByBranch[bc] = (raisedByBranch[bc] || 0) + amt;
+          if (bc && countsTowardGoal_(config, bc, row[6])) raisedByBranch[bc] = (raisedByBranch[bc] || 0) + amt;
         });
       }
     }
@@ -2543,6 +2557,7 @@ function getBranchManagement() {
         cancelled:  (config['cancel_' + b.code] || 'No').toLowerCase() === 'yes',
         goal:       goal,
         raised:     Math.round((raisedByBranch[b.code] || 0) * 100) / 100,
+        goalResetAt: config['goalReset_' + b.code] || '',
         leadership: leadersByBranch[b.code] || []
       };
     });
@@ -2605,7 +2620,7 @@ function deleteBranch_(code, removedBy) {
 
   const cfg     = getMeetingConfigSheet_();
   const cfgData = cfg.getDataRange().getValues();
-  const keys    = ['meetingDay_', 'meetingTime_', 'cancel_', 'goal_'].map(function(k) { return k + code; });
+  const keys    = ['meetingDay_', 'meetingTime_', 'cancel_', 'goal_', 'goalReset_'].map(function(k) { return k + code; });
   for (let i = cfgData.length - 1; i >= 1; i--) {
     if (keys.indexOf(String(cfgData[i][0])) !== -1) cfg.deleteRow(i + 1);
   }

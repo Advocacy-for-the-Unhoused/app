@@ -7578,8 +7578,10 @@
                     '<input type="number" id="goal-input-' + b.code + '" value="' + b.goal + '" min="0" step="100" style="width:100%;box-sizing:border-box;padding:8px;border:1.5px solid var(--dark);font-family:\'Montserrat\',sans-serif;font-size:0.85rem;margin-bottom:8px;">' +
                     '<div style="display:flex;align-items:center;gap:10px;">' +
                       '<button onclick="saveGoal(\'' + _ea(b.code) + '\')" style="background:var(--dark);color:var(--cream);border:none;padding:7px 14px;font-family:\'Montserrat\',sans-serif;font-size:0.7rem;font-weight:700;cursor:pointer;text-transform:uppercase;width:auto;margin-top:0;">Save</button>' +
+                      '<button onclick="resetGoal(\'' + _ea(b.code) + '\', \'' + _ea(b.name) + '\')" style="background:transparent;color:#b83232;border:1.5px solid #b83232;padding:6px 12px;font-family:\'Montserrat\',sans-serif;font-size:0.7rem;font-weight:700;cursor:pointer;text-transform:uppercase;width:auto;margin-top:0;">Reset Raised</button>' +
                       '<span id="goal-msg-' + b.code + '" style="font-size:0.65rem;font-weight:700;"></span>' +
                     '</div>' +
+                    (b.goalResetAt ? '<div style="font-size:0.6rem;color:#5a514d;margin-top:6px;">Last reset ' + new Date(b.goalResetAt).toLocaleDateString() + '</div>' : '') +
                   '</div>'
                 : '') +
             '</div>';
@@ -7848,6 +7850,21 @@
       } catch(e) { if(msg){msg.textContent='Network error.';msg.style.color='#b83232';} }
     }
 
+    async function resetGoal(branchCode, branchName) {
+      if (!confirm('Reset the raised amount for ' + branchName + ' to $0?\n\nUse this after the yearly donation. Donation records are kept; only donations logged from now on will count toward the goal.')) return;
+      var msg = document.getElementById('goal-msg-' + branchCode);
+      try {
+        var res = await fetch(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: 'action=resetBranchGoal&branchCode=' + encodeURIComponent(branchCode)
+        });
+        var r = await res.json();
+        if (r.ok) { if(msg){msg.textContent='Reset!';msg.style.color='#1D9E75';} setTimeout(loadBranchManagement, 800); }
+        else { if(msg){msg.textContent=r.error||'Error.';msg.style.color='#b83232';} }
+      } catch(e) { if(msg){msg.textContent='Network error.';msg.style.color='#b83232';} }
+    }
+
     function showMeetingMsg(bc, msg, ok) {
       var el = document.getElementById('meeting-save-msg-' + bc);
       if (!el) return;
@@ -7938,6 +7955,7 @@
     window.removeLeader                 = removeLeader;
     window.toggleGoalEdit               = toggleGoalEdit;
     window.saveGoal                     = saveGoal;
+    window.resetGoal                    = resetGoal;
     window.saveMeetingDay               = saveMeetingDay;
     window.saveMeetingTime              = saveMeetingTime;
     window.saveMeetingCancel            = saveMeetingCancel;
