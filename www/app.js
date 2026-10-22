@@ -420,7 +420,6 @@ function submitDonation() {
 
   const digits    = parseInt(document.getElementById("udiDigits").value);
   const amount    = document.getElementById("amount").value;
-  const fundraiser = document.getElementById("fundraiser").value;
 
   if (!digits || digits < 1 || digits > 999) {
     alert("UDI digits must be between 1–999");
@@ -438,7 +437,6 @@ function submitDonation() {
     udi,
     amount: Number(amount),
     branchLetter,
-    fundraiser,
     volunteerEmail,
     volunteerName,
     timestamp: Date.now()
@@ -470,7 +468,6 @@ function submitDonation() {
 function restart() {
   document.getElementById("udiDigits").value  = "";
   document.getElementById("amount").value     = "";
-  document.getElementById("fundraiser").value = "Candle";
   document.getElementById("step3").classList.add("hidden");
   document.getElementById("step2").classList.remove("hidden");
 }
@@ -591,9 +588,9 @@ function toggleUDIPanel() {
 }
 
 async function runGenerateSlips() {
-  const dateVal = document.getElementById("udiDate").value;
+  const fundraiser = document.getElementById("udiFundraiser").value;
 
-  if (!dateVal) { alert("Please select a fundraiser date."); return; }
+  if (!fundraiser) { alert("Please choose a fundraiser."); return; }
   const slipBranch = document.getElementById("udiBranchSelect").value || branchLetter;
   if (!slipBranch) { alert("Please choose a branch."); return; }
 
@@ -629,7 +626,8 @@ async function runGenerateSlips() {
   try {
     const body = [
       `action=generateSlips`,
-      `dateString=${encodeURIComponent(dateVal)}`,
+      `fundraiser=${encodeURIComponent(fundraiser)}`,
+      `volunteerName=${encodeURIComponent(volunteerName || '')}`,
       `branchCode=${encodeURIComponent(slipBranch)}`
     ].join("&");
 

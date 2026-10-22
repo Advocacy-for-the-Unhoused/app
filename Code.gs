@@ -136,7 +136,7 @@ function doPost(e) {
       result = updateProfilePhoto_(p.email, p.photoBase64, p.photoMime);
 
     } else if (p.action === "generateSlips") {
-      return handleGenerateSlips(p.dateString, p.branchCode);
+      return handleGenerateSlips(p.branchCode, p.fundraiser, p.volunteerName);
 
     } else if (p.action === "getEventTypes") {
       const sheet    = SpreadsheetApp.openById(HOURS_SS_ID).getSheetByName("volunteer hours");
@@ -583,8 +583,11 @@ function handleDonation(data) {
     ).setMimeType(ContentService.MimeType.JSON);
   }
 
-  sheet.appendRow([data.udi, data.amount, "", data.volunteerName, data.fundraiser, data.branchLetter, new Date()]);
-  return ContentService.createTextOutput(JSON.stringify({ success: true }))
+  // Fundraiser comes from the slip batch the UDI was printed in; older app
+  // versions still send one, used only when the UDI predates batch tracking.
+  const fundraiser = lookupSlipFundraiser_(data.udi) || data.fundraiser || "Unknown";
+  sheet.appendRow([data.udi, data.amount, "", data.volunteerName, fundraiser, data.branchLetter, new Date()]);
+  return ContentService.createTextOutput(JSON.stringify({ success: true, fundraiser }))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -982,9 +985,9 @@ function denyVolunteer(rowIndex) {
 }
 
 // ── UDI Slip Generation ───────────────────────────────────────────────────────
-function handleGenerateSlips(dateString, branchCode) {
+function handleGenerateSlips(branchCode, fundraiser, printedBy) {
   try {
-    return ContentService.createTextOutput(JSON.stringify(generateSlips(dateString, branchCode)))
+    return ContentService.createTextOutput(JSON.stringify(generateSlips(branchCode, fundraiser, printedBy)))
       .setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
     return ContentService.createTextOutput(JSON.stringify({ error: err.message }))
@@ -992,7 +995,36 @@ function handleGenerateSlips(dateString, branchCode) {
   }
 }
 
-function generateSlips(dateString, branchCode) {
+// Sheet "Slip Batches" in UDI_TRACKER_SS_ID: one row per printed UDI.
+// A=UDI | B=Fundraiser | C=Branch | D=Printed At | E=Printed By
+// The fundraiser is chosen once at print time; handleDonation looks it up by UDI.
+const SLIP_BATCHES_SHEET = 'Slip Batches';
+
+function getSlipBatchesSheet_() {
+  const ss = SpreadsheetApp.openById(UDI_TRACKER_SS_ID);
+  let sheet = ss.getSheetByName(SLIP_BATCHES_SHEET);
+  if (!sheet) {
+    sheet = ss.insertSheet(SLIP_BATCHES_SHEET);
+    sheet.appendRow(['UDI', 'Fundraiser', 'Branch', 'Printed At', 'Printed By']);
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+function lookupSlipFundraiser_(udi) {
+  const sheet = getSlipBatchesSheet_();
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return '';
+  const rows = sheet.getRange(2, 1, lastRow - 1, 2).getValues();
+  for (let i = rows.length - 1; i >= 0; i--) {
+    if (String(rows[i][0]).trim().toUpperCase() === String(udi).trim().toUpperCase()) return String(rows[i][1] || '');
+  }
+  return '';
+}
+
+function generateSlips(branchCode, fundraiser, printedBy) {
+  fundraiser = String(fundraiser || '').trim();
+  if (!fundraiser) throw new Error("Please choose a fundraiser.");
   const ss    = SpreadsheetApp.openById(UDI_TRACKER_SS_ID);
   const sheet = ss.getSheetByName("Sheet1");
   if (!sheet) throw new Error("Sheet 'Sheet1' not found.");
@@ -1012,6 +1044,11 @@ function generateSlips(dateString, branchCode) {
     UDIs.push(branchCode + String(lastNum + i).padStart(3, "0"));
   }
   sheet.getRange(rowIndex, 2).setValue(lastNum + 16);
+
+  const printedAt = new Date();
+  const batches = getSlipBatchesSheet_();
+  batches.getRange(batches.getLastRow() + 1, 1, UDIs.length, 5)
+    .setValues(UDIs.map(udi => [udi, fundraiser, branchCode, printedAt, printedBy || '']));
 
   const firstUDI = UDIs[0];
   const lastUDI  = UDIs[UDIs.length - 1];
@@ -1064,7 +1101,7 @@ function generateSlips(dateString, branchCode) {
   const pdfFile = folder.createFile(docFile.getAs("application/pdf"))
     .setName(`Branch ${branchCode}: ${firstUDI} to ${lastUDI}.pdf`);
 
-  return { docUrl: doc.getUrl(), pdfUrl: pdfFile.getUrl(), UDIs };
+  return { docUrl: doc.getUrl(), pdfUrl: pdfFile.getUrl(), UDIs, fundraiser };
 }
 
 // ── Roster members list (for admin name autocomplete) ─────────────────────────

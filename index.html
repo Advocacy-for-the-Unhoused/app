@@ -3016,12 +3016,7 @@
       <label>Donation Amount ($)</label>
       <input id="amount" type="number" step="0.01" min="0" placeholder="0.00">
 
-      <label>Fundraiser</label>
-      <select id="fundraiser">
-        <option value="Candle">Candle</option>
-        <option value="5k">5k</option>
-        <option value="School Sale">School Sale</option>
-      </select>
+      <p style="font-size:0.8rem;color:#555;margin:4px 0 0;">The fundraiser is filled in automatically from when the slip was printed.</p>
 
       <button onclick="submitDonation()">Save Record</button>
     </div>
@@ -3045,11 +3040,15 @@
         <div class="card">
           <h3>Generate Slips</h3>
           <p style="font-size:0.85rem;color:#555;line-height:1.6;margin-bottom:6px;">
-            Generates 16 donor slips for the branch below (defaults to yours). Takes ~30 seconds.
+            Generates 16 donor slips for the branch below (defaults to yours). Every slip in the batch is tagged with the fundraiser you pick. Takes ~30 seconds.
           </p>
 
-          <label for="udiDate">Fundraiser Date</label>
-          <input id="udiDate" type="date">
+          <label for="udiFundraiser">Fundraiser</label>
+          <select id="udiFundraiser">
+            <option value="Candle">Candle</option>
+            <option value="5k">5k</option>
+            <option value="School Sale">School Sale</option>
+          </select>
 
           <label>Branch</label>
           <select id="udiBranchSelect">
@@ -3104,10 +3103,10 @@
     (function () {
       const STEPS = [
         { t: 'What is a UDI?', b: '<p>A <strong>UDI</strong> (Unique Donation Identifier) is the code printed on each donor slip, like <code>A001</code> or <code>W042</code>.</p><p>It is your <strong>branch letter</strong> + a <strong>3-digit number</strong>. It lets donors track their donation and keeps every record unique.</p>' },
-        { t: '1. Print slips first', b: '<p>Before the fundraiser, open <strong>🖨 Print UDI Slips</strong> at the bottom of this page.</p><p>Pick the fundraiser date and tap <strong>Generate Slips</strong> (~30 sec). Print at <strong>16 pages per sheet, double-sided</strong>, then cut them out.</p>' },
+        { t: '1. Print slips first', b: '<p>Before the fundraiser, open <strong>🖨 Print UDI Slips</strong> at the bottom of this page.</p><p>Pick the <strong>fundraiser</strong> these slips are for and tap <strong>Generate Slips</strong> (~30 sec). Print at <strong>16 pages per sheet, double-sided</strong>, then cut them out.</p>' },
         { t: '2. Hand a slip to each donor', b: '<p>When someone gives a cash donation in person, give them one slip. Keep note of the slip number so you can record it.</p><p class="rec-help-note">This app never collects or moves money — it only keeps the ledger.</p>' },
         { t: '3. Enter the UDI number', b: '<p>Type <strong>only the number</strong> (1–999). Your branch letter is added automatically — typing <code>42</code> saves <code>' + 'X042</code> for branch X.</p><p>Or tap <strong>📷</strong> to scan the slip’s code with your camera; the last 3 digits fill in for you.</p>' },
-        { t: '4. Amount & fundraiser', b: '<p>Enter the dollar amount received and choose the fundraiser (Candle, 5k, School Sale).</p><p>Tap <strong>Save Record</strong>. Records save offline first and sync when you’re online.</p>' },
+        { t: '4. Amount & save', b: '<p>Enter the dollar amount received. The fundraiser is filled in automatically from the batch the slip was printed in.</p><p>Tap <strong>Save Record</strong>. Records save offline first and sync when you’re online.</p>' },
         { t: 'Duplicates & mistakes', b: '<p>Each UDI can be recorded <strong>only once</strong>. If you see <em>"already recorded"</em>, double-check the slip number — nothing new was saved.</p><p>Made a mistake on a saved record? Contact your branch coordinator to fix it.</p>' }
       ];
       let i = 0;
@@ -4892,7 +4891,7 @@
   });
 </script>
 
-<script src="app.js?v=19"></script>
+<script src="app.js?v=20"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 
 <script>
