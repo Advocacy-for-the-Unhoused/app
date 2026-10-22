@@ -220,7 +220,6 @@ These cost real debugging time. Internalize them before your first change.
 | `ios/` | Capacitor iOS project |
 | `codemagic.yaml` | iOS CI/CD config |
 | `.clasp.json` | Apps Script project ID + deploy config |
-| `Integrated boston trip online form/` | Separate public permission form (its own GAS web app) |
 | `DEVELOPER.md` | Full architecture reference — **read this** |
 | `BUG_AUDIT.md` | Historical bug audit notes |
 | `docs/internal-notes/` | Full development notes (feature details, gotchas, history) — great context for an AI assistant |

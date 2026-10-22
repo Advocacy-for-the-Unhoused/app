@@ -1757,8 +1757,6 @@
     --border: rgba(26,19,17,0.12);
     --green:  #167A5B;
     --blue:   #378ADD;
-    --zelle:  #6d1ed4;
-    --paypal: #003087;
     background: #F9F6F0;
     display: flex;
     flex-direction: column;
@@ -1950,22 +1948,6 @@
     .total-amount { font-family: 'Abril Fatface', serif; font-size: 2rem; color: var(--cream); line-height: 1; }
     .total-amount.zero { color: rgba(249,246,240,0.6); }
 
-    /* TRAIN PRE-PAY BANNER */
-    .train-prepay-banner { background: white; border-top: 2px solid var(--border); padding: 14px; }
-    .train-prepay-eyebrow { font-size: 0.52rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: rgba(26,19,17,0.62); margin-bottom: 6px; }
-    .train-prepay-title   { font-size: 0.9rem; font-weight: 700; color: var(--dark); margin-bottom: 4px; }
-    .train-prepay-sub     { font-size: 0.62rem; font-weight: 600; color: rgba(26,19,17,0.62); margin-bottom: 12px; line-height: 1.5; }
-    .train-prepay-btns    { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-    .btn-train-pay {
-      background: var(--blue); color: white; border: 2px solid var(--dark);
-      font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 0.68rem;
-      letter-spacing: 0.5px; text-transform: uppercase; padding: 0 14px; height: 42px;
-      cursor: pointer; box-shadow: 3px 3px 0 var(--dark); display: inline-flex; align-items: center;
-      gap: 5px; border-radius: 0; -webkit-appearance: none; touch-action: manipulation; text-decoration: none;
-    }
-    .btn-train-pay:active { transform: translate(1px,1px); box-shadow: 2px 2px 0 var(--dark); }
-    .btn-train-pay.paypal { background: var(--paypal); }
-
     /* TRAIN PAID CONFIRMATION */
     .train-paid-banner {
       background: rgba(55,138,221,0.06); border-top: 1px solid rgba(55,138,221,0.25);
@@ -1974,20 +1956,6 @@
     .train-paid-banner i { color: var(--blue); font-size: 18px; flex-shrink: 0; }
     .train-paid-banner-text { font-size: 0.65rem; font-weight: 700; color: rgba(26,19,17,0.62); line-height: 1.6; letter-spacing: 0.2px; }
     .train-paid-banner-text strong { color: var(--blue); }
-
-    /* PAY METHODS (full bill) */
-    .pay-methods { display: flex; border-top: 1px solid var(--border); background: white; }
-    .pay-method  { flex: 1; display: flex; flex-direction: column; padding: 10px 12px 14px; }
-    .pay-method + .pay-method { border-left: 1px solid var(--border); }
-    .pay-method-label { display: flex; align-items: center; gap: 5px; font-size: 0.52rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: rgba(26,19,17,0.62); margin-bottom: 9px; }
-    .pay-method-label .zelle-icon  { color: var(--zelle);  font-size: 11px; }
-    .pay-method-label .paypal-icon { color: var(--paypal); font-size: 11px; }
-    .pay-method-body { display: flex; flex-direction: column; align-items: center; gap: 7px; flex: 1; }
-    .pay-method-qr   { width: 80px; height: 80px; object-fit: contain; border: 2px solid var(--dark); display: block; }
-    .pay-method-name { font-family: 'Abril Fatface', serif; font-size: 0.8rem; color: var(--dark); text-align: center; line-height: 1.2; }
-    .pay-btn-zelle  { display: inline-flex; align-items: center; justify-content: center; gap: 5px; background: var(--zelle);  color: white; border: 2px solid var(--dark); box-shadow: 3px 3px 0 var(--dark); font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 0.6rem; letter-spacing: 0.5px; text-transform: uppercase; padding: 7px 10px; text-decoration: none; width: 100%; }
-    .pay-btn-paypal { display: inline-flex; align-items: center; justify-content: center; gap: 5px; background: var(--paypal); color: white; border: 2px solid var(--dark); box-shadow: 3px 3px 0 var(--dark); font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 0.6rem; letter-spacing: 0.5px; text-transform: uppercase; padding: 7px 10px; text-decoration: none; width: 100%; }
-    .pay-btn-zelle:active, .pay-btn-paypal:active { transform: translate(1px,1px); box-shadow: 2px 2px 0 var(--dark); }
 
     .bill-footer { background: var(--cream); border-top: 1px solid var(--border); padding: 12px 14px; display: flex; align-items: center; gap: 8px; }
     .bill-footer i { color: rgba(26,19,17,0.62); font-size: 14px; flex-shrink: 0; }
@@ -5195,7 +5163,8 @@
     try {
       const { AppleSignIn } = window.Capacitor.Plugins;
       const result = await AppleSignIn.signIn({ scopes: ['EMAIL', 'FULL_NAME'] });
-      const { user, email, givenName, familyName, authorizationCode, identityToken } = result;
+      // The plugin returns the ID token as `idToken` (not `identityToken`).
+      const { user, email, givenName, familyName, authorizationCode, idToken } = result;
       // Apple returns email + name only on the FIRST authorization for this
       // Apple ID. Cache them per user id so later sign-ins (e.g. before roster
       // approval) can still auto-fill instead of asking the user again.
@@ -5212,7 +5181,7 @@
         // Pass Apple's one-time authorizationCode to the server so it can
         // obtain (and later revoke) a refresh token — required for account
         // deletion to revoke the Sign in with Apple token (Guideline 5.1.1(v)).
-        await window.onAppleSignedIn(user, identity.email, identity.givenName, identity.familyName, authorizationCode, identityToken);
+        await window.onAppleSignedIn(user, identity.email, identity.givenName, identity.familyName, authorizationCode, idToken);
       }
     } catch (err) {
       console.error('Apple sign-in failed:', err);
