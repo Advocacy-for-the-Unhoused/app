@@ -5110,7 +5110,7 @@
     try {
       const { AppleSignIn } = window.Capacitor.Plugins;
       const result = await AppleSignIn.signIn({ scopes: ['EMAIL', 'FULL_NAME'] });
-      const { user, email, givenName, familyName } = result;
+      const { user, email, givenName, familyName, authorizationCode } = result;
       // Apple returns email + name only on the FIRST authorization for this
       // Apple ID. Cache them per user id so later sign-ins (e.g. before roster
       // approval) can still auto-fill instead of asking the user again.
@@ -5124,7 +5124,10 @@
       };
       try { localStorage.setItem(idKey, JSON.stringify(identity)); } catch (e) {}
       if (typeof window.onAppleSignedIn === 'function') {
-        await window.onAppleSignedIn(user, identity.email, identity.givenName, identity.familyName);
+        // Pass Apple's one-time authorizationCode to the server so it can
+        // obtain (and later revoke) a refresh token — required for account
+        // deletion to revoke the Sign in with Apple token (Guideline 5.1.1(v)).
+        await window.onAppleSignedIn(user, identity.email, identity.givenName, identity.familyName, authorizationCode);
       }
     } catch (err) {
       console.error('Apple sign-in failed:', err);
@@ -8309,7 +8312,7 @@
     <p>We use Google and Apple for authentication, Firebase for push notifications, and Google Apps Script for data storage. We do not sell or share your data with any other parties.</p>
 
     <h4>Data Retention</h4>
-    <p>Your data is retained while you are an active volunteer. You may delete your account at any time from the app dashboard, which removes your name, contact information, photo, date of birth, and sign-in credentials from the volunteer roster and deletes your push notification tokens. Anonymized activity records may be retained for organizational bookkeeping.</p>
+    <p>Your data is retained while you are an active volunteer. You may delete your account at any time from the app dashboard. Deletion is permanent and complete: we erase your roster entry, volunteer hours, Boston trip forms (including parent details and signature), reimbursement requests, any photos or receipts you uploaded, your date of birth, and your sign-in credentials, and we delete your push notification tokens. No personal records are retained after deletion.</p>
 
     <h4>Contact</h4>
     <p>Questions? Contact AFU leadership through the app or at maanya.shettigar@gmail.com.</p>

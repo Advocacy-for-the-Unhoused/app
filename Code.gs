@@ -36,67 +36,276 @@ const BRANCH_NAMES = { "A": "Hopkinton", "H": "Holliston", "W": "Westford", "S":
 const BRANCH_CODES = { "Hopkinton": "A", "Holliston": "H", "Westford": "W", "Shrewsbury": "S", "Medway": "M" };
 
 // ── Account deletion ──────────────────────────────────────────────────────────
-// App Review 5.1.1(v): deletion must remove the account and its personal data,
-// not just disable sign-in. Clears name, phone, email, photo, DoB AND the
-// Apple sub (col J) — otherwise a "deleted" Apple user could still sign back
-// in via the sub lookup in appleSignIn_. Anonymized activity rows remain.
+// App Review 5.1.1(v)/5.1.2: deletion must actually remove the account and ALL
+// of the user's personal data — not anonymize it or merely disable sign-in. We
+// hard-delete every row keyed to this email (roster, pending sign-ups, branch
+// requests, volunteer hours, reimbursement requests, Boston registration/costs/
+// food) and permanently delete every Drive file we uploaded for them (profile
+// photo, receipt images). Nothing with their name, email, phone, DoB, parent
+// details, signature, pay handle or photo is left behind.
 function deleteAccount_(email) {
   try {
     if (!email) return { error: 'No email provided' };
-    const ss  = SpreadsheetApp.openById(ROSTER_SS_ID);
-    const lc  = email.toLowerCase().trim();
-    let found = false;
+    const lc    = email.toLowerCase().trim();
+    let   found = false;
 
-    const sheet = ss.getSheetByName('Roster');
-    if (sheet) {
-      const data = sheet.getDataRange().getValues();
-      for (let i = 1; i < data.length; i++) {
-        if ((data[i][3] || '').toString().toLowerCase().trim() === lc) {
-          sheet.getRange(i + 1, 2).setValue('');   // B — full name
-          sheet.getRange(i + 1, 3).setValue('');   // C — phone
-          sheet.getRange(i + 1, 4).setValue('');   // D — email
-          sheet.getRange(i + 1, 7).setValue('');   // G — photo URL
-          sheet.getRange(i + 1, 8).setValue('No'); // H — Active?
-          sheet.getRange(i + 1, 9).setValue('');   // I — DoB
-          sheet.getRange(i + 1, 10).setValue('');  // J — Apple sub
+    // Collect every Apple user id tied to this email before we delete the rows,
+    // so we can revoke the Sign in with Apple token afterwards (5.1.1(v)).
+    const appleSubs = {};
+
+    // Roster (ROSTER_SS_ID). Col G(7) holds the profile photo URL — delete that
+    // Drive file permanently, then delete the whole roster row.
+    const roster = SpreadsheetApp.openById(ROSTER_SS_ID).getSheetByName('Roster');
+    if (roster) {
+      const data = roster.getDataRange().getValues();
+      for (let i = data.length - 1; i >= 1; i--) {
+        if ((data[i][3] || '').toString().toLowerCase().trim() === lc) { // D — email
+          const sub = (data[i][9] || '').toString().trim();              // J — Apple sub
+          if (sub) appleSubs[sub] = true;
+          deleteDriveFileFromUrl_(data[i][6]);                            // G — photo
+          roster.deleteRow(i + 1);
           found = true;
-          break;
         }
       }
     }
 
-    // Sign-ups still awaiting approval live only in Pending Volunteers (no
-    // activity to keep), so delete their rows outright — name, phone, photo
-    // and Apple sub (col G) go with them.
+    // Pending Volunteers (SHEET_ID): Name A, Phone B, Email C, Photo URL D,
+    // Branch E, Status F, Apple Sub G. Delete the photo file and the row.
     const pending = SpreadsheetApp.openById(SHEET_ID).getSheetByName(PENDING_SHEET);
     if (pending) {
       const pData = pending.getDataRange().getValues();
       for (let i = pData.length - 1; i >= 1; i--) {
         if ((pData[i][2] || '').toString().toLowerCase().trim() === lc) {
+          const sub = (pData[i][6] || '').toString().trim();             // G — Apple sub
+          if (sub) appleSubs[sub] = true;
+          deleteDriveFileFromUrl_(pData[i][3]);                           // D — photo
           pending.deleteRow(i + 1);
           found = true;
         }
       }
     }
 
-    // New-branch requests: scrub requester, email, phone and Apple sub.
+    // New-branch requests (SHEET_ID): email in col F(idx 5). Delete the row.
     const requests = SpreadsheetApp.openById(SHEET_ID).getSheetByName(BRANCH_REQUESTS_SHEET);
     if (requests) {
       const rData = requests.getDataRange().getValues();
-      for (let i = 1; i < rData.length; i++) {
+      for (let i = rData.length - 1; i >= 1; i--) {
         if ((rData[i][5] || '').toString().toLowerCase().trim() === lc) {
-          requests.getRange(i + 1, 5, 1, 3).setValues([['', '', '']]); // E–G
-          requests.getRange(i + 1, 9).setValue('');                     // I — Apple sub
+          const sub = (rData[i][8] || '').toString().trim();             // I — Apple sub
+          if (sub) appleSubs[sub] = true;
+          requests.deleteRow(i + 1);
           found = true;
         }
       }
     }
 
+    // Volunteer hours (HOURS_SS_ID): email in col B(idx 1). Delete every row.
+    const hours = SpreadsheetApp.openById(HOURS_SS_ID).getSheetByName('volunteer hours');
+    if (hours) {
+      const hData = hours.getDataRange().getValues();
+      for (let i = hData.length - 1; i >= 1; i--) {
+        if ((hData[i][1] || '').toString().toLowerCase().trim() === lc) {
+          hours.deleteRow(i + 1);
+          found = true;
+        }
+      }
+    }
+
+    // Reimbursement requests (ROSTER_SS_ID 'Comp Requests'): email col C(idx 2),
+    // receipt image URL col I(idx 8). Delete the receipt file and the row.
+    const comp = SpreadsheetApp.openById(ROSTER_SS_ID).getSheetByName('Comp Requests');
+    if (comp) {
+      const cData = comp.getDataRange().getValues();
+      for (let i = cData.length - 1; i >= 1; i--) {
+        if ((cData[i][2] || '').toString().toLowerCase().trim() === lc) {
+          deleteDriveFileFromUrl_(cData[i][8]);                           // I — receipt
+          comp.deleteRow(i + 1);
+          found = true;
+        }
+      }
+    }
+
+    // Boston trip (BOSTON_SHEET_ID): Qualified Persons Form holds parent name/
+    // email/phone, DoB and the typed signature (email col B idx 1); Costs (email
+    // col C idx 2) and Food (email col B idx 1) carry their payment rows.
+    try {
+      const bss = SpreadsheetApp.openById(BOSTON_SHEET_ID);
+      deleteRowsByEmail_(bss.getSheetByName(BOSTON_REG_SHEET), 1, lc);
+      deleteRowsByEmail_(bss.getSheetByName('Costs'),          2, lc);
+      deleteRowsByEmail_(bss.getSheetByName('Food'),           1, lc);
+    } catch (e) { console.warn('deleteAccount_ Boston cleanup failed:', e.message); }
+
     if (!found) return { error: 'Email not found' };
     removeFcmTokens_(email);
+    // Revoke the Sign in with Apple token(s) so the credential is fully severed,
+    // as Apple requires on account deletion (Guideline 5.1.1(v)).
+    Object.keys(appleSubs).forEach(revokeAppleToken_);
     return { success: true };
   } catch (err) {
     return { error: err.message };
+  }
+}
+
+// Delete every data row of `sheet` whose column `emailColIdx` (0-indexed)
+// matches the lowercased email. A missing sheet is a no-op.
+function deleteRowsByEmail_(sheet, emailColIdx, lc) {
+  if (!sheet) return;
+  const data = sheet.getDataRange().getValues();
+  for (let i = data.length - 1; i >= 1; i--) {
+    if ((data[i][emailColIdx] || '').toString().toLowerCase().trim() === lc) {
+      sheet.deleteRow(i + 1);
+    }
+  }
+}
+
+// Permanently delete the Drive file referenced by a stored URL (profile photo
+// or receipt). We don't just trash it — a trashed file is recoverable and can
+// still be served — so we call the Drive REST delete endpoint, falling back to
+// trashing if that fails. Blank/unrecognized URLs are a no-op.
+function deleteDriveFileFromUrl_(url) {
+  try {
+    const s  = (url || '').toString();
+    if (!s) return;
+    const id = (s.match(/\/d\/([A-Za-z0-9_-]+)/) ||
+                s.match(/[?&]id=([A-Za-z0-9_-]+)/) || [])[1] || '';
+    if (!id) return;
+    try {
+      const resp = UrlFetchApp.fetch(
+        'https://www.googleapis.com/drive/v3/files/' + id + '?supportsAllDrives=true',
+        {
+          method: 'delete',
+          headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+          muteHttpExceptions: true
+        });
+      const code = resp.getResponseCode();
+      if (code === 204 || code === 404) return;   // deleted, or already gone
+      throw new Error('Drive delete HTTP ' + code);
+    } catch (apiErr) {
+      // Fall back to trashing so the file is at least removed from active Drive.
+      DriveApp.getFileById(id).setTrashed(true);
+    }
+  } catch (e) { /* non-fatal — row deletion already succeeded */ }
+}
+
+// ── Sign in with Apple token revocation (Guideline 5.1.1(v)) ──────────────────
+// Apple requires that deleting an account also revokes the Sign in with Apple
+// token. To do that we must, at sign-in, trade Apple's one-time authorizationCode
+// for a long-lived refresh token, then POST that token to Apple's revoke endpoint
+// when the account is deleted.
+//
+// Two Script Properties are required:
+//   APPLE_CLIENT_ID     — the Sign in with Apple client id (the app's bundle id).
+//   APPLE_CLIENT_SECRET — the client-secret JWT (ES256, signed with the Apple
+//                         private key). Apps Script can't sign ES256, so generate
+//                         this offline; Apple allows an exp up to ~6 months, so
+//                         regenerate it before then. If either property is unset,
+//                         exchange/revoke are skipped (logged, never fatal).
+// Refresh tokens are stored in the ROSTER_SS_ID 'Apple Tokens' sheet, keyed by
+// the Apple user id: A=Apple Sub | B=Refresh Token | C=Updated.
+const APPLE_TOKEN_URL    = 'https://appleid.apple.com/auth/token';
+const APPLE_REVOKE_URL   = 'https://appleid.apple.com/auth/revoke';
+const APPLE_TOKENS_SHEET = 'Apple Tokens';
+
+function appleClientConfig_() {
+  const props  = PropertiesService.getScriptProperties();
+  const id      = props.getProperty('APPLE_CLIENT_ID');
+  const secret  = props.getProperty('APPLE_CLIENT_SECRET');
+  if (!id || !secret) {
+    console.warn('APPLE_CLIENT_ID / APPLE_CLIENT_SECRET not set — skipping Apple token exchange/revoke');
+    return null;
+  }
+  return { id: id, secret: secret };
+}
+
+function appleTokensSheet_() {
+  const ss = SpreadsheetApp.openById(ROSTER_SS_ID);
+  let sheet = ss.getSheetByName(APPLE_TOKENS_SHEET);
+  if (!sheet) {
+    sheet = ss.insertSheet(APPLE_TOKENS_SHEET);
+    sheet.appendRow(['Apple Sub', 'Refresh Token', 'Updated']);
+    sheet.getRange(1, 1, 1, 3).setFontWeight('bold');
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+// Exchange Apple's one-time authorizationCode for a refresh token and store it
+// keyed by the Apple user id. Best-effort: any failure is logged, never thrown,
+// so it can't break sign-in or registration.
+function captureAppleRefreshToken_(sub, authorizationCode) {
+  try {
+    if (!sub || !authorizationCode) return;
+    const cfg = appleClientConfig_();
+    if (!cfg) return;
+    const res = UrlFetchApp.fetch(APPLE_TOKEN_URL, {
+      method:             'post',
+      contentType:        'application/x-www-form-urlencoded',
+      payload:            {
+        client_id:     cfg.id,
+        client_secret: cfg.secret,
+        grant_type:    'authorization_code',
+        code:          authorizationCode
+      },
+      muteHttpExceptions: true
+    });
+    if (res.getResponseCode() !== 200) {
+      console.warn('Apple token exchange failed (HTTP ' + res.getResponseCode() + '): ' + res.getContentText());
+      return;
+    }
+    const refresh = JSON.parse(res.getContentText()).refresh_token;
+    if (refresh) storeAppleRefreshToken_(sub, refresh);
+  } catch (e) {
+    console.warn('captureAppleRefreshToken_ failed: ' + e.message);
+  }
+}
+
+function storeAppleRefreshToken_(sub, refreshToken) {
+  const sheet = appleTokensSheet_();
+  const data  = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if ((data[i][0] || '').toString().trim() === sub) {
+      sheet.getRange(i + 1, 2, 1, 2).setValues([[refreshToken, new Date()]]);
+      return;
+    }
+  }
+  sheet.appendRow([sub, refreshToken, new Date()]);
+}
+
+// Revoke the Sign in with Apple token for one Apple user id, then forget it.
+// Best-effort: logged, never thrown, so a revoke hiccup can't fail the deletion
+// (the user's data is already gone by the time this runs).
+function revokeAppleToken_(sub) {
+  try {
+    if (!sub) return;
+    const cfg = appleClientConfig_();
+    if (!cfg) return;
+    const sheet = appleTokensSheet_();
+    const data  = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      if ((data[i][0] || '').toString().trim() === sub) {
+        const refresh = (data[i][1] || '').toString().trim();
+        if (refresh) {
+          const res = UrlFetchApp.fetch(APPLE_REVOKE_URL, {
+            method:             'post',
+            contentType:        'application/x-www-form-urlencoded',
+            payload:            {
+              client_id:       cfg.id,
+              client_secret:   cfg.secret,
+              token:           refresh,
+              token_type_hint: 'refresh_token'
+            },
+            muteHttpExceptions: true
+          });
+          if (res.getResponseCode() !== 200) {
+            console.warn('Apple token revoke failed (HTTP ' + res.getResponseCode() + '): ' + res.getContentText());
+          }
+        }
+        sheet.deleteRow(i + 1);   // forget the token either way
+        return;
+      }
+    }
+  } catch (e) {
+    console.warn('revokeAppleToken_ failed: ' + e.message);
   }
 }
 
@@ -154,7 +363,7 @@ function doPost(e) {
       return handleLookup(p.lookupEmail);
 
     } else if (p.action === "appleSignIn") {
-      result = appleSignIn_(p.sub, p.email);
+      result = appleSignIn_(p.sub, p.email, p.authorizationCode || '');
 
     } else if (p.action === "registerVolunteer") {
       result = handleVolunteerRegistration({
@@ -162,6 +371,7 @@ function doPost(e) {
         phone: p.phone, branch: p.branch,
         photoBase64: p.photoBase64, photoMime: p.photoMime,
         appleSub: p.appleSub || '',
+        authorizationCode: p.authorizationCode || '',
         newBranchLocation: p.newBranchLocation || '',
         newBranchType: p.newBranchType || ''
       });
@@ -526,10 +736,16 @@ function getMemberInfo(email) {
   return { firstName: "User", branchCode: "X", branchName: "Unknown Branch", position: "" };
 }
 
-function appleSignIn_(sub, email) {
+function appleSignIn_(sub, email, authorizationCode) {
   if (!sub) return { error: 'No Apple sub provided' };
   try {
     if (isRemovedMember_(email, sub)) return { removed: true, error: REMOVED_MSG };
+
+    // Exchange Apple's one-time authorizationCode for a refresh token and keep
+    // it, so account deletion can revoke the Sign in with Apple token later
+    // (Guideline 5.1.1(v)). Best-effort: a failure here must not block sign-in.
+    captureAppleRefreshToken_(sub, authorizationCode);
+
     const sheet = SpreadsheetApp.openById(ROSTER_SS_ID).getSheetByName('Roster');
     if (!sheet) return { error: 'Roster sheet not found' };
     const data = sheet.getDataRange().getValues();
@@ -634,6 +850,10 @@ function handleDonation(data) {
 // Pending Volunteers layout: A=Name | B=Phone | C=Email | D=Photo URL | E=Branch Code | F=Status | G=Apple Sub
 function handleVolunteerRegistration(formData) {
   if (isRemovedMember_(formData.email, formData.appleSub)) return { removed: true, error: REMOVED_MSG };
+
+  // First Apple login may happen before the user is on the roster. Capture the
+  // refresh token now (keyed by Apple sub) so deletion can revoke it later.
+  captureAppleRefreshToken_(formData.appleSub, formData.authorizationCode);
 
   // "Starting a new branch" has no branch code yet — it's a request for Maanya
   // (Branch Coordinator) to review, not a pending volunteer under a branch.

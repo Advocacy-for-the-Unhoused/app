@@ -228,11 +228,17 @@ window.onSignedIn = async function (preloadedPayload = null) {
   }
 };
 
-window.onAppleSignedIn = async function(sub, email, givenName, familyName) {
+window.onAppleSignedIn = async function(sub, email, givenName, familyName, authorizationCode) {
   if (!sub) { alert('Apple sign-in did not return a user ID. Please try again.'); return; }
 
+  // Apple only hands out the authorizationCode once per sign-in. Forward it so
+  // the server can exchange it for a refresh token and revoke it on account
+  // deletion (Guideline 5.1.1(v)). Stash it for the registration path too, in
+  // case this is a first login that isn't on the roster yet.
+  window._pendingAppleAuthCode = authorizationCode || '';
+
   try {
-    const body = `action=appleSignIn&sub=${encodeURIComponent(sub)}&email=${encodeURIComponent(email || '')}`;
+    const body = `action=appleSignIn&sub=${encodeURIComponent(sub)}&email=${encodeURIComponent(email || '')}&authorizationCode=${encodeURIComponent(authorizationCode || '')}`;
     const res = await fetch(SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -1185,7 +1191,8 @@ async function submitRegistration() {
       `newBranchType=${encodeURIComponent(newBranchType)}`,
       `photoBase64=${encodeURIComponent(regPhotoBase64)}`,
       `photoMime=${encodeURIComponent(regPhotoMime)}`,
-      `appleSub=${encodeURIComponent(window._pendingAppleSub || '')}`
+      `appleSub=${encodeURIComponent(window._pendingAppleSub || '')}`,
+      `authorizationCode=${encodeURIComponent(window._pendingAppleAuthCode || '')}`
     ].join('&');
 
     const res  = await fetch(SCRIPT_URL, {
@@ -1197,6 +1204,7 @@ async function submitRegistration() {
 
     if (data.success) {
       window._pendingAppleSub = null;
+      window._pendingAppleAuthCode = null;
       document.getElementById('registerCard').classList.add('hidden');
       document.getElementById('registerSuccess').classList.remove('hidden');
     } else {
@@ -1215,7 +1223,7 @@ async function submitRegistration() {
 async function deleteAccount() {
   if (!volunteerEmail) return;
   const confirmed = confirm(
-    'Delete your account?\n\nThis removes your name, contact details, photo, date of birth, and sign-in access from the volunteer roster, and stops push notifications. Anonymized activity records are kept for organizational bookkeeping.\n\nThis cannot be undone.'
+    'Delete your account?\n\nThis permanently erases all of your data — your roster entry, volunteer hours, Boston trip forms, reimbursement requests, photos, and sign-in access — and stops push notifications. Nothing is kept.\n\nThis cannot be undone.'
   );
   if (!confirmed) return;
   try {
