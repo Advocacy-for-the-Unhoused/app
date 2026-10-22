@@ -1034,7 +1034,12 @@ function generateSlips(branchCode, fundraiser, printedBy) {
   for (let i = 1; i < data.length; i++) {
     if (data[i][0] === branchCode) { rowIndex = i + 1; break; }
   }
-  if (rowIndex === -1) throw new Error("Branch code not found.");
+  // Branches added later (Branches sheet) start their UDI count at 0 here.
+  if (rowIndex === -1) {
+    if (!getBranches_().some(b => b.code === branchCode)) throw new Error("Branch code not found.");
+    sheet.appendRow([branchCode, 0]);
+    rowIndex = sheet.getLastRow();
+  }
 
   let lastNum = sheet.getRange(rowIndex, 2).getValue();
   if (!lastNum || isNaN(lastNum)) lastNum = 0;
