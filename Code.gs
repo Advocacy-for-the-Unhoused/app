@@ -52,6 +52,9 @@ function deleteAccount_(email) {
     // Collect every Apple user id tied to this email before we delete the rows,
     // so we can revoke the Sign in with Apple token afterwards (5.1.1(v)).
     const appleSubs = {};
+    // Capture the member's name before their rows are gone, so we can scrub it
+    // from name-keyed stores (the Task Board) too — leave nothing attached.
+    let fullName = '';
 
     // Roster (ROSTER_SS_ID). Col G(7) holds the profile photo URL — delete that
     // Drive file permanently, then delete the whole roster row.
@@ -62,6 +65,7 @@ function deleteAccount_(email) {
         if ((data[i][3] || '').toString().toLowerCase().trim() === lc) { // D — email
           const sub = (data[i][9] || '').toString().trim();              // J — Apple sub
           if (sub) appleSubs[sub] = true;
+          fullName = (data[i][1] || '').toString().trim() || fullName;   // B — name
           deleteDriveFileFromUrl_(data[i][6]);                            // G — photo
           roster.deleteRow(i + 1);
           found = true;
@@ -78,6 +82,7 @@ function deleteAccount_(email) {
         if ((pData[i][2] || '').toString().toLowerCase().trim() === lc) {
           const sub = (pData[i][6] || '').toString().trim();             // G — Apple sub
           if (sub) appleSubs[sub] = true;
+          fullName = fullName || (pData[i][0] || '').toString().trim();   // A — name
           deleteDriveFileFromUrl_(pData[i][3]);                           // D — photo
           pending.deleteRow(i + 1);
           found = true;
@@ -137,6 +142,7 @@ function deleteAccount_(email) {
 
     if (!found) return { error: 'Email not found' };
     removeFcmTokens_(email);
+    scrubTaskBoardName_(fullName);   // drop their name off any Task Board task
     // Revoke the Sign in with Apple token(s) so the credential is fully severed,
     // as Apple requires on account deletion (Guideline 5.1.1(v)).
     Object.keys(appleSubs).forEach(revokeAppleToken_);
@@ -385,6 +391,39 @@ function revokeAppleToken_(sub) {
   } catch (e) {
     console.warn('revokeAppleToken_ failed: ' + e.message);
   }
+}
+
+// Remove a deleted member's name from the Task Board (stored by name, not email)
+// so no task stays labelled with their identity. Blanks taskAssignee values and
+// any assignee embedded in a newTask's Extra JSON that match the name
+// (case-insensitive); those tasks become unassigned. Best-effort.
+function scrubTaskBoardName_(fullName) {
+  const name = (fullName || '').toString().trim().toLowerCase();
+  if (!name) return;
+  try {
+    const sheet = SpreadsheetApp.openById(ROSTER_SS_ID).getSheetByName(TB_SHEET_NAME);
+    if (!sheet) return;
+    const last = sheet.getLastRow();
+    if (last < 2) return;
+    const rng  = sheet.getRange(2, 1, last - 1, 5);
+    const data = rng.getValues();
+    let changed = false;
+    for (let i = 0; i < data.length; i++) {
+      const type = String(data[i][0]);
+      if (type === 'taskAssignee' && String(data[i][2]).trim().toLowerCase() === name) {
+        data[i][2] = ''; changed = true;
+      }
+      if (type === 'newTask' && data[i][3]) {
+        try {
+          const ex = JSON.parse(data[i][3]);
+          if (ex && typeof ex.assignee === 'string' && ex.assignee.trim().toLowerCase() === name) {
+            ex.assignee = ''; data[i][3] = JSON.stringify(ex); changed = true;
+          }
+        } catch (e) { /* non-JSON extra — leave it */ }
+      }
+    }
+    if (changed) rng.setValues(data);
+  } catch (e) { console.warn('scrubTaskBoardName_ failed: ' + e.message); }
 }
 
 // Remove the user's push tokens so a deleted account stops receiving pushes.
