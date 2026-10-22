@@ -162,11 +162,11 @@ function prefillRegistrationIdentity(fname, lname, email) {
 // (it reuses the same preloaded-payload entry as biometric replay), which is the
 // demo-mode allowance Apple describes in Guideline 2.1(a).
 //
-// DEMO_REVIEWER_EMAIL must exist on the Roster sheet (col D) with a branch code
-// (col F) and a BLANK position (col E) so the reviewer sees the full
-// approved-volunteer app (Home, Hours, Donations, Tasks, Boston) while the Admin
-// tab stays hidden, exactly like any ordinary volunteer.
-const DEMO_REVIEWER_EMAIL = 'appreview@advocacyfortheunhoused.org';
+// DEMO_REVIEWER_EMAIL is a roster account pre-populated with sample hours and
+// donations for reviewers. Its role code (col A) is "V" (ordinary volunteer),
+// NOT an admin code, so the Admin tab and Password Vault stay hidden — important
+// because the "Reviewer demo access" button is visible on the login screen.
+const DEMO_REVIEWER_EMAIL = 'madhavsindia@gmail.com';
 window.demoSignIn = function () {
   window.onSignedIn({
     email: DEMO_REVIEWER_EMAIL,
