@@ -1615,6 +1615,9 @@
       border-top: 1px solid var(--delete-section-border);
       text-align: center;
     }
+    /* Hide Delete My Account entirely for the shared reviewer demo account so it
+       can't be wiped (deleteAccount() also blocks it defensively). */
+    body.is-demo .delete-account-section { display: none !important; }
     .delete-account-label {
       font-size: 0.72rem; color: var(--delete-label); margin-bottom: 12px;
       font-weight: 600; text-transform: uppercase; letter-spacing: 1px;
