@@ -2190,6 +2190,8 @@
   <style>
   /* ── Task Board styles (scoped to #tabTasks) ── */
   #tabTasks *, #tabTasks *::before, #tabTasks *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  /* Undo the app-wide big orange button so board controls size to their content */
+  #tabTasks button { width: auto; text-transform: none; letter-spacing: normal; }
   #tabTasks {
     --orange: #C8522D;
     --cream:  #F9F6F0;
@@ -2290,7 +2292,7 @@
   #tabTasks .team-card {
     background: var(--cream);
     border: 2.5px solid var(--dark);
-    box-shadow: 6px 6px 0 var(--orange);
+    box-shadow: 4px 4px 0 var(--orange);
     overflow: hidden;
     width: 100%;
   }
@@ -2366,9 +2368,11 @@
   #tabTasks .progress-track { height: 3px; background: rgba(26,19,17,0.08); }
   #tabTasks .progress-fill  { height: 3px; transition: width 0.4s ease; }
   #tabTasks .stats-strip {
-    padding: 5px 12px; display: flex; gap: 6px; align-items: center;
+    padding: 6px 12px; display: flex; gap: 6px; align-items: center;
     border-bottom: 1px solid var(--border); background: white; flex-wrap: wrap;
+    font-size: 0.68rem; font-weight: 700; color: rgba(26,19,17,0.6);
   }
+  #tabTasks .stats-strip .warn { color: #A63F1F; }
   #tabTasks .stat-chip {
     font-size: 0.58rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
     padding: 2px 6px; border: 1px solid var(--border); color: rgba(26,19,17,0.5);
@@ -2400,7 +2404,7 @@
     font-family: 'Montserrat', sans-serif; font-size: 0.9rem; font-weight: 600;
     color: var(--dark); background: none; border: none; text-align: left;
     cursor: pointer; padding: 0; line-height: 1.35; width: 100%; touch-action: manipulation;
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
     overflow: hidden; overflow-wrap: anywhere; word-break: break-word;
   }
   #tabTasks .task-text-btn.done { text-decoration: line-through; color: rgba(26,19,17,0.35); font-weight: 400; }
@@ -2412,9 +2416,10 @@
     font-size: 0.58rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
     padding: 2px 6px; border: 1px solid; cursor: pointer;
     display: inline-block; touch-action: manipulation;
-    max-width: 84px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 110px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
-  #tabTasks .assignee-tag.unset { border-color: rgba(26,19,17,0.15); color: rgba(26,19,17,0.3); }
+  #tabTasks .assignee-tag.unset { border-color: rgba(26,19,17,0.25); color: rgba(26,19,17,0.55); }
+  #tabTasks .assignee-tag.claim { border-color: var(--orange); background: var(--orange); color: white; }
   #tabTasks .assignee-input {
     font-size: 14px; font-weight: 700; text-transform: uppercase;
     padding: 3px 6px; border: 1px solid var(--orange); outline: none;
@@ -6196,7 +6201,7 @@
     let tbTeams = tbDeepCopy(HARDCODED_TEAMS);
     let tbSelectedColor = TB_COLORS[0];
     let tbRosterNames = null;
-    const tbExpanded = new Set(); // empty boards the viewer opened this session
+    const tbCollapsed = new Map(); // team → collapsed, once the viewer toggles it this session
 
     /* ── Branch boards + per-viewer visibility ──────────────
        Every branch gets its own board, keyed "branch:<CODE>" in the change log.
@@ -6582,7 +6587,8 @@
     }
 
     function tbToggleCollapse(teamName) {
-      if (tbExpanded.has(teamName)) tbExpanded.delete(teamName); else tbExpanded.add(teamName);
+      const card = document.querySelector(`#tb-canvas .team-card[data-team="${CSS.escape(teamName)}"]`);
+      tbCollapsed.set(teamName, !(card && card.classList.contains('collapsed')));
       tbRender();
     }
 
@@ -6610,9 +6616,9 @@
       const isBranch = !!team.branchCode;
 
       const card = document.createElement('div');
-      // Empty boards start collapsed to just their header; tapping it opens them.
-      const collapsed = !total && !tbExpanded.has(team.name) && !tbIsLeader(team);
-      card.className = 'team-card' + (!total ? ' tb-collapsible' : '') + (collapsed ? ' collapsed' : '');
+      // Any board can be collapsed; empty ones (except your own) start that way.
+      const collapsed = tbCollapsed.has(team.name) ? tbCollapsed.get(team.name) : (!total && !tbIsLeader(team));
+      card.className = 'team-card' + (collapsed ? ' collapsed' : '');
       card.dataset.team = team.name;
 
       const meetingPill = canEdit
@@ -6624,18 +6630,20 @@
       card.innerHTML = `
         <div class="team-header">
           <div class="team-header-top">
-            ${!total ? `<button class="tb-collapse-btn" aria-label="${collapsed ? 'Expand' : 'Collapse'}"
-              onclick="tbToggleCollapse('${tbEsc(team.name)}')"><i class="bi bi-chevron-${collapsed ? 'down' : 'up'}"></i></button>` : ''}
+            <button class="tb-collapse-btn" aria-label="${collapsed ? 'Expand' : 'Collapse'}"
+              onclick="tbToggleCollapse('${tbEsc(team.name)}')"><i class="bi bi-chevron-${collapsed ? 'down' : 'up'}"></i></button>
             <div class="team-color-swatch" style="background:${team.color}"></div>
             ${isBranch
               ? `<span class="team-name-btn">${tbEsc(tbTeamLabel(team))}</span>`
-              : `<button class="team-name-btn" onclick="tbEditTeamName('${tbEsc(team.name)}')">${tbEsc(team.name)}</button>
-            <button class="delete-team-btn" onclick="tbConfirmDeleteTeam('${tbEsc(team.name)}')">
+              : canEdit
+                ? `<button class="team-name-btn" onclick="tbEditTeamName('${tbEsc(team.name)}')">${tbEsc(team.name)}</button>
+            <button class="delete-team-btn" aria-label="Delete team" onclick="tbConfirmDeleteTeam('${tbEsc(team.name)}')">
               <i class="bi bi-trash3"></i>
-            </button>`}
+            </button>`
+                : `<span class="team-name-btn">${tbEsc(team.name)}</span>`}
           </div>
           ${isBranch
-            ? `<div class="team-officer">${canEdit ? 'Branch tasks · you manage this board' : 'Branch tasks · managed by your branch president'}</div>`
+            ? `<div class="team-officer">${canEdit ? 'You lead this board' : 'Led by your branch president'}</div>`
             : (team.officer ? `<div class="team-officer">${tbEsc(team.officer)}</div>` : '')}
           <div class="team-header-bottom">
             ${meetingPill}
@@ -6647,11 +6655,10 @@
         <div class="progress-track">
           <div class="progress-fill" style="width:${pct}%;background:${team.color}"></div>
         </div>
-        <div class="stats-strip">
-          <span class="stat-chip">${done}/${total} done</span>
-          ${unassigned ? `<span class="stat-chip warn">${unassigned} unassigned</span>` : ''}
-          ${total ? `<span class="stat-chip">${pct}%</span>` : ''}
-        </div>
+        ${total ? `<div class="stats-strip">
+          <span>${done} of ${total} done</span>
+          ${unassigned ? `<span>·</span><span class="warn">${unassigned} unclaimed</span>` : ''}
+        </div>` : ''}
         <div class="tasks-list" id="tb-tl-${tbCssId(team.name)}">
           ${team.tasks.map(t => tbTaskHTML(team, t)).join('')}
         </div>
@@ -6696,8 +6703,9 @@
       const canEdit  = tbCanEditTeam(team);
       const canCheck = canEdit || tbIsMine(task);
       const tagClass = task.assignee ? '' : ' unset';
-      const tagText  = task.assignee ? (tbIsMine(task) ? 'Yours' : tbEsc(task.assignee)) : (canEdit ? '+ assign' : 'Claim');
+      const tagText  = task.assignee ? (tbIsMine(task) ? 'Yours' : tbEsc(tbShortName(task.assignee))) : (canEdit ? '+ assign' : 'Claim');
       const tagColor = task.assignee ? `border-color:${team.color};color:${team.color}` : '';
+      const tagExtra = !task.assignee && !canEdit && !task.done ? ' claim' : '';
       const dueClass = tbDueClass(task.dueDate);
       const dueText  = tbFmtDue(task.dueDate);
       return `<div class="task-row${task.done ? ' tb-task-done' : ''}" id="tb-tr-${tbEsc(task.id)}">
@@ -6715,7 +6723,7 @@
             : (task.dueDate ? `<span class="due-chip ${dueClass}">${tbEsc(dueText)}</span>` : '')}
         </div>
         <div class="task-assignee-col">
-          <span class="assignee-tag${tagClass}" style="${tagColor}"
+          <span class="assignee-tag${tagClass}${tagExtra}" style="${tagColor}" title="${tbEsc(task.assignee || '')}"
             ${canEdit ? `onclick="tbEditAssignee('${tbEsc(task.id)}')"`
               : (!task.assignee && !task.done ? `onclick="tbOpenTaskView('${tbEsc(task.id)}')"` : '')}>${tagText}</span>
         </div>
@@ -6723,6 +6731,12 @@
           <i class="bi bi-x-lg"></i>
         </button>` : ''}
       </div>`;
+    }
+
+    // "Pranav Warrier" → "Pranav W." so chips fit; the task view shows the full name.
+    function tbShortName(n) {
+      const parts = String(n || '').trim().split(/\s+/);
+      return parts.length > 1 ? parts[0] + ' ' + parts[parts.length - 1][0] + '.' : parts[0] || '';
     }
 
     function tbEsc(s) {
