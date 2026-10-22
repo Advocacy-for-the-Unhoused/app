@@ -6330,7 +6330,8 @@
     function tbCanEditTeam(team) {
       const me = tbMe();
       if (tbIsOrgAdmin()) return true;
-      if (team.branchCode) return /P/.test(me.pos) && me.branch === team.branchCode;
+      if (team.branchCode) return (/P/.test(me.pos) && me.branch === team.branchCode)
+        || tbOverseenBranches().includes(team.branchCode);
       return !!me.name && String(team.officer || '').trim().toLowerCase() === me.name;
     }
     // The board's own leader: a team's officer, or the president of a branch board.
