@@ -55,6 +55,18 @@
     };
   </script>
   <style>
+    /* ── Apple HIG alignment (brand-preserving) ──────────────────────────
+       Native touch feel without changing the AFU visual language. */
+    * { -webkit-tap-highlight-color: transparent; }
+    html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+    /* iOS zooms the page when focusing a field smaller than 16px. Enforce a
+       16px floor on typed fields so focus never auto-zooms, while leaving
+       pinch-to-zoom available for accessibility (the viewport allows it).
+       The :not() chain carries enough specificity to beat the compact class
+       sizes (0.8rem/14px) used on some form fields. */
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]):not([type="button"]):not([type="submit"]),
+    select, textarea { font-size: max(16px, 1em); }
+
     :root {
       --camp-orange: #B84A27;
       --camp-cream: #F9F6F0;
@@ -1334,6 +1346,12 @@
       padding: 8px 0 2px;
       cursor: pointer;
       margin-top: 2px;
+      /* HIG: 44pt minimum tap target */
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
     }
     .my-tasks-viewall:hover { background: transparent; transform: none; box-shadow: none; opacity: 0.75; }
     .my-tasks-viewall:active { transform: translateY(1px); box-shadow: none; }
@@ -1735,6 +1753,14 @@
       background: var(--toggle-pill-bg); border-radius: 14px; padding: 0; flex-shrink: 0;
       border: 1.5px solid var(--toggle-pill-border);
       transition: background 0.25s, border-color 0.25s;
+    }
+    /* HIG: expand the toggle's tap target to 44pt without changing its look */
+    .theme-toggle-pill::after {
+      content: '';
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 44px; height: 44px;
     }
     .theme-toggle-knob {
       position: absolute; top: 2px; left: 2px; width: 20px; height: 20px;
