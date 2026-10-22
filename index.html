@@ -4197,8 +4197,9 @@
       window.gasFetch(body)
         .then(function (data) {
           if (data && data.success) {
-            if (data.photoUrl && avatar) avatar.src = data.photoUrl;
-            p.photoUrl = data.photoUrl || p.photoUrl;
+            // Keep the local dataUrl already shown as the preview; just remember
+            // the new file id so later sessions load it through the proxy.
+            if (data.photoId) p.photoUrl = 'id:' + data.photoId;
             p.hasRosterPhoto = true;
             window.refreshProfilePhotoUI();
             if (typeof haptic === 'function') haptic('success');
@@ -4682,7 +4683,7 @@
     var body = document.getElementById('pending-vol-body');
     if (!body) return;
     body.innerHTML = '<div style="padding:20px;text-align:center;font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color: rgba(26,19,17,0.62);"><i class="bi bi-hourglass-split spinner"></i> Loading&hellip;</div>';
-    window.gasFetch('action=getPendingVolunteers')
+    window.gasFetch('action=getPendingVolunteers&actorEmail=' + encodeURIComponent((window.volunteerProfile && window.volunteerProfile.email) || ''))
       .then(function(data) {
         var all = (data && data.volunteers) || [];
         pendingVolsCache = all.filter(function(v) { return pendingCanSeeBranch(v.branchCode); });
@@ -4727,7 +4728,7 @@
       html += '<div class="pv-branch-hdr" style="color:' + bColor + ';border-bottom:2px solid ' + bColor + ';">' + bName + ' · ' + group.length + ' pending</div>';
       group.forEach(function(v) {
         var imgHtml = v.photoUrl
-          ? '<img class="pv-avatar" src="' + crEsc(v.photoUrl) + '" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">' +
+          ? '<img class="pv-avatar" data-drive="' + crEsc(v.photoUrl) + '" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">' +
             '<div class="pv-avatar-ph" style="display:none;">👤</div>'
           : '<div class="pv-avatar-ph">👤</div>';
         html += '<div class="pv-card" id="pv-card-' + v.rowIndex + '">' +
@@ -4752,12 +4753,16 @@
     });
     html += '</div>';
     body.innerHTML = html;
+    // Photos are in a private Drive folder — load each through the getImage proxy.
+    body.querySelectorAll('.pv-avatar[data-drive]').forEach(function(img) {
+      if (window.loadDriveImage) window.loadDriveImage(img, img.getAttribute('data-drive'));
+    });
   }
 
   function pendingApprove(rowIndex) {
     var card = document.getElementById('pv-card-' + rowIndex);
     if (card) { card.style.opacity = '0.4'; card.querySelectorAll('button').forEach(function(b){b.disabled=true;}); }
-    fetch(pendingSU, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'action=approveVolunteer&rowIndex=' + rowIndex })
+    fetch(pendingSU, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'action=approveVolunteer&rowIndex=' + rowIndex + '&actorEmail=' + encodeURIComponent((window.volunteerProfile && window.volunteerProfile.email) || '') })
       .then(function(r) { return r.json(); })
       .then(function(d) {
         if (d.success) {
@@ -4779,7 +4784,7 @@
     if (!confirm('Deny this volunteer application?')) return;
     var card = document.getElementById('pv-card-' + rowIndex);
     if (card) { card.style.opacity = '0.4'; card.querySelectorAll('button').forEach(function(b){b.disabled=true;}); }
-    fetch(pendingSU, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'action=denyVolunteer&rowIndex=' + rowIndex })
+    fetch(pendingSU, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'action=denyVolunteer&rowIndex=' + rowIndex + '&actorEmail=' + encodeURIComponent((window.volunteerProfile && window.volunteerProfile.email) || '') })
       .then(function(r) { return r.json(); })
       .then(function(d) {
         if (d.success) {
@@ -4934,7 +4939,7 @@
       return;
     }
     body.innerHTML = '<div style="padding:20px;text-align:center;font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color: rgba(26,19,17,0.62);"><i class="bi bi-hourglass-split spinner"></i> Loading&hellip;</div>';
-    window.gasFetch('action=getCompRequests')
+    window.gasFetch('action=getCompRequests&actorEmail=' + encodeURIComponent((window.volunteerProfile && window.volunteerProfile.email) || ''))
       .then(function(d) { renderCompRequests(d.requests || [], body); })
       .catch(function() { body.innerHTML = '<div style="padding:20px;text-align:center;color: rgba(26,19,17,0.62);">Failed to load.</div>'; });
   }
@@ -4979,7 +4984,8 @@
           +   '</div>'
           + '</div>';
         if (r.imageUrl) {
-          html += '<a href="' + crEsc(r.imageUrl) + '" target="_blank" rel="noopener" class="cr-bill-link"><i class="bi bi-receipt"></i> View Receipt</a>';
+          // Receipt lives in a private Drive folder — load it through the proxy.
+          html += '<button type="button" class="cr-bill-link" onclick="crViewReceipt(\'' + crEsc(r.imageUrl) + '\')"><i class="bi bi-receipt"></i> View Receipt</button>';
         }
         if (isPending) {
           html += '<div class="cr-actions">'
@@ -4994,11 +5000,23 @@
     body.innerHTML = html;
   }
 
+  async function crViewReceipt(idOrUrl) {
+    try {
+      var dataUrl = window.fetchDriveImage ? await window.fetchDriveImage(idOrUrl) : '';
+      if (!dataUrl) { alert('Could not load receipt.'); return; }
+      var blob = await (await fetch(dataUrl)).blob();
+      var url  = URL.createObjectURL(blob);
+      window.open(url, '_blank', 'noopener');
+      setTimeout(function() { URL.revokeObjectURL(url); }, 60000);
+    } catch (e) { alert('Could not load receipt.'); }
+  }
+  window.crViewReceipt = crViewReceipt;
+
   function approveCompRequest(id) {
     var card = document.getElementById('cr-card-' + id);
     if (card) { card.style.opacity = '0.5'; card.querySelectorAll('button').forEach(function(b){b.disabled=true;}); }
     fetch(crSU, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: 'action=approveCompRequest&id=' + encodeURIComponent(id) })
+      body: 'action=approveCompRequest&id=' + encodeURIComponent(id) + '&actorEmail=' + encodeURIComponent((window.volunteerProfile && window.volunteerProfile.email) || '') })
       .then(function(r) { return r.json(); })
       .then(function(d) {
         if (d.success) { loadCompRequests(); }
@@ -5019,7 +5037,7 @@
     var card = document.getElementById('cr-card-' + id);
     if (card) { card.style.opacity = '0.5'; card.querySelectorAll('button').forEach(function(b){b.disabled=true;}); }
     fetch(crSU, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: 'action=denyCompRequest&id=' + encodeURIComponent(id) })
+      body: 'action=denyCompRequest&id=' + encodeURIComponent(id) + '&actorEmail=' + encodeURIComponent((window.volunteerProfile && window.volunteerProfile.email) || '') })
       .then(function(r) { return r.json(); })
       .then(function(d) {
         if (d.success) { loadCompRequests(); }
@@ -5042,7 +5060,12 @@
       if (firstName) document.getElementById('dashName').textContent = firstName;
       const branch = p.branch || p.Branch || p.branchName || '';
       if (branch) document.getElementById('dashBranch').textContent = branch + ' Branch';
-      if (p.photoUrl) document.getElementById('dashAvatar').src = p.photoUrl;
+      if (p.photoUrl) {
+        // Google profile pics and local previews load directly; a private Drive
+        // photo goes through the getImage proxy.
+        if (/^data:|googleusercontent/.test(p.photoUrl)) document.getElementById('dashAvatar').src = p.photoUrl;
+        else loadDriveImage(document.getElementById('dashAvatar'), p.photoUrl);
+      }
     }
   };
 
@@ -5110,7 +5133,7 @@
     try {
       const { AppleSignIn } = window.Capacitor.Plugins;
       const result = await AppleSignIn.signIn({ scopes: ['EMAIL', 'FULL_NAME'] });
-      const { user, email, givenName, familyName, authorizationCode } = result;
+      const { user, email, givenName, familyName, authorizationCode, identityToken } = result;
       // Apple returns email + name only on the FIRST authorization for this
       // Apple ID. Cache them per user id so later sign-ins (e.g. before roster
       // approval) can still auto-fill instead of asking the user again.
@@ -5127,7 +5150,7 @@
         // Pass Apple's one-time authorizationCode to the server so it can
         // obtain (and later revoke) a refresh token — required for account
         // deletion to revoke the Sign in with Apple token (Guideline 5.1.1(v)).
-        await window.onAppleSignedIn(user, identity.email, identity.givenName, identity.familyName, authorizationCode);
+        await window.onAppleSignedIn(user, identity.email, identity.givenName, identity.familyName, authorizationCode, identityToken);
       }
     } catch (err) {
       console.error('Apple sign-in failed:', err);

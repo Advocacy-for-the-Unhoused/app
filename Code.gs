@@ -217,6 +217,84 @@ function appleClientConfig_() {
   return { id: id, secret: secret };
 }
 
+// ── Sign in with Apple — login verification ───────────────────────────────────
+// We trust Apple's assertion of the user id / email — never raw client params —
+// so a caller can't POST appleSignIn with another member's email and take over
+// their account. We verify by exchanging Apple's one-time authorizationCode at
+// Apple's token endpoint: the id_token in that response is delivered straight
+// from appleid.apple.com over TLS, so (per OIDC's authorization-code flow) its
+// claims can be trusted after checking iss/aud/exp — no local RSA/JWKS signature
+// check, which Apps Script's V8 can't do anyway (it has no BigInt). The same
+// exchange yields the refresh_token we store for account-deletion revoke, so the
+// code is exchanged exactly once here.
+const APPLE_ISSUER = 'https://appleid.apple.com';
+
+function verifyAppleAuthCode_(authorizationCode) {
+  if (!authorizationCode) throw new Error('Missing Apple authorization code');
+  const cfg = appleClientConfig_();
+  if (!cfg) throw new Error('Apple client not configured (APPLE_CLIENT_ID / APPLE_CLIENT_SECRET)');
+
+  const res = UrlFetchApp.fetch(APPLE_TOKEN_URL, {
+    method:             'post',
+    contentType:        'application/x-www-form-urlencoded',
+    payload:            {
+      client_id:     cfg.id,
+      client_secret: cfg.secret,
+      grant_type:    'authorization_code',
+      code:          authorizationCode
+    },
+    muteHttpExceptions: true
+  });
+  if (res.getResponseCode() !== 200) {
+    throw new Error('Apple token exchange failed (HTTP ' + res.getResponseCode() + '): ' + res.getContentText());
+  }
+
+  const body    = JSON.parse(res.getContentText());
+  const idToken = body.id_token;
+  if (!idToken) throw new Error('No id_token in Apple token response');
+
+  const parts = idToken.split('.');
+  if (parts.length !== 3) throw new Error('Malformed Apple id_token');
+  const claims = JSON.parse(Utilities.newBlob(Utilities.base64DecodeWebSafe(parts[1])).getDataAsString());
+
+  const now = Math.floor(Date.now() / 1000);
+  if (claims.iss !== APPLE_ISSUER) throw new Error('Unexpected token issuer: ' + claims.iss);
+  if (claims.aud !== cfg.id)       throw new Error('Apple token audience mismatch');
+  if (claims.exp && now > claims.exp + 60) throw new Error('Apple id_token expired');
+
+  return {
+    sub:          (claims.sub   || '').toString().trim(),
+    email:        (claims.email || '').toString().trim(),
+    refreshToken: body.refresh_token || ''
+  };
+}
+
+// ── Role gate for privileged actions ──────────────────────────────────────────
+// Resolve the caller's role from the roster and require it to match `re`.
+// Returns an error object to short-circuit doPost, or null when allowed.
+// NOTE: the actor is still the client-supplied email — the public web-app URL
+// can't mint verified sessions — so this blocks anonymous / no-actor calls and
+// callers whose role is insufficient, matching the trust model the rest of the
+// admin surface (e.g. the password vault) already relies on.
+function requireRole_(actorEmail, re, msg) {
+  const actor = rosterIndex_()[(actorEmail || '').trim().toLowerCase()];
+  if (!actor) return { error: 'Sign in again — we could not confirm your account.' };
+  if (!re.test(actor.position || '')) return { error: msg || 'You are not authorized to do that.' };
+  return null;
+}
+
+// Account deletion: allow a member to delete their own account, or an officer
+// (A/Z) to delete anyone's. Returns an error object or null.
+function requireDeleteActor_(actorEmail, targetEmail) {
+  const actor  = (actorEmail  || '').trim().toLowerCase();
+  const target = (targetEmail || '').trim().toLowerCase();
+  if (!actor || !target) return { error: 'Sign in again — we could not confirm your account.' };
+  if (actor === target) return null;
+  const a = rosterIndex_()[actor];
+  if (a && /[AZ]/.test(a.position || '')) return null;
+  return { error: 'You can only delete your own account.' };
+}
+
 function appleTokensSheet_() {
   const ss = SpreadsheetApp.openById(ROSTER_SS_ID);
   let sheet = ss.getSheetByName(APPLE_TOKENS_SHEET);
@@ -363,7 +441,7 @@ function doPost(e) {
       return handleLookup(p.lookupEmail);
 
     } else if (p.action === "appleSignIn") {
-      result = appleSignIn_(p.sub, p.email, p.authorizationCode || '');
+      result = appleSignIn_(p.authorizationCode || '');
 
     } else if (p.action === "registerVolunteer") {
       result = handleVolunteerRegistration({
@@ -443,6 +521,9 @@ function doPost(e) {
           } catch(pushErr) { console.warn('Push failed (submitHours):', pushErr.message); }
         }
       }
+
+    } else if (p.action === "getImage") {
+      result = serveDriveImage_(p.id || '', p.actorEmail || '');
 
     } else if (p.action === "getRosterMembers") {
       result = getRosterMembers();
@@ -619,21 +700,29 @@ function doPost(e) {
       }
 
     } else if (p.action === "sendBostonDeadlineReminder") {
-      const qNames = bostonFilterByScope_(p.actorEmail, getQualifiedNames());
-      const dTokens = qNames.map(q => getFcmToken_(q.email)).filter(Boolean);
-      sendPushToMany_(dTokens, 'Boston Trip Deadline',
-        'Reminder: the permission form deadline is approaching. Open the app to complete your form!');
-      result = { success: true, sent: dTokens.length };
+      // Mass push — require an HQ/President actor. Without this gate a caller with
+      // no actorEmail blasts the reminder to every qualified person.
+      result = requireRole_(p.actorEmail, /[AZP]/, 'Only officers can send the deadline reminder.');
+      if (!result) {
+        const qNames = bostonFilterByScope_(p.actorEmail, getQualifiedNames());
+        const dTokens = qNames.map(q => getFcmToken_(q.email)).filter(Boolean);
+        sendPushToMany_(dTokens, 'Boston Trip Deadline',
+          'Reminder: the permission form deadline is approaching. Open the app to complete your form!');
+        result = { success: true, sent: dTokens.length };
+      }
 
     // ── Volunteer Approvals ────────────────────────────────────────────────────
     } else if (p.action === "getPendingVolunteers") {
-      result = getPendingVolunteers();
+      result = requireRole_(p.actorEmail, /[AZPC]/, 'Only officers can view pending volunteers.') ||
+               getPendingVolunteers();
 
     } else if (p.action === "approveVolunteer") {
-      result = approveVolunteer(parseInt(p.rowIndex, 10));
+      result = requireRole_(p.actorEmail, /[AZPC]/, 'Only officers can approve volunteers.') ||
+               approveVolunteer(parseInt(p.rowIndex, 10));
 
     } else if (p.action === "denyVolunteer") {
-      result = denyVolunteer(parseInt(p.rowIndex, 10));
+      result = requireRole_(p.actorEmail, /[AZPC]/, 'Only officers can deny volunteers.') ||
+               denyVolunteer(parseInt(p.rowIndex, 10));
 
     // ── Branch Management ──────────────────────────────────────────────────────
     } else if (p.action === "getBranchManagement") {
@@ -671,19 +760,25 @@ function doPost(e) {
       result = submitCompRequest_(p.email || '', p.amount || '0', p.description || '', p.payMethod || 'Cash', p.payHandle || '', p.imageBase64 || '', p.imageMime || '');
 
     } else if (p.action === "getCompRequests") {
-      result = getCompRequests_();
+      result = requireRole_(p.actorEmail, /[AZPC]/, 'Only officers can view reimbursement requests.') ||
+               getCompRequests_();
 
     } else if (p.action === "getMyCompRequests") {
       result = getMyCompRequests_(p.email || '');
 
     } else if (p.action === "approveCompRequest") {
-      result = approveCompRequest_(p.id || '');
+      result = requireRole_(p.actorEmail, /[AZPC]/, 'Only officers can approve reimbursement requests.') ||
+               approveCompRequest_(p.id || '');
 
     } else if (p.action === "denyCompRequest") {
-      result = denyCompRequest_(p.id || '');
+      result = requireRole_(p.actorEmail, /[AZPC]/, 'Only officers can deny reimbursement requests.') ||
+               denyCompRequest_(p.id || '');
 
     } else if (p.action === "deleteAccount") {
-      result = deleteAccount_(p.email || '');
+      // You may delete your own account; officers (A/Z) may delete any. Reject
+      // anonymous or mismatched callers so one member can't erase another.
+      result = requireDeleteActor_(p.actorEmail, p.email) ||
+               deleteAccount_(p.email || '');
 
     } else {
       result = { error: "Invalid request" };
@@ -736,15 +831,28 @@ function getMemberInfo(email) {
   return { firstName: "User", branchCode: "X", branchName: "Unknown Branch", position: "" };
 }
 
-function appleSignIn_(sub, email, authorizationCode) {
+function appleSignIn_(authorizationCode) {
+  // Trust only what Apple asserts (via the token-exchange id_token) — never a
+  // raw client-supplied sub/email — so a caller cannot bind their Apple id to
+  // someone else's account.
+  let identity;
+  try {
+    identity = verifyAppleAuthCode_(authorizationCode);
+  } catch (e) {
+    console.warn('Apple sign-in verification failed: ' + e.message);
+    return { error: 'Could not verify your Apple sign-in. Please try again.' };
+  }
+  const sub   = identity.sub;
+  const email = identity.email;
   if (!sub) return { error: 'No Apple sub provided' };
   try {
     if (isRemovedMember_(email, sub)) return { removed: true, error: REMOVED_MSG };
 
-    // Exchange Apple's one-time authorizationCode for a refresh token and keep
-    // it, so account deletion can revoke the Sign in with Apple token later
-    // (Guideline 5.1.1(v)). Best-effort: a failure here must not block sign-in.
-    captureAppleRefreshToken_(sub, authorizationCode);
+    // The refresh token captured during the exchange above lets account deletion
+    // revoke the Sign in with Apple token later (Guideline 5.1.1(v)). Store it
+    // best-effort — a failure here must not block sign-in.
+    try { if (identity.refreshToken) storeAppleRefreshToken_(sub, identity.refreshToken); }
+    catch (tokErr) { console.warn('storeAppleRefreshToken_ failed: ' + tokErr.message); }
 
     const sheet = SpreadsheetApp.openById(ROSTER_SS_ID).getSheetByName('Roster');
     if (!sheet) return { error: 'Roster sheet not found' };
@@ -799,12 +907,13 @@ function updateProfilePhoto_(email, photoBase64, photoMime) {
         const filename = nameSafe + '_profile';
         const blob     = Utilities.newBlob(Utilities.base64Decode(photoBase64), photoMime, filename);
         const file     = DriveApp.getFolderById(config.folderId).createFile(blob);
-        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-
+        // Folder stays private; the app fetches the bytes through the getImage
+        // proxy (this script runs as the owner). We store a url that carries the
+        // file id so existing id-extraction keeps working.
         const photoUrl = 'https://drive.google.com/uc?export=view&id=' + file.getId();
         sheet.getRange(i + 1, 7).setValue(photoUrl); // col G = photo URL
 
-        return { success: true, photoUrl: 'https://drive.google.com/thumbnail?id=' + file.getId() + '&sz=w200' };
+        return { success: true, photoId: file.getId() };
       }
     }
     return { error: 'Not found in roster' };
@@ -884,7 +993,7 @@ function handleVolunteerRegistration(formData) {
       const filename = formData.fname + "_" + formData.lname + "_profile";
       const blob     = Utilities.newBlob(Utilities.base64Decode(formData.photoBase64), formData.photoMime, filename);
       const file     = DriveApp.getFolderById(folderId).createFile(blob);
-      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      // Private folder; served to the app via the getImage proxy. URL carries id.
       photoUrl = "https://drive.google.com/uc?export=view&id=" + file.getId();
     } catch (photoErr) {
       console.error("Photo upload failed:", photoErr.message);
@@ -2759,6 +2868,54 @@ function getBranchPhotoFolderId_(code, name) {
   return folder.getId();
 }
 
+// ── Private-image proxy ───────────────────────────────────────────────────────
+// Profile photos and receipts live in branch Drive folders that are no longer
+// shared publicly, so the app can't load them by Drive URL anymore. This script
+// runs as the folder owner, so it reads the bytes and returns a data: URL. We
+// only serve files that actually live in one of our known folders (so the proxy
+// can't be used to read arbitrary files in the owner's Drive), and receipts
+// (named receipt_*) additionally require an officer caller.
+function allowedImageFolderIds_() {
+  const ids = {};
+  Object.keys(BRANCH_CONFIG).forEach(function (name) {
+    const c = BRANCH_CONFIG[name];
+    if (c && c.folderId) ids[c.folderId] = true;
+  });
+  ids['17glZEMCfE7L65RVuSglffhaUEGxzTqTe'] = true; // legacy fallback folder
+  const props = PropertiesService.getScriptProperties().getProperties();
+  Object.keys(props).forEach(function (k) {
+    if (k.indexOf('photoFolderId_') === 0 && props[k]) ids[props[k]] = true;
+  });
+  return ids;
+}
+
+function serveDriveImage_(id, actorEmail) {
+  try {
+    const fileId = (id || '').toString().trim();
+    if (!fileId) return { error: 'Missing id' };
+
+    const file    = DriveApp.getFileById(fileId);
+    const allowed = allowedImageFolderIds_();
+    let inAllowed = false;
+    const parents = file.getParents();
+    while (parents.hasNext()) { if (allowed[parents.next().getId()]) { inAllowed = true; break; } }
+    if (!inAllowed) return { error: 'Not found' };
+
+    // Receipts carry financial detail about a member — officers only.
+    if (/^receipt_/i.test(file.getName())) {
+      const gate = requireRole_(actorEmail, /[AZPC]/, 'Only officers can view receipts.');
+      if (gate) return gate;
+    }
+
+    const blob  = file.getBlob();
+    const bytes = blob.getBytes();
+    if (bytes.length > 8 * 1024 * 1024) return { error: 'Image too large' };
+    return { dataUrl: 'data:' + blob.getContentType() + ';base64,' + Utilities.base64Encode(bytes) };
+  } catch (e) {
+    return { error: 'Not found' };
+  }
+}
+
 function isOfficerCode_(code) {
   if (!code) return false;
   return /^[AZP]$/.test(code) || /O$/.test(code);
@@ -2955,7 +3112,7 @@ function submitCompRequest_(email, amount, description, payMethod, payHandle, im
           'receipt_' + email + '_' + Date.now()
         );
         const file = DriveApp.getFolderById(folderId).createFile(blob);
-        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        // Private folder; served to officers via the getImage proxy. URL carries id.
         imageUrl = 'https://drive.google.com/uc?export=view&id=' + file.getId();
       } catch (imgErr) {
         console.warn('Receipt image upload failed:', imgErr.message);

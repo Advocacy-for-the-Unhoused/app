@@ -8,6 +8,45 @@ let volunteerName  = null;
 let branchLetter   = null;
 let branchName     = null;
 
+// ===== PRIVATE DRIVE IMAGES =====
+// Profile photos and receipts live in a private Drive folder, so they can't be
+// loaded by their Drive URL. Pull the bytes from the getImage proxy (the server
+// runs as the folder owner) and hand back a data: URL.
+function driveImgId(idOrUrl) {
+  const s = (idOrUrl || '').toString();
+  if (!s) return '';
+  const m = s.match(/[-\w]{25,}/); // a bare id, or the id inside a Drive URL
+  return m ? m[0] : '';
+}
+
+async function fetchDriveImage(idOrUrl) {
+  const id = driveImgId(idOrUrl);
+  if (!id) return '';
+  try {
+    const body = 'action=getImage&id=' + encodeURIComponent(id) +
+      '&actorEmail=' + encodeURIComponent(volunteerEmail || '');
+    const res  = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body
+    });
+    const data = await res.json();
+    return data && data.dataUrl ? data.dataUrl : '';
+  } catch (e) { return ''; }
+}
+
+// Set an <img>'s src from a private Drive id/URL. Leaves the element untouched
+// (so any onerror placeholder can fire) when the image can't be loaded.
+async function loadDriveImage(imgEl, idOrUrl) {
+  if (!imgEl) return;
+  const dataUrl = await fetchDriveImage(idOrUrl);
+  if (dataUrl) imgEl.src = dataUrl;
+  else imgEl.dispatchEvent(new Event('error'));
+}
+window.driveImgId     = driveImgId;
+window.fetchDriveImage = fetchDriveImage;
+window.loadDriveImage = loadDriveImage;
+
 // ===== THEME TOGGLE =====
 function toggleTheme() {
   const html = document.documentElement;
@@ -173,8 +212,9 @@ window.onSignedIn = async function (preloadedPayload = null) {
     window.loadDashboard = async function() {
       document.getElementById('dashName').textContent = volunteerName;
       document.getElementById('dashBranch').textContent = branchName + ' Branch';
-      const avatarSrc = info.photoUrl || payload.picture;
-      if (avatarSrc) document.getElementById('dashAvatar').src = avatarSrc;
+      // Roster photo lives in private Drive → proxy; Google picture is a public URL.
+      if (info.photoUrl) loadDriveImage(document.getElementById('dashAvatar'), info.photoUrl);
+      else if (payload.picture) document.getElementById('dashAvatar').src = payload.picture;
 
       // Fetch stats from the Apps Script
       try {
@@ -228,8 +268,11 @@ window.onSignedIn = async function (preloadedPayload = null) {
   }
 };
 
-window.onAppleSignedIn = async function(sub, email, givenName, familyName, authorizationCode) {
+window.onAppleSignedIn = async function(sub, email, givenName, familyName, authorizationCode, identityToken) {
   if (!sub) { alert('Apple sign-in did not return a user ID. Please try again.'); return; }
+  // The server verifies the login by exchanging authorizationCode with Apple, so
+  // that code is required (identityToken is no longer used).
+  if (!authorizationCode) { alert('Apple sign-in did not return an authorization code. Please try again.'); return; }
 
   // Apple only hands out the authorizationCode once per sign-in. Forward it so
   // the server can exchange it for a refresh token and revoke it on account
@@ -238,7 +281,10 @@ window.onAppleSignedIn = async function(sub, email, givenName, familyName, autho
   window._pendingAppleAuthCode = authorizationCode || '';
 
   try {
-    const body = `action=appleSignIn&sub=${encodeURIComponent(sub)}&email=${encodeURIComponent(email || '')}&authorizationCode=${encodeURIComponent(authorizationCode || '')}`;
+    // The server exchanges authorizationCode with Apple and derives sub/email
+    // from the returned id_token — raw sub/email are no longer trusted (they let
+    // anyone claim another account).
+    const body = `action=appleSignIn&authorizationCode=${encodeURIComponent(authorizationCode)}`;
     const res = await fetch(SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -288,7 +334,7 @@ window.onAppleSignedIn = async function(sub, email, givenName, familyName, autho
     window.loadDashboard = async function() {
       document.getElementById('dashName').textContent = volunteerName;
       document.getElementById('dashBranch').textContent = branchName + ' Branch';
-      if (info.photoUrl) document.getElementById('dashAvatar').src = info.photoUrl;
+      if (info.photoUrl) loadDriveImage(document.getElementById('dashAvatar'), info.photoUrl);
 
       try {
         const statsRes = await fetch(SCRIPT_URL, {
@@ -1231,7 +1277,7 @@ async function deleteAccount() {
     const res = await fetch(SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `action=deleteAccount&email=${encodeURIComponent(volunteerEmail)}`
+      body: `action=deleteAccount&email=${encodeURIComponent(volunteerEmail)}&actorEmail=${encodeURIComponent(volunteerEmail)}`
     });
     const data = await res.json();
     if (data.error) { alert('Error: ' + data.error); return; }
