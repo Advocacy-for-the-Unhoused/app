@@ -43,24 +43,58 @@ const BRANCH_CODES = { "Hopkinton": "A", "Holliston": "H", "Westford": "W", "Shr
 function deleteAccount_(email) {
   try {
     if (!email) return { error: 'No email provided' };
-    const sheet = SpreadsheetApp.openById(ROSTER_SS_ID).getSheetByName('Roster');
-    if (!sheet) return { error: 'Roster sheet not found' };
-    const data = sheet.getDataRange().getValues();
-    const lc   = email.toLowerCase().trim();
-    for (let i = 1; i < data.length; i++) {
-      if ((data[i][3] || '').toString().toLowerCase().trim() === lc) {
-        sheet.getRange(i + 1, 2).setValue('');   // B — full name
-        sheet.getRange(i + 1, 3).setValue('');   // C — phone
-        sheet.getRange(i + 1, 4).setValue('');   // D — email
-        sheet.getRange(i + 1, 7).setValue('');   // G — photo URL
-        sheet.getRange(i + 1, 8).setValue('No'); // H — Active?
-        sheet.getRange(i + 1, 9).setValue('');   // I — DoB
-        sheet.getRange(i + 1, 10).setValue('');  // J — Apple sub
-        removeFcmTokens_(email);
-        return { success: true };
+    const ss  = SpreadsheetApp.openById(ROSTER_SS_ID);
+    const lc  = email.toLowerCase().trim();
+    let found = false;
+
+    const sheet = ss.getSheetByName('Roster');
+    if (sheet) {
+      const data = sheet.getDataRange().getValues();
+      for (let i = 1; i < data.length; i++) {
+        if ((data[i][3] || '').toString().toLowerCase().trim() === lc) {
+          sheet.getRange(i + 1, 2).setValue('');   // B — full name
+          sheet.getRange(i + 1, 3).setValue('');   // C — phone
+          sheet.getRange(i + 1, 4).setValue('');   // D — email
+          sheet.getRange(i + 1, 7).setValue('');   // G — photo URL
+          sheet.getRange(i + 1, 8).setValue('No'); // H — Active?
+          sheet.getRange(i + 1, 9).setValue('');   // I — DoB
+          sheet.getRange(i + 1, 10).setValue('');  // J — Apple sub
+          found = true;
+          break;
+        }
       }
     }
-    return { error: 'Email not found in roster' };
+
+    // Sign-ups still awaiting approval live only in Pending Volunteers (no
+    // activity to keep), so delete their rows outright — name, phone, photo
+    // and Apple sub (col G) go with them.
+    const pending = SpreadsheetApp.openById(SHEET_ID).getSheetByName(PENDING_SHEET);
+    if (pending) {
+      const pData = pending.getDataRange().getValues();
+      for (let i = pData.length - 1; i >= 1; i--) {
+        if ((pData[i][2] || '').toString().toLowerCase().trim() === lc) {
+          pending.deleteRow(i + 1);
+          found = true;
+        }
+      }
+    }
+
+    // New-branch requests: scrub requester, email, phone and Apple sub.
+    const requests = SpreadsheetApp.openById(SHEET_ID).getSheetByName(BRANCH_REQUESTS_SHEET);
+    if (requests) {
+      const rData = requests.getDataRange().getValues();
+      for (let i = 1; i < rData.length; i++) {
+        if ((rData[i][5] || '').toString().toLowerCase().trim() === lc) {
+          requests.getRange(i + 1, 5, 1, 3).setValues([['', '', '']]); // E–G
+          requests.getRange(i + 1, 9).setValue('');                     // I — Apple sub
+          found = true;
+        }
+      }
+    }
+
+    if (!found) return { error: 'Email not found' };
+    removeFcmTokens_(email);
+    return { success: true };
   } catch (err) {
     return { error: err.message };
   }
