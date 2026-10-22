@@ -341,22 +341,29 @@
     #closeScan:hover { background: var(--camp-orange); border-color: var(--camp-dark); }
 
     .g_id_signin { display: flex; justify-content: center; margin-top: 20px; }
+    /* Google / biometric buttons harmonized with the Apple button so the
+       sign-in stack reads as one set: same 44pt height, 8px radius, and
+       sentence case (overriding the global uppercase) instead of three
+       mismatched sizes. "Sign in with Google" sentence case also matches
+       Google's own button branding guidelines. */
     .btn-google-native {
       display: flex; align-items: center; justify-content: center;
-      width: 100%; padding: 12px 16px; margin-top: 20px;
+      width: 100%; min-height: 44px; padding: 0 16px; margin-top: 20px;
       background: #fff; color: #3c4043; border: 1px solid #dadce0;
-      border-radius: 4px; font-size: 14px; font-weight: 600;
-      font-family: 'Montserrat', sans-serif; cursor: pointer;
+      border-radius: 8px; font-size: 16px; font-weight: 600;
+      font-family: 'Montserrat', sans-serif; text-transform: none;
+      letter-spacing: 0; cursor: pointer;
       box-shadow: 0 1px 3px rgba(0,0,0,.12);
     }
     .btn-google-native:active { background: #f8f8f8; }
 
     .btn-biometric-native {
       display: flex; align-items: center; justify-content: center;
-      width: 100%; padding: 12px 16px; margin-top: 4px;
+      width: 100%; min-height: 44px; padding: 0 16px; margin-top: 4px;
       background: #1a1311; color: #fff; border: 1.5px solid #3a2e2b;
-      border-radius: 4px; font-size: 14px; font-weight: 600;
-      font-family: 'Montserrat', sans-serif; cursor: pointer;
+      border-radius: 8px; font-size: 16px; font-weight: 600;
+      font-family: 'Montserrat', sans-serif; text-transform: none;
+      letter-spacing: 0; cursor: pointer;
       box-shadow: 0 1px 3px rgba(0,0,0,.25);
     }
     .btn-biometric-native:active { background: #2e2220; }
@@ -1000,7 +1007,7 @@
     .boston-banner-body { flex: 1; min-width: 0; }
     .boston-banner-title { font-family: 'Abril Fatface', serif; font-size: 1.05rem; color: var(--camp-cream); line-height: 1.1; }
     .boston-banner-title span { color: var(--camp-orange); font-style: italic; }
-    .boston-banner-sub { font-size: 0.6rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(249,246,240,0.6); margin-top: 3px; }
+    .boston-banner-sub { font-size: 0.72rem; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: rgba(249,246,240,0.78); margin-top: 3px; }
     .boston-banner-arrow { color: var(--camp-orange); font-size: 1.1rem; flex-shrink: 0; }
     .boston-banner.hidden { display: none !important; }
 
@@ -1323,11 +1330,11 @@
       overflow-wrap: anywhere;
     }
     .my-task-team {
-      font-size: 0.62rem;
+      font-size: 0.72rem;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 1px;
-      color: #8a8378;
+      color: #6b645a;
     }
     .my-task-due {
       flex-shrink: 0;
