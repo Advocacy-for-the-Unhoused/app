@@ -234,7 +234,7 @@ window.onSignedIn = async function (preloadedPayload = null) {
     document.getElementById('navAdmin').classList.toggle('hidden', !/[AZPC]/.test(info.position || ''));
 
     await storeAuthForBiometric(payload);
-    await registerPushNotifications();
+    registerPushNotifications();   // silent; only if already granted
 
     // Wire loadDashboard to pull real stats + activity once data is ready
     window.loadDashboard = async function() {
@@ -369,7 +369,7 @@ window.onAppleSignedIn = async function(sub, email, givenName, familyName, autho
     document.getElementById('navAdmin').classList.toggle('hidden', !/[AZPC]/.test(info.position || ''));
 
     await storeAuthForBiometric({ email: volunteerEmail, given_name: givenName || '', family_name: familyName || '', picture: '' });
-    await registerPushNotifications();
+    registerPushNotifications();   // silent; only if already granted
 
     window.loadDashboard = async function() {
       document.getElementById('dashName').textContent = volunteerName;
@@ -941,6 +941,7 @@ async function submitHoursRequest() {
       document.getElementById("hoursNotes").value  = "";
       document.getElementById("hoursEvent").value  = "";
       loadMyHours();
+      askForNotifications('Get notified when it\'s approved?\n\nAFU can let you know when your hours are approved, when you\'re assigned a task, and about meetings and trip deadlines.');
     } else {
       throw new Error(data.error || "Unknown error");
     }
@@ -1087,9 +1088,48 @@ function showNativeToast(title, body, tab) {
 // =====================================================
 // PUSH NOTIFICATIONS (Capacitor / FCM)
 // =====================================================
+// Sign-in calls this silently: it only registers if permission was already
+// granted. Asking happens in context via askForNotifications().
+const PUSH_DECLINED_KEY = 'afuPushDeclined';
+let pushListenersAdded = false;
+
+function getPushPlugin() {
+  if (!window.Capacitor?.isNativePlatform()) return null;
+  return window.Capacitor.Plugins.FirebaseMessaging || null;
+}
+
+// reason: the sentence shown in the pre-prompt. force: true from the Account
+// row, which ignores a remembered decline (the user tapped it on purpose).
+async function askForNotifications(reason, force = false) {
+  const FirebaseMessaging = getPushPlugin();
+  if (!FirebaseMessaging) return;
+  let declined = false;
+  try { declined = localStorage.getItem(PUSH_DECLINED_KEY) === '1'; } catch (e) {}
+  if (declined && !force) return;
+  try {
+    const perm = await FirebaseMessaging.checkPermissions();
+    if (perm.receive === 'granted') {
+      if (force) alert('Notifications are on. You can turn them off in the iOS Settings app.');
+      return registerPushNotifications();
+    }
+    if (perm.receive === 'denied') {
+      if (force) alert('Notifications are off for AFU. To turn them on, open the iOS Settings app → AFU → Notifications.');
+      return;
+    }
+    if (!confirm(reason)) {
+      try { localStorage.setItem(PUSH_DECLINED_KEY, '1'); } catch (e) {}
+      return;
+    }
+    try { localStorage.removeItem(PUSH_DECLINED_KEY); } catch (e) {}
+    const res = await FirebaseMessaging.requestPermissions();
+    if (res.receive === 'granted') await registerPushNotifications();
+  } catch (e) {
+    console.warn('Notification permission request failed:', e);
+  }
+}
+
 async function registerPushNotifications() {
-  if (!window.Capacitor?.isNativePlatform()) return;
-  const { FirebaseMessaging } = window.Capacitor.Plugins;
+  const FirebaseMessaging = getPushPlugin();
   if (!FirebaseMessaging) return;
 
   // Send the FCM registration token to the backend (upserts the FCM Tokens sheet)
@@ -1105,18 +1145,15 @@ async function registerPushNotifications() {
   };
 
   try {
-    let perm = await FirebaseMessaging.checkPermissions();
-    if (perm.receive === 'prompt' || perm.receive === 'prompt-with-rationale') {
-      // Say why before iOS asks; if they decline here we can ask again next sign-in
-      const wants = confirm('Turn on notifications?\n\nAFU will let you know when your hours or registration are approved, when you\'re assigned a task, and about meetings and trip deadlines.');
-      if (!wants) return;
-      perm = await FirebaseMessaging.requestPermissions();
-    }
+    const perm = await FirebaseMessaging.checkPermissions();
     if (perm.receive !== 'granted') return;
 
     // getToken() registers with APNs (via Firebase) and returns the real FCM token
     const { token } = await FirebaseMessaging.getToken();
     await storeToken(token);
+
+    if (pushListenersAdded) return;
+    pushListenersAdded = true;
 
     // Re-store whenever Firebase rotates the token
     FirebaseMessaging.addListener('tokenReceived', (event) => {
@@ -1476,15 +1513,22 @@ async function enterPendingMode(p, authPayload) {
   };
 
   if (authPayload) await storeAuthForBiometric(authPayload);
-  await registerPushNotifications();   // so the "approved" push reaches them
+  registerPushNotifications();   // silent; only if already granted
 
   document.getElementById('authScreen').classList.add('hidden');
   document.getElementById('registerCard').classList.add('hidden');
   document.getElementById('appContent').classList.remove('hidden');
   document.getElementById('mainNav').classList.remove('hidden');
   switchTab('home');
+  const tourPending = !localStorage.getItem(WELCOME_SEEN_KEY);
   maybeShowWelcome();
   loadEventTypes();
+
+  // Ask once the pending screen is up (and after the welcome tour, if it shows),
+  // so the reason is clear. A remembered decline skips this.
+  const askApproval = () => askForNotifications('Get notified when you\'re approved?\n\nAFU will let you know as soon as your registration is approved, and later about hours, tasks, meetings and trip deadlines.');
+  if (tourPending) window.addEventListener('afu-welcome-closed', () => setTimeout(askApproval, 400), { once: true });
+  else setTimeout(askApproval, 800);
 }
 
 // =====================================================
@@ -1647,6 +1691,7 @@ window.showWelcome = function(force = false) {
     overlay.classList.remove('visible');
     document.removeEventListener('keydown', onKey);
     setTimeout(() => overlay.remove(), 250);
+    window.dispatchEvent(new Event('afu-welcome-closed'));
   }
   function next() {
     if (idx < WELCOME_SLIDES.length - 1) { idx++; haptic('light'); render(); }

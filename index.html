@@ -3219,7 +3219,6 @@
   </button>
   <!-- Biometric button — shown on native only if a previous session is stored -->
   <div id="biometricSignInOr" class="hidden" style="text-align:center;color: #6B6B6B;font-size:0.8125rem;margin:10px 0 4px;">— or —</div>
-  <button class="privacy-link" onclick="openPrivacyPolicy()">Privacy Policy</button>
   <button id="biometricSignInBtn" class="hidden btn-biometric-native" onclick="biometricSignIn()">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right:9px;vertical-align:middle;">
       <!-- Face ID icon -->
@@ -3234,6 +3233,8 @@
     </svg>
     <span class="biometric-type-label">Sign in with Face ID</span>
   </button>
+  <!-- Keep Privacy Policy last: every sign-in button sits above it (HIG H4) -->
+  <button class="privacy-link" onclick="openPrivacyPolicy()">Privacy Policy</button>
 </div>
 </div><!-- /#authScreen -->
 
@@ -3464,6 +3465,7 @@
         </button>
       </div>
       <div class="delete-account-label">Account</div>
+      <button class="sign-out-btn" onclick="askForNotifications('Turn on notifications?\n\nAFU will let you know when your hours or registration are approved, when you\'re assigned a task, and about meetings and trip deadlines.', true)">Notifications</button>
       <button class="sign-out-btn" onclick="signOut()">Sign Out</button>
       <button class="delete-account-btn" onclick="deleteAccount()">Delete My Account</button>
       <button class="privacy-link" onclick="openPrivacyPolicy()">Privacy Policy</button>
