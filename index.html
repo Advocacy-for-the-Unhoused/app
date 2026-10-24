@@ -1563,6 +1563,17 @@
     /* ── Pending (not yet approved) volunteers ── */
     .pending-only { display: none; }
     body.is-pending .pending-only { display: block; }
+    /* New-branch founders see the Record form but it's locked until they claim a
+       branch code (donation IDs need the branch letter). */
+    .record-locked-note {
+      background: rgba(184,74,39,0.08); border: 1px solid rgba(184,74,39,0.25);
+      color: var(--camp-orange); font-size: 0.8rem; font-weight: 700;
+      padding: 8px 12px; margin-bottom: 10px; text-align: center;
+    }
+    body.is-pending #step2 input,
+    body.is-pending #step2 select,
+    body.is-pending #step2 > button,
+    body.is-pending #step2 .input-group button { opacity: 0.5; pointer-events: none; }
     body.is-pending .approved-only { display: none !important; }
 
     /* ── Privacy policy modal ── */
@@ -3349,23 +3360,32 @@
     <div id="welcomeMessage" class="welcome"></div>
 
     <!-- New-branch founders land here: they're in the app and set as their
-         branch's President, but donation recording needs a branch letter, which
-         is assigned when an officer reviews the new branch. (Volunteers joining
-         existing branches are auto-approved and never see this.) -->
+         branch's President. They claim a short branch code themselves — if it's
+         free they get it and recording unlocks immediately; if taken they try
+         another. (Volunteers joining existing branches never see this.) -->
     <div class="card pending-only">
-      <h3>Your branch is being set up</h3>
-      <p style="font-size:0.85rem;line-height:1.6;margin-bottom:0;">
-        You're set as its President and can use everything else now. Recording donations and
-        printing slips unlock once your branch gets its code — donation IDs start with your
-        branch's letter. You'll get a notification when it's ready.
+      <h3>Set up your branch</h3>
+      <p style="font-size:0.85rem;line-height:1.6;margin-bottom:12px;">
+        You're set as its President. Pick a short code (1–3 letters) for your branch —
+        your donation IDs will start with it. If the code is taken, just try another.
       </p>
+      <label for="claimCodeInput">Branch code</label>
+      <div class="input-group">
+        <input id="claimCodeInput" type="text" maxlength="3" placeholder="e.g. SMV"
+               autocapitalize="characters" autocomplete="off" style="text-transform:uppercase;letter-spacing:2px;">
+        <button id="claimCodeBtn" type="button" onclick="claimBranchCode()">Claim</button>
+      </div>
+      <div id="claimCodeMsg" class="hours-msg" style="display:none;margin-top:8px;"></div>
     </div>
 
-    <div id="step2" class="card approved-only">
+    <div id="step2" class="card">
       <div class="rec-help-row">
         <h3>Record a Donation</h3>
         <button type="button" class="rec-help-btn" onclick="openRecordHelp()" aria-label="How recording donations works">? Help</button>
       </div>
+      <!-- New-branch founders can see the form but can't record until they claim
+           a branch code above (donation IDs need the branch letter). -->
+      <div class="pending-only record-locked-note">🔒 Claim your branch code above to start recording.</div>
       <p style="font-size:0.85rem;color:#555;line-height:1.6;margin-bottom:6px;">
         Volunteer record-keeping only: log a cash donation you collected in person
         at an AFU fundraiser. No money is collected, processed, or transferred in this app.

@@ -1402,6 +1402,44 @@ function proceedAfterRegistration() {
   }
 }
 
+// Self-service branch-code claim for a new-branch founder sitting in the
+// "being set up" state. On success the backend creates the branch and promotes
+// them to President under the new code, so we re-run the lookup to drop them into
+// the fully-approved app (recording unlocked). A taken code just asks for another.
+window.claimBranchCode = async function () {
+  const input = document.getElementById('claimCodeInput');
+  const btn   = document.getElementById('claimCodeBtn');
+  const msg   = document.getElementById('claimCodeMsg');
+  const show  = (type, text) => { msg.textContent = text; msg.className = 'hours-msg ' + (type === 'ok' ? 'ok' : 'error'); msg.style.display = ''; };
+  const code  = (input.value || '').trim().toUpperCase();
+  msg.style.display = 'none';
+  if (!/^[A-Z]{1,3}$/.test(code)) { show('error', 'Use 1–3 letters (A–Z).'); return; }
+
+  btn.disabled = true; btn.textContent = 'Claiming…';
+  try {
+    const res = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `action=claimBranchCode&code=${encodeURIComponent(code)}&actorEmail=${encodeURIComponent(volunteerEmail || '')}`
+    });
+    const data = await res.json();
+    if (data && data.success) {
+      try { haptic('success'); } catch (e) {}
+      document.body.classList.remove('is-pending');
+      // Re-enter as an approved member of the new branch (recording now works).
+      onSignedIn({ email: volunteerEmail, given_name: volunteerName || '', family_name: '', picture: '' });
+      return;
+    }
+    btn.disabled = false; btn.textContent = 'Claim';
+    show('error', (data && data.taken)
+      ? `"${code}" is taken — try another.`
+      : ((data && data.error) || 'Could not claim that code. Try again.'));
+  } catch (e) {
+    btn.disabled = false; btn.textContent = 'Claim';
+    show('error', 'Network error — please try again.');
+  }
+};
+
 // ===== PENDING (NOT YET APPROVED) STATE =====
 // A volunteer who registered but isn't on the roster yet. They can use Hours,
 // Tasks and their account settings; anything that needs a branch code (recording

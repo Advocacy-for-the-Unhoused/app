@@ -803,6 +803,12 @@ function doPost(e) {
     } else if (p.action === "denyBranchRequest") {
       result = denyBranchRequest_(p.id || '');
 
+    } else if (p.action === "claimBranchCode") {
+      // Self-service: a new-branch founder claims a short code. If it's free the
+      // branch is created and they're promoted to President under it; if taken
+      // they pick another. No officer step needed.
+      result = claimBranchCode_(p.actorEmail || p.email || '', p.code || '');
+
     // ── Compensation / Reimbursement Requests ──────────────────────────────────
     } else if (p.action === "submitCompRequest") {
       result = submitCompRequest_(p.email || '', p.amount || '0', p.description || '', p.payMethod || 'Cash', p.payHandle || '', p.imageBase64 || '', p.imageMime || '');
@@ -1365,6 +1371,51 @@ function approveBranchRequest_(id, code) {
 
   setBranchRequestStatus_(id, 'Approved');
   return { ok: true };
+}
+
+// Self-service branch-code claim by a new-branch founder. Validates the code,
+// creates the branch if the code is free (addBranch_ enforces uniqueness), then
+// promotes the founder from the temporary "NEW" holding code to President of the
+// real branch and marks their request Approved. Returns {taken:true} when the
+// code is already in use so the app can ask them to try another.
+function claimBranchCode_(email, code) {
+  email = String(email || '').trim();
+  code  = String(code  || '').trim().toUpperCase();
+  if (!email) return { error: 'You must be signed in.' };
+  if (!/^[A-Z]{1,3}$/.test(code)) return { error: 'Use 1–3 letters (A–Z).' };
+
+  // Only a founder currently sitting under the temporary "NEW" code may claim.
+  const info = getMemberInfo(email);
+  if (!info || info.branchCode !== TEMP_BRANCH_CODE) {
+    return { error: 'No branch is waiting to be set up for this account.' };
+  }
+
+  const location = findBranchRequestLocation_(email) || info.branchName || 'New Branch';
+  const added = addBranch_(code, location);
+  if (added.error) {
+    // addBranch_ returns 'Branch code already exists' when the code is taken.
+    return { error: added.error, taken: /exists/i.test(added.error) };
+  }
+
+  // Move the founder from "NEW" to the real code as President.
+  try {
+    const sheet  = SpreadsheetApp.openById(ROSTER_SS_ID).getSheetByName('Roster');
+    const rowNum = findRosterRowByEmail_(email);
+    if (rowNum && sheet) {
+      sheet.getRange(rowNum, 1).setValue('P');   // col A — role code
+      sheet.getRange(rowNum, 6).setValue(code);  // col F — branch code
+    }
+  } catch (e) { console.warn('claimBranchCode promote failed:', e.message); }
+
+  // Best-effort: close out their pending branch request.
+  try {
+    const req = getBranchRequests_().find(function (r) {
+      return (r.email || '').toLowerCase() === email.toLowerCase() && r.status === 'Pending';
+    });
+    if (req) setBranchRequestStatus_(req.id, 'Approved');
+  } catch (e) { console.warn('claimBranchCode request close failed:', e.message); }
+
+  return { success: true, code: code, branchName: location };
 }
 
 function denyBranchRequest_(id) {
