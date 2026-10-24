@@ -3094,6 +3094,88 @@
       window.addEventListener('pageshow', syncDynamicType);
     })();
   </script>
+  <style>
+    /* ── iPad / wide layout ──
+       The iOS build is universal, so iPads get the full window. Below 700px
+       (every phone in portrait) none of this applies; 700 rather than 768 so
+       iPad mini portrait (744pt) gets it too. */
+    @media (min-width: 700px) {
+      body { padding-left: 32px; padding-right: 32px; }
+      #appContent { max-width: 1040px; }
+
+      /* Tab bar: centered fixed-width items like a native iPad tab bar,
+         instead of five buttons stretched across the whole screen. */
+      .bottom-nav { justify-content: center; }
+      .nav-item { flex: 0 1 140px; }
+      #navHome { flex: 0 1 180px; }
+
+      /* Home: two-column dashboard. order puts Your Tasks + Recent Activity
+         side by side below the tiles. */
+      #tabHome {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        column-gap: 28px;
+      }
+      #tabHome > * { grid-column: 1 / -1; }
+      #tabHome > .dash-profile-card { grid-column: 1; }
+      #tabHome > .dash-stats { grid-column: 2; }
+      #tabHome > .my-tasks-card { grid-column: 1; order: 1; }
+      #tabHome > .dash-activity { grid-column: 2; order: 1; }
+      #tabHome:has(#myTasksCard.hidden) > .dash-activity { grid-column: 1 / -1; }
+      #tabHome > .delete-account-section { order: 2; justify-self: center; width: 100%; max-width: 480px; }
+      .dash-grid { gap: 14px; }
+      html.dt-large .dash-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+      /* Donations: record form beside Print Slips. step2/step3 never show together. */
+      #tabDonations {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        column-gap: 32px;
+        align-items: start;
+      }
+      #tabDonations > * { grid-column: 1 / -1; }
+      #tabDonations > #step2, #tabDonations > #step3 { grid-column: 1; grid-row: 3; }
+      #tabDonations > #udiSection { grid-column: 2; grid-row: 3; }
+
+      /* Hours: log form beside history. Reimbursement: form beside My Requests. */
+      #tabHours, #tabReimburse {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        column-gap: 32px;
+        align-items: start;
+      }
+
+      /* A lone form shouldn't stretch to 1040px — center it at form width. */
+      body.is-pending #tabDonations,
+      #tabReimburse:has(#my-expenses-card[style*="none"]) {
+        grid-template-columns: minmax(0, 640px);
+        justify-content: center;
+      }
+      body.is-pending #tabDonations > * { grid-column: 1; }
+
+      /* Task Board: team cards in two columns. */
+      #tabTasks .canvas {
+        max-width: none;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        align-items: start;
+        column-gap: 18px;
+      }
+      #tabTasks .canvas > .tb-section-label,
+      #tabTasks .canvas > .empty-state,
+      #tabTasks .canvas > .tb-section-label + .team-card:last-child,
+      #tabTasks .canvas > .tb-section-label + .team-card:has(+ .tb-section-label) { grid-column: 1 / -1; }
+
+      /* Admin (accordion) and Boston (step-by-step forms) read best as a
+         single column, just wider than the phone one. */
+      #tabAdmin { max-width: 820px; margin-left: auto; margin-right: auto; }
+      .boston-canvas { max-width: 720px; }
+    }
+    /* Four tiles across only once each has room for "Reimbursement" (landscape). */
+    @media (min-width: 1000px) {
+      html:not(.dt-large) .dash-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    }
+  </style>
 </head>
 <body>
 

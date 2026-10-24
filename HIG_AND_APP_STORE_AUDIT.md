@@ -74,6 +74,7 @@ Earlier today's pass fixed Home, Record, Hours and Reimburse, which now measure 
 **HIG:** Layout (iPad); Guideline 2.4.1 / 4.0. The rejection of 1.0 (6) was **reviewed on an iPad Air 11"**.
 The project is universal (`TARGETED_DEVICE_FAMILY = "1,2"`). `#appContent` is `max-width: 500px`, so at 1180px wide it uses **500 of 1180px** (measured), while the bottom tab bar stretches the full width. The result looks like a stretched phone app.
 **Fix:** either (a) add a ≥768px layout (a wider container and a two-column dashboard grid and forms), or (b) ship **iPhone-only** (`TARGETED_DEVICE_FAMILY = 1`). iPhone apps run on iPad in compatibility mode and reviewers judge them as iPhone apps.
+**Status:** fixed with option (a), in code (2026-10-24). The app stays universal. A `min-width: 700px` block (so iPad mini portrait at 744pt is covered too) widens `#appContent` to 1040px. Home becomes a two-column dashboard: profile beside stats, and Your Tasks beside Recent Activity, with 4 tiles across at ≥1000px. Record, Hours and Reimburse put the form beside its companion panel, and a lone form is centered at 640px. The Task Board shows two columns of cards. Admin and Boston stay single-column, widened to 820px and 720px. The tab bar items are centered at a fixed width. Phones (<700px) are unchanged. The browser check at 744, 820, 1000 and 1180px wide, in light and dark mode, found no overflow. Still needs a check on an iPad or the iPad Simulator.
 
 ### H4 — Sign-in screen: the Face ID button sits below the links
 **HIG:** Sign in with Apple / Authentication; Layout.
