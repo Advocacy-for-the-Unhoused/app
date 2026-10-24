@@ -3366,12 +3366,12 @@
     <div class="card pending-only">
       <h3>Set up your branch</h3>
       <p style="font-size:0.85rem;line-height:1.6;margin-bottom:12px;">
-        You're set as its President. Pick a short code (1–3 letters) for your branch —
-        your donation IDs will start with it. If the code is taken, just try another.
+        You're set as its President. Pick a single letter for your branch —
+        your donation IDs will start with it. If the letter is taken, just try another.
       </p>
-      <label for="claimCodeInput">Branch code</label>
+      <label for="claimCodeInput">Branch letter</label>
       <div class="input-group">
-        <input id="claimCodeInput" type="text" maxlength="3" placeholder="e.g. SMV"
+        <input id="claimCodeInput" type="text" maxlength="1" placeholder="e.g. S"
                autocapitalize="characters" autocomplete="off" style="text-transform:uppercase;letter-spacing:2px;">
         <button id="claimCodeBtn" type="button" onclick="claimBranchCode()">Claim</button>
       </div>

@@ -1413,7 +1413,7 @@ window.claimBranchCode = async function () {
   const show  = (type, text) => { msg.textContent = text; msg.className = 'hours-msg ' + (type === 'ok' ? 'ok' : 'error'); msg.style.display = ''; };
   const code  = (input.value || '').trim().toUpperCase();
   msg.style.display = 'none';
-  if (!/^[A-Z]{1,3}$/.test(code)) { show('error', 'Use 1–3 letters (A–Z).'); return; }
+  if (!/^[A-Z]$/.test(code)) { show('error', 'Use a single letter (A–Z).'); return; }
 
   btn.disabled = true; btn.textContent = 'Claiming…';
   try {

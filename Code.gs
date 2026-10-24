@@ -1382,7 +1382,7 @@ function claimBranchCode_(email, code) {
   email = String(email || '').trim();
   code  = String(code  || '').trim().toUpperCase();
   if (!email) return { error: 'You must be signed in.' };
-  if (!/^[A-Z]{1,3}$/.test(code)) return { error: 'Use 1–3 letters (A–Z).' };
+  if (!/^[A-Z]$/.test(code)) return { error: 'Use a single letter (A–Z).' };
 
   // Only a founder currently sitting under the temporary "NEW" code may claim.
   const info = getMemberInfo(email);
