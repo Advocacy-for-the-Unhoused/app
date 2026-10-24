@@ -1057,22 +1057,21 @@ function handleVolunteerRegistration(formData) {
     return handleNewBranchRequest_(formData);
   }
 
-  const ss     = SpreadsheetApp.openById(SHEET_ID);
-  const sheet  = ss.getSheetByName(PENDING_SHEET) || ss.insertSheet(PENDING_SHEET);
-
   // Resolve the branch against the dynamic Branches sheet (falling back to the
   // hardcoded map) so branches added later register without code changes.
   const branchCode = resolveBranchCode_(formData.branch);
   if (!branchCode) return { error: "Invalid branch: " + formData.branch };
 
+  // Idempotent: if this email is already an active roster member, don't add a
+  // second row (the client only shows registration when getMemberInfo returns
+  // branchCode "X", but guard anyway against double-submits).
+  const existing = getMemberInfo(formData.email);
+  if (existing && existing.branchCode && existing.branchCode !== "X") {
+    return { success: true };
+  }
+
   const config   = BRANCH_CONFIG[formData.branch] || null;
   const folderId = getBranchPhotoFolderId_(branchCode, formData.branch);
-
-  if (sheet.getLastRow() === 0) {
-    sheet.appendRow(["Name", "Phone", "Email", "Photo URL", "Branch Code", "Status", "Apple Sub"]);
-    sheet.getRange(1, 1, 1, 7).setFontWeight("bold");
-    sheet.setFrozenRows(1);
-  }
 
   let photoUrl = "";
   if (formData.photoBase64 && formData.photoMime && folderId) {
@@ -1087,19 +1086,29 @@ function handleVolunteerRegistration(formData) {
     }
   }
 
-  sheet.appendRow([
-    formData.fname + " " + formData.lname,
-    formData.phone,
-    formData.email,
-    photoUrl,
-    branchCode,
-    "Pending",
-    formData.appleSub || ''
-  ]);
+  // Open membership (2026-10-24): volunteers joining an EXISTING branch are added
+  // straight to the Roster as approved — no officer approval step — so they get
+  // full access immediately. Approvals don't scale, and this also lets App Review
+  // self-register (via Sign in with Apple) and test account deletion on their own
+  // account instead of a shared demo login. Officers can still remove bad actors
+  // via the removed-members flow. Row format mirrors approveVolunteer():
+  //   A=role 'V' | B=name | C=phone | D=email | E='' | F=branchCode | G=photo | H='Yes' | I='' | J=Apple Sub
+  // Insert after the last row of the same branch so the roster stays grouped.
+  const fullName = formData.fname + " " + formData.lname;
+  const roster   = SpreadsheetApp.openById(ROSTER_SS_ID).getSheetByName('Roster')
+                || SpreadsheetApp.openById(ROSTER_SS_ID).insertSheet('Roster');
+  const allRows  = roster.getDataRange().getValues();
+  let insertAfter = allRows.length;
+  for (let i = 0; i < allRows.length; i++) {
+    if ((allRows[i][5] || '').toString().trim().toUpperCase() === branchCode) insertAfter = i + 1;
+  }
+  roster.insertRowAfter(insertAfter);
+  roster.getRange(insertAfter + 1, 1, 1, 10)
+        .setValues([['V', fullName, formData.phone, formData.email, '', branchCode, photoUrl, 'Yes', '', formData.appleSub || '']]);
 
-  const sheetLink = "https://docs.google.com/spreadsheets/d/" + SHEET_ID;
+  // Best-effort, purely informational notification (no action required now).
   const emailHtml = `
-    <p style="font-family:sans-serif;font-size:14px;">A new volunteer has registered for the <strong>${formData.branch}</strong> branch and is awaiting your approval.</p>
+    <p style="font-family:sans-serif;font-size:14px;">A new volunteer has joined the <strong>${formData.branch}</strong> branch.</p>
     <table cellpadding="8" style="border-collapse:collapse;font-family:sans-serif;font-size:14px;border:1px solid #eee;">
       <tr style="background:#f9f9f9;"><td><b>Name</b></td><td>${formData.fname} ${formData.lname}</td></tr>
       <tr><td><b>Email</b></td><td>${formData.email}</td></tr>
@@ -1107,37 +1116,25 @@ function handleVolunteerRegistration(formData) {
       <tr><td><b>Branch</b></td><td>${formData.branch}</td></tr>
       <tr style="background:#f9f9f9;"><td><b>Photo</b></td><td>${photoUrl ? `<a href="${photoUrl}">View photo</a>` : "No photo uploaded"}</td></tr>
     </table>
-    <br>
-    <p style="font-family:sans-serif;font-size:14px;">To approve or deny: open the <b>AFU Volunteer Portal app</b>, go to <b>Admin → Volunteer Approvals</b>.</p>
   `;
-
-  // Notification emails are best-effort: the volunteer is already saved above,
-  // so a Gmail permission/quota error must NOT abort registration.
   try {
     if (config && config.presidentEmail) {
-      GmailApp.sendEmail(config.presidentEmail, `New volunteer registration — ${formData.branch}`, "", { htmlBody: emailHtml });
+      GmailApp.sendEmail(config.presidentEmail, `New volunteer joined — ${formData.branch}`, "", { htmlBody: emailHtml });
     }
     GmailApp.sendEmail(NOTIFY_ALL, `[All branches] New volunteer — ${formData.fname} ${formData.lname} (${formData.branch})`, "", { htmlBody: emailHtml });
   } catch (mailErr) {
     console.warn('Notification email failed (registerVolunteer):', mailErr.message);
   }
-
-  // Push to branch P (role code) + fallback to hardcoded president email + all Z
   try {
-    const bc = branchCode;
-    const pTokens = getFcmTokensByBranchAndCode_(bc, 'P');
+    const pTokens = getFcmTokensByBranchAndCode_(branchCode, 'P');
     if (pTokens.length) {
-      sendPushToMany_(pTokens, 'New Volunteer Registration',
-        `${formData.fname} ${formData.lname} from ${formData.branch} is awaiting your approval.`);
+      sendPushToMany_(pTokens, 'New Volunteer',
+        `${formData.fname} ${formData.lname} joined the ${formData.branch} branch.`);
     } else if (config && config.presidentEmail) {
-      // Fallback: president by hardcoded email (only for hardcoded branches)
       const presToken = getFcmToken_(config.presidentEmail);
-      if (presToken) sendPush_(presToken, 'New Volunteer Registration',
-        `${formData.fname} ${formData.lname} from ${formData.branch} is awaiting your approval.`);
+      if (presToken) sendPush_(presToken, 'New Volunteer',
+        `${formData.fname} ${formData.lname} joined the ${formData.branch} branch.`);
     }
-    const zTokens = getFcmTokensByPositionCode_('Z');
-    sendPushToMany_(zTokens, 'New Volunteer Registration',
-      `${formData.fname} ${formData.lname} registered for the ${formData.branch} branch.`);
   } catch(pushErr) { console.warn('Push failed (registerVolunteer):', pushErr.message); }
 
   return { success: true };

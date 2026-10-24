@@ -1416,7 +1416,15 @@ window.signOut = signOut;
 function proceedAfterRegistration() {
   document.getElementById('registerSuccess').classList.add('hidden');
   const p = registeredProfile || { email: volunteerEmail };
-  enterPendingMode(p, { email: p.email, given_name: p.firstName, family_name: '' });
+  // Open membership (2026-10-24): joining an existing branch now adds the
+  // volunteer to the Roster as approved, so re-run the lookup to drop them into
+  // the full app instead of the pending screen. Only a brand-new-branch request
+  // still waits for an officer to set the branch up.
+  if (p.newBranch) {
+    enterPendingMode(p, { email: p.email, given_name: p.firstName, family_name: '' });
+  } else {
+    onSignedIn({ email: p.email, given_name: p.firstName, family_name: '', picture: '' });
+  }
 }
 
 // ===== PENDING (NOT YET APPROVED) STATE =====
