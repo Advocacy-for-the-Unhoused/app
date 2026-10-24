@@ -3201,13 +3201,12 @@
 <div id="registerSuccess" class="card hidden" style="max-width:500px;text-align:center;">
   <div style="font-size:2.5rem;margin-bottom:8px;">✅</div>
   <h3>Welcome to AFU!</h3>
-  <p style="font-size:0.95rem;line-height:1.7;color:#444;">
-    Your registration has been submitted to the Branch Coordination team.
+  <p id="regSuccessIntro" style="font-size:0.95rem;line-height:1.7;color:#444;">
+    You're all set — welcome to the team!
   </p>
-  <div class="reg-pending-chip">⏳ Pending Branch President Approval</div>
-  <p style="font-size:0.85rem;line-height:1.7;color:#666;">
-    Your Branch President will review and approve your volunteer profile before it appears on the team page.
-    While you wait, you can log volunteer hours and see your team's tasks. Recording donations unlocks once you're approved.
+  <div id="regSuccessChip" class="reg-pending-chip" style="display:none;">⏳ Branch being set up</div>
+  <p id="regSuccessMsg" style="font-size:0.85rem;line-height:1.7;color:#666;">
+    Your profile is active. You can record donations, log volunteer hours, and see your team's tasks right away.
   </p>
   <button onclick="proceedAfterRegistration()">Continue to App →</button>
 </div>

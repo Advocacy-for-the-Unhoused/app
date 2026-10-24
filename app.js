@@ -1311,6 +1311,18 @@ async function submitRegistration() {
         email: emailToSubmit,
         newBranch: isNewBranch
       };
+      // Success card: existing-branch registrants are approved immediately (the
+      // default HTML). New-branch founders are in the app as President, but their
+      // branch code is assigned on review, so show the "being set up" variant.
+      if (isNewBranch) {
+        document.getElementById('regSuccessIntro').textContent =
+          'Your request to start the ' + (newBranchLocation || 'new') + ' branch is in.';
+        const chip = document.getElementById('regSuccessChip');
+        chip.textContent = '⏳ Branch being set up';
+        chip.style.display = '';
+        document.getElementById('regSuccessMsg').textContent =
+          "You're set as its President and can use the app now. Recording donations unlocks once an officer assigns your branch code.";
+      }
       document.getElementById('registerCard').classList.add('hidden');
       document.getElementById('registerSuccess').classList.remove('hidden');
     } else {
