@@ -154,38 +154,10 @@ function prefillRegistrationIdentity(fname, lname, email) {
 
 // ===== SIGN-IN HANDLER =====
 // ===== REVIEWER / DEMO SIGN-IN =====
-// App Review cannot complete a real Google sign-in: Google blocks the demo
-// account's login from an unrecognized location (a "verify it's you" challenge
-// that is independent of 2FA), so the reviewer never reaches the app and the
-// submission is rejected under Guideline 2.1. This path signs the reviewer in
-// as a seeded, already-approved demo volunteer with NO external OAuth round-trip
-// (it reuses the same preloaded-payload entry as biometric replay), which is the
-// demo-mode allowance Apple describes in Guideline 2.1(a).
-//
-// DEMO_REVIEWER_EMAIL is a roster account pre-populated with sample hours and
-// donations for reviewers. Its role code (col A) is "V" (ordinary volunteer),
-// NOT an admin code, so the Admin tab and Password Vault stay hidden — important
-// because the "Reviewer demo access" button is visible on the login screen.
-const DEMO_REVIEWER_EMAIL = 'madhavsindia@gmail.com';
-
-// True while the shared, passwordless "Reviewer demo access" account is signed
-// in. That button is visible to every user, so the demo session must never be
-// able to (a) delete the account — a reviewer testing deletion would wipe it and
-// lock out the next reviewer (2.1 rejection), or (b) rebind this account's push
-// notifications to a stranger's device. These are guarded client-side here AND
-// must be enforced server-side in Apps Script for storeFcmToken/deleteAccount.
-window.isDemoAccount = function () {
-  return String(volunteerEmail || '').trim().toLowerCase() === DEMO_REVIEWER_EMAIL.toLowerCase();
-};
-window.demoSignIn = function () {
-  document.body.classList.add('is-demo');
-  window.onSignedIn({
-    email: DEMO_REVIEWER_EMAIL,
-    given_name: 'App',
-    family_name: 'Review',
-    picture: ''
-  });
-};
+// Reviewer access: the "Reviewer demo access" button was removed. Registration
+// now auto-approves into the full app, so App Review signs in with Sign in with
+// Apple (which has no Google location block), registers, and can test account
+// deletion on their own account — no shared demo login needed.
 
 window.onSignedIn = async function (preloadedPayload = null) {
   console.log("onSignedIn called!");
@@ -1117,9 +1089,6 @@ function showNativeToast(title, body, tab) {
 // =====================================================
 async function registerPushNotifications() {
   if (!window.Capacitor?.isNativePlatform()) return;
-  // Never bind the shared demo account's notifications to this device — whoever
-  // taps "Reviewer demo access" would otherwise start receiving its pushes.
-  if (window.isDemoAccount && window.isDemoAccount()) return;
   const { FirebaseMessaging } = window.Capacitor.Plugins;
   if (!FirebaseMessaging) return;
 
@@ -1338,7 +1307,7 @@ async function submitRegistration() {
       registeredProfile = {
         firstName: fname,
         fullName: fname + ' ' + lname,
-        branchName: isNewBranch ? '' : branch,
+        branchName: isNewBranch ? newBranchLocation : branch,
         email: emailToSubmit,
         newBranch: isNewBranch
       };
@@ -1359,12 +1328,6 @@ async function submitRegistration() {
 
 async function deleteAccount() {
   if (!volunteerEmail) return;
-  // The shared reviewer demo account must never be deletable — otherwise a
-  // reviewer testing deletion wipes it and the next reviewer can't sign in.
-  if (window.isDemoAccount && window.isDemoAccount()) {
-    alert('The reviewer demo account cannot be deleted.');
-    return;
-  }
   const confirmed = confirm(
     'Delete your account?\n\nThis permanently erases all of your data — your roster entry, volunteer hours, Boston trip forms, reimbursement requests, photos, and sign-in access — and stops push notifications. Nothing is kept.\n\nThis cannot be undone.'
   );
@@ -1453,7 +1416,8 @@ async function enterPendingMode(p, authPayload) {
   document.body.classList.add('is-pending');
   document.getElementById('navAdmin').classList.add('hidden');
 
-  const status = p.newBranch ? 'New branch request · Pending review'
+  const status = p.newBranch
+    ? (branchName ? branchName + ' · Branch being set up' : 'Branch being set up')
     : (branchName ? branchName + ' Branch · Pending approval' : 'Pending approval');
   window.loadDashboard = function() {
     document.getElementById('dashName').textContent = volunteerName || 'Volunteer';

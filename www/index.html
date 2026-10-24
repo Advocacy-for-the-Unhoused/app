@@ -1615,9 +1615,6 @@
       border-top: 1px solid var(--delete-section-border);
       text-align: center;
     }
-    /* Hide Delete My Account entirely for the shared reviewer demo account so it
-       can't be wiped (deleteAccount() also blocks it defensively). */
-    body.is-demo .delete-account-section { display: none !important; }
     .delete-account-label {
       font-size: 0.72rem; color: var(--delete-label); margin-bottom: 12px;
       font-weight: 600; text-transform: uppercase; letter-spacing: 1px;
@@ -3091,10 +3088,6 @@
   <!-- Biometric button — shown on native only if a previous session is stored -->
   <div id="biometricSignInOr" class="hidden" style="text-align:center;color: #6B6B6B;font-size:13px;margin:10px 0 4px;">— or —</div>
   <button class="privacy-link" onclick="openPrivacyPolicy()">Privacy Policy</button>
-  <!-- Reviewer demo access — signs in as a seeded, approved demo volunteer with
-       no external OAuth, so App Review can evaluate the app without Google's
-       location-based sign-in block. See app.js demoSignIn(). -->
-  <button class="privacy-link" onclick="demoSignIn()" style="opacity:.65;">Reviewer demo access</button>
   <button id="biometricSignInBtn" class="hidden btn-biometric-native" onclick="biometricSignIn()">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right:9px;vertical-align:middle;">
       <!-- Face ID icon -->
@@ -3356,12 +3349,16 @@
 
     <div id="welcomeMessage" class="welcome"></div>
 
-    <!-- Shown instead of the record form while the volunteer awaits approval -->
+    <!-- New-branch founders land here: they're in the app and set as their
+         branch's President, but donation recording needs a branch letter, which
+         is assigned when an officer reviews the new branch. (Volunteers joining
+         existing branches are auto-approved and never see this.) -->
     <div class="card pending-only">
-      <h3>Pending Approval</h3>
+      <h3>Your branch is being set up</h3>
       <p style="font-size:0.85rem;line-height:1.6;margin-bottom:0;">
-        Recording donations and printing slips unlock once your Branch President approves your profile —
-        donation IDs start with your branch's letter. You'll get a notification when you're approved.
+        You're set as its President and can use everything else now. Recording donations and
+        printing slips unlock once your branch gets its code — donation IDs start with your
+        branch's letter. You'll get a notification when it's ready.
       </p>
     </div>
 

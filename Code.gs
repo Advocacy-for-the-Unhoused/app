@@ -887,6 +887,25 @@ function findPendingRegistration_(email, sub) {
   return null;
 }
 
+// Returns the location a member submitted when requesting a new branch (so the
+// app can show it while they sit under the temporary "NEW" code), or '' if none.
+// Branch Requests layout: A=Id|B=Timestamp|C=Location|D=Type|E=Requester|F=Email|G=Phone|H=Status|I=Apple Sub
+function findBranchRequestLocation_(email) {
+  const lc = (email || '').toString().trim().toLowerCase();
+  if (!lc) return '';
+  try {
+    const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(BRANCH_REQUESTS_SHEET);
+    if (!sheet || sheet.getLastRow() < 2) return '';
+    const data = sheet.getDataRange().getValues();
+    for (let i = data.length - 1; i >= 1; i--) {  // newest request wins
+      if ((data[i][5] || '').toString().trim().toLowerCase() === lc) {
+        return (data[i][2] || '').toString().trim();
+      }
+    }
+  } catch (e) { console.warn('findBranchRequestLocation_ failed:', e.message); }
+  return '';
+}
+
 function getMemberInfo(email) {
   const ss    = SpreadsheetApp.openById(ROSTER_SS_ID);
   const sheet = ss.getSheetByName("Roster");
@@ -907,7 +926,14 @@ function getMemberInfo(email) {
       const photoId   = (rawPhoto.match(/\/d\/([A-Za-z0-9_-]+)/) || rawPhoto.match(/[?&]id=([A-Za-z0-9_-]+)/) || [])[1] || "";
       const photoUrl  = photoId ? "https://drive.google.com/thumbnail?id=" + photoId + "&sz=w200" : "";
       Logger.log("Match at row " + (i + 1) + " | " + fullName + " | " + branchCode);
-      return { firstName, fullName, branchCode, branchName: resolveBranchName_(branchCode) || "Unknown", position, photoUrl };
+      let branchName = resolveBranchName_(branchCode) || "Unknown";
+      // New-branch founders sit under the temporary "NEW" code until review —
+      // show the location they submitted so the home reads as their branch.
+      if (branchCode === TEMP_BRANCH_CODE) {
+        const submitted = findBranchRequestLocation_(searchEmail);
+        if (submitted) branchName = submitted;
+      }
+      return { firstName, fullName, branchCode, branchName, position, photoUrl };
     }
   }
 
@@ -1170,13 +1196,15 @@ function handleNewBranchRequest_(formData) {
   const sheet = getBranchRequestsSheet_();
   sheet.appendRow([id, new Date(), location, type, requester, email, phone, 'Pending', String(formData.appleSub || '')]);
 
-  // Add the requester to the Roster under the holding branch so their sign-in
-  // lookup resolves (otherwise every later login bounces them to registration).
-  // On approval this same row is moved to the real branch as President.
+  // Add the requester to the Roster under the holding branch as President ('P')
+  // so they're signed straight into the app and set as their branch's leader.
+  // The branch keeps the temporary "NEW" code (and donation recording, which
+  // needs a real branch letter, stays locked) until an officer assigns the code
+  // on review; approveBranchRequest_ then moves this same row to the real code.
   if (email) {
     try {
       if (!findRosterRowByEmail_(email)) {
-        addRosterMember_(requester, phone, email, TEMP_BRANCH_CODE, 'V', formData.appleSub);
+        addRosterMember_(requester, phone, email, TEMP_BRANCH_CODE, 'P', formData.appleSub);
       }
     } catch (rosterErr) { console.warn('Temp roster add failed:', rosterErr.message); }
   }
