@@ -1297,6 +1297,12 @@
       box-sizing: border-box;
     }
     .my-tasks-card.hidden { display: none !important; }
+    /* Whole-card tap targets on Home (Hours stat, Your Tasks, Recent Activity). */
+    .dash-link { cursor: pointer; transition: transform 0.12s; -webkit-tap-highlight-color: transparent; }
+    .dash-link:active { transform: translateY(2px); }
+    .dash-link:focus-visible { outline: 3px solid var(--camp-orange); outline-offset: 3px; }
+    .my-tasks-empty { font-size: 0.85rem; color: rgba(26,19,17,0.65); padding: 2px 0 6px; }
+    .my-tasks-chev { margin-left: auto; color: var(--camp-dark); font-size: 0.9rem; }
     .my-tasks-head {
       display: flex;
       align-items: center;
@@ -3436,7 +3442,7 @@
 
     <!-- Quick stats -->
     <div class="dash-stats">
-      <div class="dash-stat">
+      <div class="dash-stat dash-link" role="button" tabindex="0" onclick="switchTab('hours')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchTab('hours')}" aria-label="Hours logged — open My Hours">
         <div class="dash-stat-num" id="dashHours">—</div>
         <div class="dash-stat-label">Hours Logged</div>
       </div>
@@ -3451,13 +3457,13 @@
     </div>
 
     <!-- Your Tasks (personal, pulled live from the Task Board) -->
-    <div class="my-tasks-card hidden" id="myTasksCard">
+    <div class="my-tasks-card dash-link hidden" id="myTasksCard" role="button" tabindex="0" onclick="switchTab('tasks')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchTab('tasks')}" aria-label="Your tasks — open Task Board">
       <div class="my-tasks-head">
         <span class="my-tasks-title">📋 Your Tasks</span>
         <span class="my-tasks-count" id="myTasksCount">0</span>
+        <i class="bi bi-chevron-right my-tasks-chev"></i>
       </div>
       <div id="myTasksList"></div>
-      <button class="my-tasks-viewall" onclick="switchTab('tasks')">Open Task Board <i class="bi bi-chevron-right"></i></button>
     </div>
 
     <!-- Boston Trip Banner (date-aware, admin-toggleable) -->
@@ -3480,18 +3486,6 @@
         <div class="dash-tile-desc">Log a donation you collected in person</div>
       </button>
 
-      <button class="dash-tile" onclick="switchTab('hours')">
-        <span class="dash-tile-icon">⏱</span>
-        <div class="dash-tile-title">My Hours</div>
-        <div class="dash-tile-desc">Log an event & view history</div>
-      </button>
-
-      <button class="dash-tile" onclick="switchTab('tasks')">
-        <span class="dash-tile-icon">✅</span>
-        <div class="dash-tile-title">Task Board</div>
-        <div class="dash-tile-desc">Branch to-dos & assignments</div>
-      </button>
-
       <button class="dash-tile" onclick="switchTab('reimburse')">
         <span class="dash-tile-icon">🧾</span>
         <div class="dash-tile-title">Reimbursement</div>
@@ -3501,7 +3495,7 @@
     </div>
 
     <!-- Recent activity feed -->
-    <div class="dash-activity">
+    <div class="dash-activity dash-link" role="button" tabindex="0" onclick="switchTab('hours')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchTab('hours')}" aria-label="Recent activity — open My Hours">
       <h4>Recent Activity</h4>
       <div id="dashActivity">
         <div class="activity-empty">No recent activity yet.</div>
@@ -4410,7 +4404,14 @@
 
     let tasks = [];
     try { tasks = await window.tbGetMyTasks(fullName); } catch (e) { tasks = []; }
-    if (!tasks.length) { card.classList.add('hidden'); return; }
+    // No tasks: keep the card as the Home entry point to the Task Board.
+    if (!tasks.length) {
+      document.getElementById('myTasksList').innerHTML =
+        '<div class="my-tasks-empty">No tasks assigned — tap to open the Task Board</div>';
+      document.getElementById('myTasksCount').textContent = 0;
+      card.classList.remove('hidden');
+      return;
+    }
 
     const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g,
       c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
@@ -4418,19 +4419,16 @@
     const MAX = 5;
     const shown = tasks.slice(0, MAX);
     document.getElementById('myTasksList').innerHTML = shown.map(t => `
-      <button class="my-task-row" onclick="switchTab('tasks')">
+      <div class="my-task-row">
         <span class="my-task-dot" style="background:${esc(t.teamColor)}"></span>
         <span class="my-task-main">
           <span class="my-task-text">${esc(t.text)}</span>
           <span class="my-task-team">${esc(t.teamName)}</span>
         </span>
         ${t.dueLabel ? `<span class="my-task-due ${esc(t.dueClass)}">${esc(t.dueLabel)}</span>` : ''}
-      </button>`).join('');
+      </div>`).join('');
 
     document.getElementById('myTasksCount').textContent = tasks.length;
-    const btn = card.querySelector('.my-tasks-viewall');
-    if (btn) btn.innerHTML = (tasks.length > MAX ? 'View all ' + tasks.length : 'Open Task Board')
-      + ' <i class="bi bi-chevron-right"></i>';
     card.classList.remove('hidden');
   };
 
