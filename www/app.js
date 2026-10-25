@@ -138,7 +138,10 @@ function escHtml(s) {
 // supplied the user's name and email, the registration form must not ask for
 // them again. Fill the inputs, hide the covered fields, and show a read-only
 // identity summary instead. Fields the provider did NOT supply stay visible.
-function prefillRegistrationIdentity(fname, lname, email) {
+// Apple returns the name only on the FIRST authorization ever (later sign-ins,
+// reinstalls and new devices get none), so for Apple the name fields are never
+// shown or required — `neverAskName` keeps them hidden even when it's blank.
+function prefillRegistrationIdentity(fname, lname, email, neverAskName = false) {
   fname = (fname || '').trim();
   lname = (lname || '').trim();
   email = (email || '').trim();
@@ -149,10 +152,10 @@ function prefillRegistrationIdentity(fname, lname, email) {
   emailInput.value = email;
   emailInput.readOnly = !!email; // editable only if the provider didn't return one
 
-  const haveName  = !!(fname && lname);
+  const haveName  = !!(fname && lname) || (neverAskName && !!(fname || lname));
   const haveEmail = !!email;
 
-  document.getElementById('regNameRow').classList.toggle('hidden', haveName);
+  document.getElementById('regNameRow').classList.toggle('hidden', haveName || neverAskName);
   document.getElementById('regEmailGroup').classList.toggle('hidden', haveEmail);
 
   const idEl = document.getElementById('regIdentity');
@@ -330,13 +333,19 @@ window.onAppleSignedIn = async function(sub, email, givenName, familyName, autho
     // The server exchanges authorizationCode with Apple and derives sub/email
     // from the returned id_token — raw sub/email are no longer trusted (they let
     // anyone claim another account).
-    const body = `action=appleSignIn&authorizationCode=${encodeURIComponent(authorizationCode)}`;
+    // Apple gives the name only on the first authorization — send it so the
+    // server can keep it for later sign-ins on any device.
+    const body = `action=appleSignIn&authorizationCode=${encodeURIComponent(authorizationCode)}` +
+      `&givenName=${encodeURIComponent(givenName || '')}&familyName=${encodeURIComponent(familyName || '')}`;
     const res = await fetch(SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body
     });
     const info = JSON.parse(await res.text());
+    // Server-stored name covers reinstalls/new devices where Apple sent none.
+    givenName  = givenName  || info.givenName  || '';
+    familyName = familyName || info.familyName || '';
 
     if (info.removed) {
       await clearStoredAuth();
@@ -364,7 +373,7 @@ window.onAppleSignedIn = async function(sub, email, givenName, familyName, autho
       window._pendingAppleSub = sub;
       // Apple's Authentication Services already provided name/email (cached
       // per-sub for repeat sign-ins) — never ask for them again (Guideline 4)
-      prefillRegistrationIdentity(givenName, familyName, appleEmail);
+      prefillRegistrationIdentity(givenName, familyName, appleEmail, true);
       document.getElementById('authScreen').classList.add('hidden');
       document.getElementById('registerCard').classList.remove('hidden');
       loadBranchOptions();
@@ -1398,14 +1407,18 @@ function toggleNewBranchFields() {
 window.toggleNewBranchFields = toggleNewBranchFields;
 
 async function submitRegistration() {
-  const fname  = document.getElementById('regFname').value.trim();
+  // Name row hidden = the sign-in provider owns the name (Apple may send none);
+  // don't block registration on it — fall back to a placeholder first name.
+  const nameAsked = !document.getElementById('regNameRow').classList.contains('hidden');
+  let   fname  = document.getElementById('regFname').value.trim();
   const lname  = document.getElementById('regLname').value.trim();
   const phone  = document.getElementById('regPhone').value.trim();
   const branch = document.getElementById('regBranch').value;
   const msgEl  = document.getElementById('regMsg');
   const btn    = document.getElementById('regSubmitBtn');
 
-  if (!fname || !lname || !branch) {
+  if (!nameAsked && !fname) fname = lname ? '' : 'Volunteer';
+  if ((nameAsked && (!fname || !lname)) || (!fname && !lname) || !branch) {
     showToast('Please fill in all required fields.', 'error');
     return;
   }

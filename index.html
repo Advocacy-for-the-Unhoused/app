@@ -385,7 +385,13 @@
       text-transform: none;
       cursor: pointer;
     }
-    .btn-apple-native .apple-logo { width: auto; height: 18px; margin-top: -2px; }
+    .btn-apple-native .apple-logo { width: 18px; height: 18px; flex-shrink: 0; margin-top: -2px; }
+    /* Neutralize the global button:hover (camp-dark bg, offset + orange shadow),
+       which outranks the class alone and sticks after a tap on iOS. */
+    .btn-apple-native, .btn-apple-native:hover, .btn-apple-native:active {
+      transform: none; box-shadow: none; transition: none;
+    }
+    .btn-apple-native:hover { background: #000; }
     .btn-apple-native:active { background: #222; }
     .btn-apple-native:disabled { opacity: 0.6; cursor: default; }
 

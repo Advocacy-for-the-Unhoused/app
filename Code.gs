@@ -355,6 +355,37 @@ function storeAppleRefreshToken_(sub, refreshToken) {
   sheet.appendRow([sub, refreshToken, new Date()]);
 }
 
+// Apple hands the client the user's name only on the FIRST authorization ever,
+// so keep it server-side (cols D/E of the Apple tokens sheet, keyed by sub) and
+// return it on later sign-ins from any device. The row is deleted with the
+// token on account deletion. Only written for a verified sub, and only when the
+// client actually has a name, so a nameless sign-in never erases a stored one.
+function storeAppleName_(sub, givenName, familyName) {
+  const g = String(givenName  || '').trim().slice(0, 100);
+  const f = String(familyName || '').trim().slice(0, 100);
+  if (!sub || (!g && !f)) return;
+  const sheet = appleTokensSheet_();
+  const data  = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if ((data[i][0] || '').toString().trim() === sub) {
+      sheet.getRange(i + 1, 4, 1, 2).setValues([[g, f]]);
+      return;
+    }
+  }
+  sheet.appendRow([sub, '', new Date(), g, f]);
+}
+
+function getAppleName_(sub) {
+  if (!sub) return { givenName: '', familyName: '' };
+  const data = appleTokensSheet_().getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if ((data[i][0] || '').toString().trim() === sub) {
+      return { givenName: (data[i][3] || '').toString().trim(), familyName: (data[i][4] || '').toString().trim() };
+    }
+  }
+  return { givenName: '', familyName: '' };
+}
+
 // Revoke the Sign in with Apple token for one Apple user id, then forget it.
 // Best-effort: logged, never thrown, so a revoke hiccup can't fail the deletion
 // (the user's data is already gone by the time this runs).
@@ -482,7 +513,7 @@ function doPost(e) {
       return handleLookup(p.lookupEmail);
 
     } else if (p.action === "appleSignIn") {
-      result = appleSignIn_(p.authorizationCode || '');
+      result = appleSignIn_(p.authorizationCode || '', p.givenName || '', p.familyName || '');
 
     } else if (p.action === "registerVolunteer") {
       result = handleVolunteerRegistration({
@@ -947,7 +978,7 @@ function getMemberInfo(email) {
   return { firstName: "User", branchCode: "X", branchName: "Unknown Branch", position: "" };
 }
 
-function appleSignIn_(authorizationCode) {
+function appleSignIn_(authorizationCode, givenName, familyName) {
   // Trust only what Apple asserts (via the token-exchange id_token) — never a
   // raw client-supplied sub/email — so a caller cannot bind their Apple id to
   // someone else's account.
@@ -969,6 +1000,12 @@ function appleSignIn_(authorizationCode) {
     // best-effort — a failure here must not block sign-in.
     try { if (identity.refreshToken) storeAppleRefreshToken_(sub, identity.refreshToken); }
     catch (tokErr) { console.warn('storeAppleRefreshToken_ failed: ' + tokErr.message); }
+
+    // Persist the name Apple gave the client (first authorization only) and
+    // read back whatever is stored, so registration can prefill it later.
+    let appleName = { givenName: '', familyName: '' };
+    try { storeAppleName_(sub, givenName, familyName); appleName = getAppleName_(sub); }
+    catch (nameErr) { console.warn('Apple name store failed: ' + nameErr.message); }
 
     const sheet = SpreadsheetApp.openById(ROSTER_SS_ID).getSheetByName('Roster');
     if (!sheet) return { error: 'Roster sheet not found' };
@@ -993,12 +1030,12 @@ function appleSignIn_(authorizationCode) {
     }
 
     const pendingReg = findPendingRegistration_(email, sub);
-    if (pendingReg) return pendingReg;
+    if (pendingReg) return Object.assign({}, appleName, pendingReg);
 
     // Apple's client response only carries the email on the very first
     // authorization, but the verified id_token always does — hand it back so
-    // registration never has to ask for it.
-    return { error: 'Not found in roster', email: email || '' };
+    // registration never has to ask for it. Same for the stored name.
+    return { error: 'Not found in roster', email: email || '', givenName: appleName.givenName, familyName: appleName.familyName };
   } catch (err) {
     return { error: err.message };
   }
