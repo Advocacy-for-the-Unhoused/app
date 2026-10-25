@@ -1662,8 +1662,8 @@ function injectWelcomeStyles() {
       position: absolute; top: 12px; right: 14px; z-index: 2;
       background: none; border: none; cursor: pointer; font-family: 'Montserrat', sans-serif;
       font-size: 0.72rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
-      color: var(--page-text, #F9F6F0); opacity: 0.45; padding: 6px 8px;
-      min-height: auto; width: auto; box-shadow: none;
+      color: var(--page-text, #F9F6F0); opacity: 0.75; padding: 6px 12px;
+      min-height: 44px; min-width: 44px; width: auto; box-shadow: none;
     }
     .afu-welcome-skip:hover { opacity: 0.8; }
     .afu-welcome-track-wrap { overflow: hidden; }
