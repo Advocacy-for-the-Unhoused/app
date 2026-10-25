@@ -439,6 +439,7 @@
     .confirm-sheet-btn { min-height: 52px; border: none; background: var(--sheet-bg); font-family: inherit; font-size: 1rem; cursor: pointer; text-transform: none; letter-spacing: normal; box-shadow: none; margin: 0; width: 100%; }
     .confirm-sheet-action { border-radius: 0 0 14px 14px; color: var(--sheet-action); font-weight: 600; }
     .confirm-sheet-action.destructive { color: var(--sheet-danger); }
+    .confirm-sheet-action.confirm-sheet-mid { border-radius: 0; border-bottom: 1px solid var(--sheet-line); }
     .confirm-sheet-cancel { border-radius: 14px; color: var(--sheet-action); font-weight: 700; }
     @media (prefers-color-scheme: dark) {
       html:not([data-theme="light"]) .confirm-sheet { --sheet-bg: #2A2220; --sheet-text: #F9F6F0; --sheet-muted: rgba(249,246,240,.72); --sheet-line: rgba(249,246,240,.14); --sheet-action: #7FB4FF; --sheet-danger: #FF7A6B; }
@@ -3414,7 +3415,7 @@
     <div class="subtitle">Advocacy for the Unhoused</div>
 
     <!-- Profile header — tap to add / change photo -->
-    <div class="dash-profile-card dash-profile-tappable" id="dashProfileCard" aria-label="Change profile photo" onclick="openProfilePhotoPicker()">
+    <div class="dash-profile-card dash-profile-tappable" id="dashProfileCard" role="button" tabindex="0" aria-label="Account" onclick="openAccountMenu()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openAccountMenu()}">
       <div class="dash-avatar-wrap">
         <img id="dashAvatar" class="dash-avatar"
              src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='24' r='14' fill='%23ddd'/%3E%3Cellipse cx='32' cy='60' rx='22' ry='16' fill='%23ddd'/%3E%3C/svg%3E"
@@ -3426,6 +3427,7 @@
         <p class="dash-meta" id="dashBranch">Loading…</p>
         <p class="dash-photo-hint" id="dashPhotoHint">📷 Tap to add your profile photo</p>
       </div>
+      <i class="bi bi-gear-fill" aria-hidden="true" style="margin-left:auto;font-size:1.2rem;opacity:0.55;"></i>
     </div>
     <input type="file" id="profilePhotoInput" accept="image/*" style="display:none" onchange="handleProfilePhotoPick(event)">
 
@@ -3501,16 +3503,8 @@
       </div>
     </div>
 
-    <!-- Theme toggle + Delete account -->
+    <!-- Theme toggle -->
     <div class="delete-account-section">
-      <div class="theme-toggle-row" style="margin-bottom:16px;">
-        <div class="theme-toggle-icons">
-          <span class="theme-toggle-icon">🧭</span>
-          <span class="theme-toggle-label">App tour</span>
-        </div>
-        <button onclick="showWelcome(true)" aria-label="Replay welcome tour"
-          style="background:var(--camp-orange);color:#fff;border:none;border-radius:12px;font-family:var(--font-body);font-weight:800;font-size:0.78rem;letter-spacing:0.3px;padding:10px 18px;min-height:44px;width:auto;box-shadow:0 4px 12px rgba(200,82,45,0.3);cursor:pointer;">Replay</button>
-      </div>
       <div class="theme-toggle-row">
         <div class="theme-toggle-icons">
           <span class="theme-toggle-icon">🌙</span>
@@ -3521,11 +3515,6 @@
           <span class="theme-toggle-knob"></span>
         </button>
       </div>
-      <div class="delete-account-label">Account</div>
-      <button class="sign-out-btn" onclick="askForNotifications('Turn on notifications?\n\nAFU will let you know when your hours or registration are approved, when you\'re assigned a task, and about meetings and trip deadlines.', true)">Notifications</button>
-      <button class="sign-out-btn" onclick="signOut()">Sign Out</button>
-      <button class="delete-account-btn" onclick="deleteAccount()">Delete My Account</button>
-      <button class="privacy-link" onclick="openPrivacyPolicy()">Privacy Policy</button>
     </div>
 
   </div>
@@ -4440,6 +4429,20 @@
     if (window.volunteerProfile && window.volunteerProfile.pending) return;
     var input = document.getElementById('profilePhotoInput');
     if (input) input.click();
+  };
+
+  // Account menu — tap the profile card on Home
+  window.openAccountMenu = async function () {
+    var p = window.volunteerProfile || {};
+    var items = [];
+    if (!p.pending) items.push({ label: p.hasRosterPhoto ? 'Change Profile Photo' : 'Add Profile Photo', run: openProfilePhotoPicker });
+    items.push({ label: 'Privacy Policy', run: openPrivacyPolicy });
+    items.push({ label: 'Sign Out', run: signOut });
+    items.push({ label: 'Delete My Account', destructive: true, run: deleteAccount });
+    var name = (document.getElementById('dashName') || {}).textContent || 'Account';
+    var branch = (document.getElementById('dashBranch') || {}).textContent || '';
+    var i = await actionSheet({ title: name, message: branch, actions: items });
+    if (i >= 0) items[i].run();
   };
 
   window.handleProfilePhotoPick = function (e) {

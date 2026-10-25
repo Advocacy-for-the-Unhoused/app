@@ -1154,6 +1154,43 @@ function confirmSheet({ title, message = '', confirmLabel, cancelLabel = 'Cancel
 }
 window.confirmSheet = confirmSheet;
 
+// actionSheet: menu of several actions. actions: [{ label, destructive }].
+// Resolves the tapped action's index, or -1 on cancel.
+function actionSheet({ title, message = '', actions, cancelLabel = 'Cancel' }) {
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.className = 'confirm-sheet-overlay';
+    overlay.innerHTML = `
+      <div class="confirm-sheet" role="dialog" aria-modal="true" aria-labelledby="actionSheetTitle">
+        <div class="confirm-sheet-group">
+        <div class="confirm-sheet-text">
+          <div class="confirm-sheet-title" id="actionSheetTitle">${escHtml(title)}</div>
+          ${message ? `<div class="confirm-sheet-msg">${escHtml(message).replace(/\n/g, '<br>')}</div>` : ''}
+        </div>
+        ${actions.map((a, i) => `<button type="button" data-i="${i}" class="confirm-sheet-btn confirm-sheet-action${i < actions.length - 1 ? ' confirm-sheet-mid' : ''}${a.destructive ? ' destructive' : ''}">${escHtml(a.label)}</button>`).join('')}
+        </div>
+        <button type="button" class="confirm-sheet-btn confirm-sheet-cancel">${escHtml(cancelLabel)}</button>
+      </div>`;
+    const close = (result) => {
+      overlay.classList.remove('visible');
+      document.removeEventListener('keydown', onKey);
+      setTimeout(() => overlay.remove(), 250);
+      resolve(result);
+    };
+    const onKey = (e) => { if (e.key === 'Escape') close(-1); };
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(-1); });
+    overlay.querySelectorAll('[data-i]').forEach(b => b.addEventListener('click', () => close(+b.dataset.i)));
+    overlay.querySelector('.confirm-sheet-cancel').addEventListener('click', () => close(-1));
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => {
+      overlay.classList.add('visible');
+      overlay.querySelector('.confirm-sheet-cancel').focus();
+    });
+  });
+}
+window.actionSheet = actionSheet;
+
 // =====================================================
 // PUSH NOTIFICATIONS (Capacitor / FCM)
 // =====================================================
