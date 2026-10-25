@@ -993,10 +993,8 @@
       cursor: pointer;
       color: var(--nav-inactive);
       font-family: 'Montserrat', sans-serif;
-      font-size: 0.72rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1px;
+      font-size: 0.68rem;
+      font-weight: 600;
       width: auto;
       margin: 0;
       transition: color 0.2s;
@@ -1010,33 +1008,13 @@
       box-shadow: none;
     }
 
-    .nav-item.active { color: var(--orange-text); }
+    .nav-item.active { color: var(--orange-text); font-weight: 700; }
 
-    .nav-item .nav-icon { font-size: 1.3rem; line-height: 1; }
-
-    .nav-item .nav-dot {
-      width: 4px;
-      height: 4px;
-      border-radius: 50%;
-      background: var(--camp-orange);
-      margin-top: 2px;
-      opacity: 0;
-    }
-
-    .nav-item.active .nav-dot { opacity: 1; }
-
-    /* Home button — centered hero button */
-    #navHome {
-      position: relative;
-      flex: 1.4;
-    }
-    #navHome .nav-icon {
-      font-size: 1.7rem;
-    }
-    #navHome span:not(.nav-icon):not(.nav-dot) {
-      font-size: 0.72rem;
-      letter-spacing: 1.2px;
-    }
+    /* Monochrome glyphs: outline when inactive, filled + tinted when selected */
+    .nav-item .nav-icon { font-size: 1.4rem; line-height: 1; }
+    .nav-item .nav-icon-on { display: none; }
+    .nav-item.active .nav-icon-off { display: none; }
+    .nav-item.active .nav-icon-on { display: inline-block; }
 
     /* ── Meeting Scheduler ── */
     .meeting-row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
@@ -3171,7 +3149,6 @@
          instead of five buttons stretched across the whole screen. */
       .bottom-nav { justify-content: center; }
       .nav-item { flex: 0 1 140px; }
-      #navHome { flex: 0 1 180px; }
 
       /* Home: two-column dashboard. order puts Your Tasks + Recent Activity
          side by side below the tiles. */
@@ -4358,29 +4335,29 @@
 
 <nav class="bottom-nav hidden" id="mainNav">
     <button class="nav-item" id="navTasks" onclick="switchTab('tasks')" aria-label="Task Board">
-      <span class="nav-icon">📋</span>
+      <i class="nav-icon nav-icon-off bi bi-clipboard-check" aria-hidden="true"></i>
+      <i class="nav-icon nav-icon-on bi bi-clipboard-check-fill" aria-hidden="true"></i>
       <span>Tasks</span>
-      <span class="nav-dot"></span>
     </button>
     <button class="nav-item" id="navDonations" onclick="switchTab('donations')" aria-label="Record donations">
-      <span class="nav-icon">🤝</span>
+      <i class="nav-icon nav-icon-off bi bi-box2-heart" aria-hidden="true"></i>
+      <i class="nav-icon nav-icon-on bi bi-box2-heart-fill" aria-hidden="true"></i>
       <span>Record</span>
-      <span class="nav-dot"></span>
     </button>
     <button class="nav-item active" id="navHome" onclick="switchTab('home')" aria-label="Home">
-      <span class="nav-icon">🏠</span>
+      <i class="nav-icon nav-icon-off bi bi-house" aria-hidden="true"></i>
+      <i class="nav-icon nav-icon-on bi bi-house-fill" aria-hidden="true"></i>
       <span>Home</span>
-      <span class="nav-dot"></span>
     </button>
     <button class="nav-item" id="navHours" onclick="switchTab('hours')" aria-label="Hours">
-      <span class="nav-icon">⏱</span>
+      <i class="nav-icon nav-icon-off bi bi-stopwatch" aria-hidden="true"></i>
+      <i class="nav-icon nav-icon-on bi bi-stopwatch-fill" aria-hidden="true"></i>
       <span>Hours</span>
-      <span class="nav-dot"></span>
     </button>
     <button class="nav-item hidden" id="navAdmin" onclick="switchTab('admin')" aria-label="Admin Tools">
-      <span class="nav-icon">⚙️</span>
+      <i class="nav-icon nav-icon-off bi bi-gear" aria-hidden="true"></i>
+      <i class="nav-icon nav-icon-on bi bi-gear-fill" aria-hidden="true"></i>
       <span>Admin</span>
-      <span class="nav-dot"></span>
     </button>
   </nav>
 
