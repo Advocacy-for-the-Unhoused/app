@@ -164,7 +164,7 @@ window.onSignedIn = async function (preloadedPayload = null) {
 
   const payload = preloadedPayload || parseJwt(window.googleCredential || "");
   if (!payload || !payload.email) {
-    alert("Could not read your Google account. Please try again.");
+    showToast("Could not read your Google account. Please try again.", 'error');
     return;
   }
 
@@ -187,7 +187,7 @@ window.onSignedIn = async function (preloadedPayload = null) {
 
     if (info.removed) {
       await clearStoredAuth();
-      alert(info.error);
+      showError(info.error);
       return;
     }
 
@@ -292,15 +292,15 @@ window.onSignedIn = async function (preloadedPayload = null) {
 
   } catch (err) {
     console.error("Error during lookup:", err);
-    alert("Could not connect to AFU. Please check your internet connection and try again.");
+    showError(NETWORK_ERROR_MSG);
   }
 };
 
 window.onAppleSignedIn = async function(sub, email, givenName, familyName, authorizationCode, identityToken) {
-  if (!sub) { alert('Apple sign-in did not return a user ID. Please try again.'); return; }
+  if (!sub) { showToast('Apple sign-in did not return a user ID. Please try again.', 'error'); return; }
   // The server verifies the login by exchanging authorizationCode with Apple, so
   // that code is required (identityToken is no longer used).
-  if (!authorizationCode) { alert('Apple sign-in did not return an authorization code. Please try again.'); return; }
+  if (!authorizationCode) { showToast('Apple sign-in did not return an authorization code. Please try again.', 'error'); return; }
 
   // Apple only hands out the authorizationCode once per sign-in. Forward it so
   // the server can exchange it for a refresh token and revoke it on account
@@ -322,7 +322,7 @@ window.onAppleSignedIn = async function(sub, email, givenName, familyName, autho
 
     if (info.removed) {
       await clearStoredAuth();
-      alert(info.error);
+      showError(info.error);
       return;
     }
 
@@ -416,7 +416,7 @@ window.onAppleSignedIn = async function(sub, email, givenName, familyName, autho
 
   } catch (err) {
     console.error('Apple sign-in error:', err);
-    alert('Could not connect to AFU. Please check your internet connection and try again.');
+    showError(NETWORK_ERROR_MSG);
   }
 };
 
@@ -508,19 +508,19 @@ window.addEventListener('online', syncDonations);
 
 // ===== DONATION UI =====
 function submitDonation() {
-  if (!volunteerEmail) { alert("Please sign in first."); return; }
+  if (!volunteerEmail) { showToast("Please sign in first.", 'error'); return; }
   // UDIs are prefixed with the branch letter — pending volunteers don't have one yet
-  if (!branchLetter) { alert("Recording donations unlocks once your Branch President approves your profile."); return; }
+  if (!branchLetter) { showToast("Recording donations unlocks once your Branch President approves your profile.", 'error'); return; }
 
   const digits    = parseInt(document.getElementById("udiDigits").value);
   const amount    = document.getElementById("amount").value;
 
   if (!digits || digits < 1 || digits > 999) {
-    alert("UDI digits must be between 1–999");
+    showToast("UDI digits must be between 1–999", 'error');
     return;
   }
   if (!amount || amount <= 0) {
-    alert("Enter a valid donation amount.");
+    showToast("Enter a valid donation amount.", 'error');
     return;
   }
 
@@ -541,7 +541,7 @@ function submitDonation() {
     .then((duplicates) => {
       if (Array.isArray(duplicates) && duplicates.includes(udi)) {
         haptic('error');
-        alert("UDI " + udi + " has already been recorded. Double-check the slip number — no new record was created.");
+        showToast("UDI " + udi + " has already been recorded. Double-check the slip number — no new record was created.", 'error');
         return;
       }
       haptic('success');
@@ -549,13 +549,13 @@ function submitDonation() {
       document.getElementById("step2").classList.add("hidden");
       document.getElementById("step3").classList.remove("hidden");
       if (!navigator.onLine) {
-        alert("Saved offline. Will sync when connection is restored.");
+        showToast("Saved offline. It will sync when you’re back online.", 'info');
       }
     })
     .catch(err => {
       haptic('error');
       console.error("Error saving donation:", err);
-      alert("Error saving donation: " + err.message);
+      showError("Couldn’t save the donation. Try again.", err.message);
     });
 }
 
@@ -626,7 +626,7 @@ async function startScan() {
     statusEl.textContent = "Camera error: " + err.message;
     isScanning = false;
     setTimeout(() => {
-      alert("Could not start the camera. Allow camera access for AFU in Settings, or type the UDI number instead.");
+      showToast("Could not start the camera. Allow camera access for AFU in Settings, or type the UDI number instead.", 'error');
       stopScan();
     }, 100);
   }
@@ -686,9 +686,9 @@ function toggleUDIPanel() {
 async function runGenerateSlips() {
   const fundraiser = document.getElementById("udiFundraiser").value;
 
-  if (!fundraiser) { alert("Please choose a fundraiser."); return; }
+  if (!fundraiser) { showToast("Please choose a fundraiser.", 'error'); return; }
   const slipBranch = document.getElementById("udiBranchSelect").value || branchLetter;
-  if (!slipBranch) { alert("Please choose a branch."); return; }
+  if (!slipBranch) { showToast("Please choose a branch.", 'error'); return; }
 
   const loadingEl  = document.getElementById("udiLoading");
   const resultEl   = document.getElementById("udiResult");
@@ -894,7 +894,7 @@ async function loadMyHours() {
 }
 
 async function submitHoursRequest() {
-  if (!volunteerEmail) { alert("Please sign in first."); return; }
+  if (!volunteerEmail) { showToast("Please sign in first.", 'error'); return; }
 
   const eventName = document.getElementById("hoursEvent").value.trim();
   const eventDate = document.getElementById("hoursDate").value;
@@ -903,9 +903,9 @@ async function submitHoursRequest() {
   const msgEl     = document.getElementById("hoursSubmitMsg");
   const btn       = document.getElementById("hoursSubmitBtn");
 
-  if (!eventName) { alert("Please choose or type an event."); return; }
-  if (!eventDate) { alert("Please enter the event date."); return; }
-  if (!hours || Number(hours) <= 0) { alert("Please enter a valid number of hours."); return; }
+  if (!eventName) { showToast("Please choose or type an event.", 'error'); return; }
+  if (!eventDate) { showToast("Please enter the event date.", 'error'); return; }
+  if (!hours || Number(hours) <= 0) { showToast("Please enter a valid number of hours.", 'error'); return; }
 
   btn.disabled    = true;
   btn.textContent = "Submitting…";
@@ -1086,6 +1086,75 @@ function showNativeToast(title, body, tab) {
 }
 
 // =====================================================
+// IN-APP FEEDBACK (HIG M2: no native alert()/confirm())
+// =====================================================
+// showToast: non-blocking status line for success and recoverable errors.
+// kind: 'success' | 'error' | 'info'.
+function showToast(message, kind = 'info') {
+  haptic(kind === 'error' ? 'warning' : kind === 'success' ? 'success' : 'light');
+  document.querySelectorAll('.app-toast').forEach(t => t.remove());
+  const toast = document.createElement('div');
+  toast.className = 'app-toast app-toast-' + kind;
+  toast.setAttribute('role', kind === 'error' ? 'alert' : 'status');
+  toast.textContent = message;
+  toast.addEventListener('click', () => toast.remove());
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('visible'));
+  setTimeout(() => {
+    toast.classList.remove('visible');
+    setTimeout(() => toast.remove(), 350);
+  }, kind === 'error' ? 5000 : 3200);
+}
+window.showToast = showToast;
+
+// showError: friendly copy for users; the raw server error goes to the console.
+function showError(friendly, raw) {
+  if (raw) console.warn(friendly, raw);
+  showToast(friendly, 'error');
+}
+window.showError = showError;
+const NETWORK_ERROR_MSG = 'Couldn’t reach AFU. Check your connection and try again.';
+window.NETWORK_ERROR_MSG = NETWORK_ERROR_MSG;
+
+// confirmSheet: action sheet whose buttons name the action. Resolves true when
+// the action button is tapped. destructive: red action button.
+function confirmSheet({ title, message = '', confirmLabel, cancelLabel = 'Cancel', destructive = false }) {
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.className = 'confirm-sheet-overlay';
+    overlay.innerHTML = `
+      <div class="confirm-sheet" role="alertdialog" aria-modal="true" aria-labelledby="confirmSheetTitle">
+        <div class="confirm-sheet-group">
+        <div class="confirm-sheet-text">
+          <div class="confirm-sheet-title" id="confirmSheetTitle">${escHtml(title)}</div>
+          ${message ? `<div class="confirm-sheet-msg">${escHtml(message).replace(/\n/g, '<br>')}</div>` : ''}
+        </div>
+        <button type="button" class="confirm-sheet-btn confirm-sheet-action${destructive ? ' destructive' : ''}">${escHtml(confirmLabel)}</button>
+        </div>
+        <button type="button" class="confirm-sheet-btn confirm-sheet-cancel">${escHtml(cancelLabel)}</button>
+      </div>`;
+    const close = (result) => {
+      overlay.classList.remove('visible');
+      document.removeEventListener('keydown', onKey);
+      setTimeout(() => overlay.remove(), 250);
+      resolve(result);
+    };
+    const onKey = (e) => { if (e.key === 'Escape') close(false); };
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(false); });
+    overlay.querySelector('.confirm-sheet-action').addEventListener('click', () => close(true));
+    overlay.querySelector('.confirm-sheet-cancel').addEventListener('click', () => close(false));
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(overlay);
+    if (destructive) haptic('warning');
+    requestAnimationFrame(() => {
+      overlay.classList.add('visible');
+      overlay.querySelector('.confirm-sheet-cancel').focus();
+    });
+  });
+}
+window.confirmSheet = confirmSheet;
+
+// =====================================================
 // PUSH NOTIFICATIONS (Capacitor / FCM)
 // =====================================================
 // Sign-in calls this silently: it only registers if permission was already
@@ -1109,14 +1178,14 @@ async function askForNotifications(reason, force = false) {
   try {
     const perm = await FirebaseMessaging.checkPermissions();
     if (perm.receive === 'granted') {
-      if (force) alert('Notifications are on. You can turn them off in the iOS Settings app.');
+      if (force) showToast('Notifications are on. You can turn them off in the iOS Settings app.', 'info');
       return registerPushNotifications();
     }
     if (perm.receive === 'denied') {
-      if (force) alert('Notifications are off for AFU. To turn them on, open the iOS Settings app → AFU → Notifications.');
+      if (force) showToast('Notifications are off for AFU. To turn them on, open the iOS Settings app → AFU → Notifications.', 'info');
       return;
     }
-    if (!confirm(reason)) {
+    if (!(await confirmSheet({ title: 'Turn on notifications?', message: reason, confirmLabel: 'Turn On Notifications', cancelLabel: 'Not Now' }))) {
       try { localStorage.setItem(PUSH_DECLINED_KEY, '1'); } catch (e) {}
       return;
     }
@@ -1280,12 +1349,12 @@ async function submitRegistration() {
   const btn    = document.getElementById('regSubmitBtn');
 
   if (!fname || !lname || !branch) {
-    alert('Please fill in all required fields.');
+    showToast('Please fill in all required fields.', 'error');
     return;
   }
   // The app is for volunteers 13+; we don't collect data from younger children (COPPA)
   if (!document.getElementById('regAgeConfirm').checked) {
-    alert('Please confirm you are 13 or older. Volunteers under 13 can’t create an account.');
+    showToast('Please confirm you are 13 or older. Volunteers under 13 can’t create an account.', 'error');
     return;
   }
 
@@ -1299,14 +1368,14 @@ async function submitRegistration() {
     const typeEl = document.querySelector('input[name="regNewBranchType"]:checked');
     newBranchType = typeEl ? typeEl.value : '';
     if (!newBranchLocation) {
-      alert('Please enter the branch location.');
+      showToast('Please enter the branch location.', 'error');
       return;
     }
   }
 
   const emailToSubmit = volunteerEmail || document.getElementById('regEmail').value.trim();
   if (!emailToSubmit) {
-    alert('Please enter your email address.');
+    showToast('Please enter your email address.', 'error');
     return;
   }
 
@@ -1377,9 +1446,12 @@ async function submitRegistration() {
 
 async function deleteAccount() {
   if (!volunteerEmail) return;
-  const confirmed = confirm(
-    'Delete your account?\n\nThis permanently erases all of your data — your roster entry, volunteer hours, Boston trip forms, reimbursement requests, photos, and sign-in access — and stops push notifications. Nothing is kept.\n\nThis cannot be undone.'
-  );
+  const confirmed = await confirmSheet({
+    title: 'Delete your account?',
+    message: 'This permanently erases all of your data — your roster entry, volunteer hours, Boston trip forms, reimbursement requests, photos, and sign-in access — and stops push notifications. Nothing is kept.\n\nThis cannot be undone.',
+    confirmLabel: 'Delete Account',
+    destructive: true
+  });
   if (!confirmed) return;
   try {
     haptic('warning');
@@ -1389,7 +1461,7 @@ async function deleteAccount() {
       body: `action=deleteAccount&email=${encodeURIComponent(volunteerEmail)}&actorEmail=${encodeURIComponent(volunteerEmail)}`
     });
     const data = await res.json();
-    if (data.error) { alert('Error: ' + data.error); return; }
+    if (data.error) { showError('Couldn’t delete your account. Try again, or contact your Branch President.', data.error); return; }
     haptic('success');
     // Clear the stored biometric credential (key BIOMETRIC_AUTH_KEY = 'afu_stored_auth')
     // so Face ID / Touch ID can't sign the deleted account back in.
@@ -1403,9 +1475,9 @@ async function deleteAccount() {
     document.getElementById('appContent').classList.add('hidden');
     document.getElementById('mainNav').classList.add('hidden');
     document.getElementById('authScreen').classList.remove('hidden');
-    alert('Your account has been deleted.');
+    showToast('Your account has been deleted.', 'success');
   } catch (err) {
-    alert('Could not delete account: ' + err.message);
+    showError('Couldn’t delete your account. Check your connection and try again.', err.message);
   }
 }
 
@@ -1415,7 +1487,7 @@ let registeredProfile = null;
 // notifications to this device, signs out of Google, then reloads so no
 // signed-in state survives. The account itself is untouched.
 async function signOut() {
-  if (!confirm('Sign out of AFU on this device?')) return;
+  if (!(await confirmSheet({ title: 'Sign out of AFU on this device?', confirmLabel: 'Sign Out', destructive: true }))) return;
   await clearStoredAuth();
   const plugins = (window.Capacitor?.isNativePlatform() && window.Capacitor.Plugins) || {};
   try { if (plugins.FirebaseMessaging) await plugins.FirebaseMessaging.deleteToken(); } catch (e) {}

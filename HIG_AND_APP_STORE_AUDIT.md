@@ -107,6 +107,7 @@ If the user taps Cancel, nothing is remembered. The pre-prompt comes back on **e
 - The push pre-prompt is also an OK/Cancel `confirm()`.
 
 **Fix:** use inline status or toasts for success (the app already has `.hours-msg` and `showNativeToast`), friendly error copy, and a custom sheet or `@capacitor/dialog` with a destructive **Delete Account** button.
+**Status:** fixed in code (2026-10-24). There are no `alert()` or `confirm()` calls left. New helpers in `app.js`: `showToast(msg, kind)` (non-blocking status line), `showError(friendly, raw)` (plain copy for the user; the raw server error goes to the console only), and `confirmSheet({...})` (bottom action sheet with a named action button, red when destructive, plus a separate Cancel). Success messages are toasts, raw `res.error` strings are replaced with friendly copy, and every confirm is a sheet: **Delete Account** and **Sign Out** in red, named deny/delete/reset actions, and **Turn On Notifications** / **Not Now** for the push pre-prompt. Validation messages are error toasts; inline field errors would be better and are left for later. Checked in the browser in light and dark mode; still needs a device check.
 
 ### M3 — Tab bar uses colour emoji as icons
 The icons are 📋 🤝 🏠 ⏱ ⚙️ ([index.html:4146-4172](index.html:4146)). **HIG:** Tab bars, Icons. Emoji are full colour and can't be tinted. The selected tab is shown only by label colour and a 4px dot, and in light mode the inactive and active icons look identical. Labels are 11.5px uppercase with tracking, and Home is 1.4× wider.
