@@ -3503,19 +3503,6 @@
       </div>
     </div>
 
-    <!-- Theme toggle -->
-    <div class="delete-account-section">
-      <div class="theme-toggle-row">
-        <div class="theme-toggle-icons">
-          <span class="theme-toggle-icon">🌙</span>
-          <span class="theme-toggle-label">Appearance</span>
-          <span class="theme-toggle-icon">☀️</span>
-        </div>
-        <button class="theme-toggle-pill" onclick="toggleTheme()" aria-label="Toggle dark/light mode">
-          <span class="theme-toggle-knob"></span>
-        </button>
-      </div>
-    </div>
 
   </div>
   <!-- ── End Home Tab ── -->
@@ -4436,6 +4423,8 @@
     var p = window.volunteerProfile || {};
     var items = [];
     if (!p.pending) items.push({ label: p.hasRosterPhoto ? 'Change Profile Photo' : 'Add Profile Photo', run: openProfilePhotoPicker });
+    var theme = document.documentElement.dataset.theme;
+    items.push({ label: 'Appearance: ' + (theme === 'dark' ? 'Dark' : theme === 'light' ? 'Light' : 'System'), run: openAppearanceMenu });
     items.push({ label: 'Privacy Policy', run: openPrivacyPolicy });
     items.push({ label: 'Sign Out', run: signOut });
     items.push({ label: 'Delete My Account', destructive: true, run: deleteAccount });

@@ -47,23 +47,34 @@ window.driveImgId     = driveImgId;
 window.fetchDriveImage = fetchDriveImage;
 window.loadDriveImage = loadDriveImage;
 
-// ===== THEME TOGGLE =====
-function toggleTheme() {
+// ===== THEME =====
+// mode: 'light' | 'dark' | 'system' (no override; follows the phone's setting)
+function setTheme(mode) {
   const html = document.documentElement;
-  const current = html.dataset.theme;
-  // If explicitly dark → go light; if explicitly light or system → go dark
-  // We detect "effective" mode by checking the computed bg
-  const systemLight = window.matchMedia('(prefers-color-scheme: light)').matches;
-  const effectivelyLight = current === 'light' || (!current && systemLight);
-  if (effectivelyLight) {
-    html.dataset.theme = 'dark';
-    localStorage.setItem('afu-theme', 'dark');
-  } else {
-    html.dataset.theme = 'light';
-    localStorage.setItem('afu-theme', 'light');
-  }
+  try {
+    if (mode === 'light' || mode === 'dark') {
+      html.dataset.theme = mode;
+      localStorage.setItem('afu-theme', mode);
+    } else {
+      delete html.dataset.theme;
+      localStorage.removeItem('afu-theme');
+    }
+  } catch (e) {}
   syncStatusBar();
 }
+window.setTheme = setTheme;
+
+function openAppearanceMenu() {
+  const modes = ['system', 'light', 'dark'];
+  const current = document.documentElement.dataset.theme || 'system';
+  const labels = { system: 'System', light: 'Light', dark: 'Dark' };
+  actionSheet({
+    title: 'Appearance',
+    message: 'System matches your phone’s light or dark setting.',
+    actions: modes.map(m => ({ label: (m === current ? '✓ ' : '') + labels[m] }))
+  }).then(i => { if (i >= 0) setTheme(modes[i]); });
+}
+window.openAppearanceMenu = openAppearanceMenu;
 
 // Keep the iOS status bar (clock, battery) readable: light text on the dark
 // theme, dark text on the light theme. Capacitor's 'DARK' style = light text.
