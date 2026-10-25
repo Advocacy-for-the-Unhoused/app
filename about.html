@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>AFU Volunteer Portal</title>
+  <meta name="description" content="Log hours, record donations, and work with your branch. The official app for Advocacy for the Unhoused volunteers.">
+  <meta property="og:title" content="AFU Volunteer Portal">
+  <meta property="og:description" content="Log hours, record donations, and work with your branch. The official app for Advocacy for the Unhoused volunteers.">
+  <meta property="og:image" content="https://app.hauhelps.org/512.png">
+  <link rel="icon" href="favicon.ico">
+  <style>
+    :root { --bg: #F9F6F0; --text: #1A1311; --muted: #5A4F4B; --accent: #B84A27; --on-accent: #FFFFFF; --card: #FFFFFF; --rule: rgba(26,19,17,0.15); }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #1A1311; --text: #F9F6F0; --muted: #CFC6BF; --accent: #E0663E; --on-accent: #1A1311; --card: #261C19; --rule: rgba(249,246,240,0.18); }
+    }
+    body {
+      margin: 0; background: var(--bg); color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 16px; line-height: 1.6;
+    }
+    main { max-width: 760px; margin: 0 auto; padding: 48px 16px 48px; }
+    .hero { text-align: center; }
+    .hero img { width: 112px; height: 112px; border-radius: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+    h1 { font-size: 2rem; line-height: 1.2; margin: 20px 0 8px; }
+    .tagline { color: var(--muted); font-size: 1.1rem; margin: 0 auto 24px; max-width: 520px; }
+    .badge { display: inline-block; }
+    .badge img { height: 54px; width: auto; display: block; }
+    h2 { font-size: 1.2rem; margin: 44px 0 12px; color: var(--accent); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+    .card { background: var(--card); border: 1px solid var(--rule); border-radius: 14px; padding: 16px; }
+    .card h3 { margin: 0 0 4px; font-size: 1rem; }
+    .card p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+    a { color: var(--accent); }
+    footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--rule); color: var(--muted); font-size: 0.9rem; text-align: center; }
+  </style>
+</head>
+<body>
+<main>
+  <section class="hero">
+    <img src="512.png" alt="AFU app icon">
+    <h1>AFU Volunteer Portal</h1>
+    <p class="tagline">Log your hours, record donations, and work with your branch, all in one app. Built for Advocacy for the Unhoused volunteers.</p>
+    <!-- TODO: swap href for the app's apps.apple.com/app/id… link once approved -->
+    <a class="badge" href="https://apps.apple.com/"><img src="https://tools.applemarketingtools.com/api/badges/download-on-the-app-store/black/en-us" alt="Download on the App Store"></a>
+  </section>
+
+  <h2>For every volunteer</h2>
+  <div class="grid">
+    <div class="card"><h3>Log hours</h3><p>Record time from events and keep a running total on your Home screen.</p></div>
+    <div class="card"><h3>Record donations</h3><p>Scan a slip's barcode with your camera and log the amount in seconds.</p></div>
+    <div class="card"><h3>Task Board</h3><p>See your assigned tasks, read the instructions, and mark them done.</p></div>
+    <div class="card"><h3>Reimbursements</h3><p>Submit supply expenses with a receipt photo and track their status.</p></div>
+    <div class="card"><h3>Notifications</h3><p>Get alerts for new tasks, approvals, and branch updates.</p></div>
+    <div class="card"><h3>Quick sign-in</h3><p>Sign in with Apple or Google and join your branch right away.</p></div>
+  </div>
+
+  <h2>For Branch Presidents</h2>
+  <div class="grid">
+    <div class="card"><h3>Start a branch</h3><p>No AFU branch nearby? Set one up from the app and lead it.</p></div>
+    <div class="card"><h3>Manage your roster</h3><p>New members join your roster automatically.</p></div>
+    <div class="card"><h3>Build teams</h3><p>Create teams, add members, and assign officers.</p></div>
+    <div class="card"><h3>Assign tasks</h3><p>Post tasks with instructions and follow their progress.</p></div>
+  </div>
+
+  <h2>About AFU</h2>
+  <p>Advocacy for the Unhoused is a student-run nonprofit that supports people experiencing homelessness through donation drives, outreach, and community service. This app takes care of the paperwork so volunteers can spend their time helping.</p>
+
+  <footer>
+    <a href="support.html">Support</a> · <a href="privacy.html">Privacy Policy</a><br>
+    © 2026 Advocacy for the Unhoused
+  </footer>
+</main>
+</body>
+</html>
