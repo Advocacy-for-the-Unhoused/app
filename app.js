@@ -1645,7 +1645,7 @@ function injectWelcomeStyles() {
       background: rgba(0,0,0,0.55);
       backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
       opacity: 0; transition: opacity 0.25s ease;
-      font-family: 'Montserrat', sans-serif;
+      font-family: var(--font-body);
     }
     .afu-welcome-overlay.visible { opacity: 1; }
     .afu-welcome-card {
@@ -1660,7 +1660,7 @@ function injectWelcomeStyles() {
     .afu-welcome-overlay.visible .afu-welcome-card { transform: translateY(0) scale(1); }
     .afu-welcome-skip {
       position: absolute; top: 12px; right: 14px; z-index: 2;
-      background: none; border: none; cursor: pointer; font-family: 'Montserrat', sans-serif;
+      background: none; border: none; cursor: pointer; font-family: var(--font-body);
       font-size: 0.72rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
       color: var(--page-text, #F9F6F0); opacity: 0.75; padding: 6px 12px;
       min-height: 44px; min-width: 44px; width: auto; box-shadow: none;
@@ -1692,14 +1692,14 @@ function injectWelcomeStyles() {
     .afu-welcome-actions { display: flex; gap: 10px; align-items: center; }
     .afu-welcome-back {
       flex: 0 0 auto; background: none; border: none; cursor: pointer;
-      font-family: 'Montserrat', sans-serif; font-size: 0.82rem; font-weight: 700;
+      font-family: var(--font-body); font-size: 0.82rem; font-weight: 700;
       color: var(--page-text, #F9F6F0); opacity: 0.55;
       padding: 12px 6px; min-height: 44px; width: auto; box-shadow: none;
     }
     .afu-welcome-back:hover { opacity: 0.9; }
     .afu-welcome-next {
       flex: 1; min-height: 48px; background: var(--camp-orange, #B84A27); color: #fff;
-      border: none; border-radius: 14px; cursor: pointer; font-family: 'Montserrat', sans-serif;
+      border: none; border-radius: 14px; cursor: pointer; font-family: var(--font-body);
       font-size: 0.95rem; font-weight: 800; letter-spacing: 0.3px;
       box-shadow: 0 6px 18px rgba(200,82,45,0.35); transition: transform 0.12s, box-shadow 0.12s;
     }
