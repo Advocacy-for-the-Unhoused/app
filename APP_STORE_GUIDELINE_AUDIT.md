@@ -1,5 +1,7 @@
 # App Store Review Guidelines — Full Audit
 
+> **Superseded issue log:** see [HIG_AND_APP_STORE_AUDIT.md](HIG_AND_APP_STORE_AUDIT.md) (2026-10-22, later the same day). It adds the HIG audit, a new Critical issue (the public "Reviewer demo access" button) and corrections to the 4.5.6 and 2.5.19 rows below.
+
 **App:** AFU Volunteer Portal (`com.afu.volunteerportal`) — Capacitor-wrapped PWA, internal tool for Advocacy for the Unhoused volunteers.
 **Audited:** 2026-10-22 against the live [App Review Guidelines](https://developer.apple.com/app-store/review/guidelines/).
 **Legend:** ✅ Pass · ⬜ N/A · ⚠️ Issue logged · 🔍 Verify at runtime / in App Store Connect (can't be confirmed from code).

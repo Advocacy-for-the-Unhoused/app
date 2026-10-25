@@ -80,6 +80,7 @@ The project is universal (`TARGETED_DEVICE_FAMILY = "1,2"`). `#appContent` is `m
 **HIG:** Sign in with Apple / Authentication; Layout.
 Rendered order ([index.html:3072-3108](index.html:3072)): Google → Apple → "— or —" → **Privacy Policy** → **Reviewer demo access** → **Sign in with Face ID**. The "— or —" separator introduces two text links instead of the alternative sign-in button, and the main returning-user action ends up last, under small links.
 **Fix:** move `#biometricSignInOr` and `#biometricSignInBtn` above the links, and keep Privacy Policy as the last item. The demo link goes away with C1.
+**Status:** fixed in code (2026-10-24). The demo link was already gone (C1). The order is now Google → Apple → "— or —" → Sign in with Face ID → Privacy Policy, so the separator introduces the Face ID button, and Privacy Policy is the last item. No JS change was needed, because `initBiometricSignIn` and `biometricSignIn` look up both elements by id. Still needs a check on a device with a stored session, since the Face ID button only appears there.
 
 ### H5 — Notification permission is requested during sign-in, and again on every launch
 **HIG:** Privacy → Requesting permission; Notifications (ask in context, when the benefit is clear).
