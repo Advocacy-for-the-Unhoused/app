@@ -416,6 +416,27 @@
     /* ── Tab Views ── */
     .tab-view { width: 100%; }
 
+    /* ── Pushed screens (opened from Home, not tabs): title bar + back ──
+       "#appContent .tab-view" outranks the per-tab dark-mode button rules. */
+    .screen-header {
+      display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+      width: 100%; margin: 0 0 20px;
+      border-bottom: 1px solid var(--divider-line);
+    }
+    #appContent .tab-view button.screen-back {
+      justify-self: start; display: inline-flex; align-items: center; gap: 2px;
+      width: auto; min-height: 44px; margin: 0; padding: 0 12px 0 0;
+      background: none; border: none; box-shadow: none; transform: none;
+      font-family: 'Montserrat', sans-serif; font-size: 1rem; font-weight: 600;
+      text-transform: none; letter-spacing: 0; color: var(--orange-text);
+    }
+    #appContent .tab-view button.screen-back:hover { background: none; box-shadow: none; transform: none; opacity: 0.75; }
+    .screen-back-chev { font-size: 1.6rem; line-height: 1; margin-top: -3px; }
+    .screen-title {
+      margin: 0; font-family: 'Abril Fatface', serif; font-size: 1.15rem;
+      font-weight: normal; color: var(--page-text); text-align: center; white-space: nowrap;
+    }
+
     /* ── Section Divider ── */
     .udi-divider {
       display: flex;
@@ -3144,6 +3165,7 @@
         column-gap: 32px;
         align-items: start;
       }
+      #tabReimburse > .screen-header { grid-column: 1 / -1; }
 
       /* A lone form shouldn't stretch to 1040px — center it at form width. */
       body.is-pending #tabDonations,
@@ -3687,6 +3709,11 @@
   ──────────────────────────────────────────────── -->
   <div id="tabReimburse" class="tab-view hidden">
 
+    <div class="screen-header">
+      <button class="screen-back" onclick="switchTab('home')" aria-label="Back to Home"><span class="screen-back-chev" aria-hidden="true">‹</span>Home</button>
+      <h2 class="screen-title">Reimbursement</h2>
+    </div>
+
     <div class="card" id="expense-form-card">
       <h3>Request Reimbursement</h3>
       <p style="font-size:0.85rem;color:#555;line-height:1.6;margin-bottom:12px;">
@@ -4025,6 +4052,7 @@
   <!-- zelle QR data image removed 2026-07-29 -->
     <!-- ── BOSTON SUB-HEADER ── -->
     <div class="boston-sub-header">
+      <button class="screen-back" onclick="switchTab('home')" aria-label="Back to Home"><span class="screen-back-chev" aria-hidden="true">‹</span>Home</button>
       <div class="boston-sub-header-left">
         <div class="wordmark">Advocacy for the <span>Unhoused</span></div>
         <div class="bsub js-trip-label">Boston Trip</div>
@@ -4456,10 +4484,12 @@
 
     } else if (tab === 'reimburse') {
       document.getElementById('tabReimburse').classList.remove('hidden');
+      document.getElementById('navHome').classList.add('active'); // pushed from Home
       if (typeof loadMyCompRequests === 'function') loadMyCompRequests();
 
     } else if (tab === 'boston') {
       document.getElementById('tabBoston').classList.remove('hidden');
+      document.getElementById('navHome').classList.add('active'); // pushed from Home
       if (typeof window.initBostonTrip === 'function') window.initBostonTrip();
       initBostonBanner();
 
