@@ -1985,6 +1985,10 @@
     .field-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .field { display: flex; flex-direction: column; gap: 5px; }
     .field.span-2 { grid-column: span 2; }
+    @media (max-width: 400px) {
+      .field-group { grid-template-columns: 1fr; }
+      .field.span-2 { grid-column: auto; }
+    }
     .field label { font-size: 0.58rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: rgba(26,19,17,0.62); }
     .field input, .field select {
       font-family: 'Montserrat', sans-serif; font-size: 0.875rem; font-weight: 600;
@@ -3309,11 +3313,11 @@
   <div class="reg-name-row" id="regNameRow">
     <div>
       <label for="regFname">First Name</label>
-      <input type="text" id="regFname" />
+      <input type="text" id="regFname" autocomplete="given-name" />
     </div>
     <div>
       <label for="regLname">Last Name</label>
-      <input type="text" id="regLname" />
+      <input type="text" id="regLname" autocomplete="family-name" />
     </div>
   </div>
 
@@ -3323,7 +3327,7 @@
   </div>
 
   <label for="regPhone">Phone Number (Optional)</label>
-  <input type="tel" id="regPhone" placeholder="(508) 555-0100" />
+  <input type="tel" id="regPhone" placeholder="(508) 555-0100" autocomplete="tel" />
 
   <label for="regBranch">Branch</label>
   <!-- Populated dynamically from the Branches sheet by loadBranchOptions().
@@ -3573,12 +3577,12 @@
 
       <label>UDI Number (1-999)</label>
       <div class="input-group">
-        <input id="udiDigits" placeholder="1–999" type="number" min="1" max="999">
+        <input id="udiDigits" placeholder="1–999" type="number" inputmode="numeric" min="1" max="999">
         <button id="scanBtn" type="button" aria-label="Scan with camera">📷</button>
       </div>
 
       <label>Donation Amount ($)</label>
-      <input id="amount" type="number" step="0.01" min="0" placeholder="0.00">
+      <input id="amount" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00">
 
       <p style="font-size:0.8rem;color:#555;margin:4px 0 0;">The fundraiser is filled in automatically from when the slip was printed.</p>
 
@@ -3716,7 +3720,7 @@
       <input id="hoursDate" type="date">
 
       <label for="hoursAmount">Hours</label>
-      <input id="hoursAmount" type="number" min="0.5" step="0.5" placeholder="e.g. 2">
+      <input id="hoursAmount" type="number" inputmode="decimal" min="0.5" step="0.5" placeholder="e.g. 2">
 
       <label for="hoursNotes">Notes <span class="hours-notes-optional">(optional)</span></label>
       <textarea id="hoursNotes" rows="2" maxlength="500"
@@ -3759,7 +3763,7 @@
       <input type="text" id="cr-desc" placeholder="e.g. Groceries for food pantry">
 
       <label for="cr-amount">Total Amount ($)</label>
-      <input type="number" id="cr-amount" min="0.01" step="0.01" placeholder="e.g. 24.99">
+      <input type="number" id="cr-amount" inputmode="decimal" min="0.01" step="0.01" placeholder="e.g. 24.99">
 
       <label>Receipt / Bill Photo</label>
       <div class="cr-photo-area" id="cr-photo-area" aria-label="Choose photo" onclick="document.getElementById('cr-photo-input').click()">
@@ -4007,7 +4011,7 @@
             </div>
             <div>
               <label for="hrs-assign-hrs">Hours</label>
-              <input type="number" id="hrs-assign-hrs" placeholder="e.g. 2.5" min="0.5" step="0.5">
+              <input type="number" id="hrs-assign-hrs" inputmode="decimal" placeholder="e.g. 2.5" min="0.5" step="0.5">
             </div>
             <div id="hrs-assign-status" class="hrs-status"></div>
             <button class="hrs-submit-btn" id="hrs-submit-btn" onclick="adminSubmitAssignHours()">Assign Hours</button>
