@@ -298,7 +298,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 20px;
+      padding: calc(20px + env(safe-area-inset-top, 0px)) 20px calc(20px + env(safe-area-inset-bottom, 0px));
     }
 
     #scannerContainer {
@@ -2372,7 +2372,9 @@
     justify-content: space-between;
     gap: 8px;
     position: sticky;
-    top: 0;
+    top: env(safe-area-inset-top, 0px);
+    /* fill the status-bar strip above the stuck header so content doesn't show through */
+    box-shadow: 0 calc(-1 * env(safe-area-inset-top, 0px)) 0 var(--cream);
     z-index: 100;
     width: 100%;
   }
