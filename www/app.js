@@ -357,11 +357,14 @@ window.onAppleSignedIn = async function(sub, email, givenName, familyName, autho
     }
 
     if (info.error || !info.firstName || info.firstName === 'User' || !info.branchCode || info.branchCode === 'X') {
-      volunteerEmail = email || '';
+      // Prefer the server's email (from Apple's verified id_token, present on
+      // every sign-in) — the client only gets it on the first authorization.
+      const appleEmail = info.email || email || '';
+      volunteerEmail = appleEmail;
       window._pendingAppleSub = sub;
       // Apple's Authentication Services already provided name/email (cached
       // per-sub for repeat sign-ins) — never ask for them again (Guideline 4)
-      prefillRegistrationIdentity(givenName, familyName, email);
+      prefillRegistrationIdentity(givenName, familyName, appleEmail);
       document.getElementById('authScreen').classList.add('hidden');
       document.getElementById('registerCard').classList.remove('hidden');
       loadBranchOptions();

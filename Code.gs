@@ -995,7 +995,10 @@ function appleSignIn_(authorizationCode) {
     const pendingReg = findPendingRegistration_(email, sub);
     if (pendingReg) return pendingReg;
 
-    return { error: 'Not found in roster' };
+    // Apple's client response only carries the email on the very first
+    // authorization, but the verified id_token always does — hand it back so
+    // registration never has to ask for it.
+    return { error: 'Not found in roster', email: email || '' };
   } catch (err) {
     return { error: err.message };
   }
