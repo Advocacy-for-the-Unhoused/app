@@ -1273,6 +1273,13 @@
       margin-top: 6px;
     }
 
+    .dash-goal-chev { font-size: 0.7rem; display: inline-block; transition: transform 0.2s; }
+    #dashGoalStat[aria-expanded="true"] .dash-goal-chev { transform: rotate(180deg); }
+    .dash-org-panel { grid-column: 1 / -1; }
+    .dash-org-panel.hidden { display: none; }
+    .dash-org-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+    .dash-org-num { font-family: 'Abril Fatface', serif; font-size: 1.35rem; color: var(--camp-orange); line-height: 1; }
+
     .dash-progress-track {
       width: 100%;
       height: 6px;
@@ -3446,13 +3453,23 @@
         <div class="dash-stat-num" id="dashHours">—</div>
         <div class="dash-stat-label">Hours Logged</div>
       </div>
-      <div class="dash-stat">
+      <div class="dash-stat dash-link" id="dashGoalStat" role="button" tabindex="0" aria-expanded="false" aria-controls="dashOrgPanel" onclick="toggleOrgPanel()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleOrgPanel()}">
         <div class="dash-stat-num" id="dashGoalRaised">—</div>
-        <div class="dash-stat-label">Branch Goal</div>
+        <div class="dash-stat-label">Branch Goal <i class="bi bi-chevron-down dash-goal-chev"></i></div>
         <div class="dash-progress-track">
           <div class="dash-progress-fill" id="dashGoalBar" style="width:0%"></div>
         </div>
         <div class="dash-goal-sub" id="dashGoalOf">Loading…</div>
+      </div>
+      <!-- AFU-wide totals. Hardcoded from the FY 2025–26 fiscal report until
+           the backend tracks org-wide and per-year history. -->
+      <div class="dash-stat dash-org-panel hidden" id="dashOrgPanel">
+        <div class="dash-stat-label">All of AFU · FY 2025–26</div>
+        <div class="dash-org-grid">
+          <div><div class="dash-org-num">$6,000+</div><div class="dash-goal-sub">raised across every branch</div></div>
+          <div><div class="dash-org-num">$5,000+</div><div class="dash-goal-sub">spent on supplies &amp; meals</div></div>
+          <div><div class="dash-org-num">2</div><div class="dash-goal-sub">Boston supply trips</div></div>
+        </div>
       </div>
     </div>
 
@@ -4395,6 +4412,12 @@
      the signed-in user's incomplete tasks from
      the Task Board, tapped through to the board.
   ───────────────────────────────────────── */
+  window.toggleOrgPanel = function() {
+    const panel = document.getElementById('dashOrgPanel');
+    const open = panel.classList.toggle('hidden') === false;
+    document.getElementById('dashGoalStat').setAttribute('aria-expanded', open);
+  };
+
   window.renderMyTasksCard = async function() {
     const card = document.getElementById('myTasksCard');
     if (!card) return;
