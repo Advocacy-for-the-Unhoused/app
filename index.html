@@ -1995,8 +1995,8 @@
     .ack-box { background: rgba(249,246,240,0.6); border: 1px solid var(--border); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
     .ack-text { font-size: 0.78rem; line-height: 1.6; color: rgba(26,19,17,0.7); }
     .checkbox-row { display: flex; align-items: flex-start; gap: 10px; }
-    .checkbox-row input[type="checkbox"] { width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; cursor: pointer; accent-color: var(--orange); }
-    .checkbox-row label { font-size: 0.78rem; font-weight: 700; color: var(--dark); cursor: pointer; line-height: 1.4; }
+    .checkbox-row input[type="checkbox"] { width: 24px; height: 24px; flex-shrink: 0; margin-top: 10px; cursor: pointer; accent-color: var(--orange); }
+    .checkbox-row label { flex: 1; min-height: 44px; padding: 12px 0; box-sizing: border-box; font-size: 0.78rem; font-weight: 700; color: var(--dark); cursor: pointer; line-height: 1.4; }
 
     .sig-note { font-size: 0.6rem; color: rgba(26,19,17,0.62); font-weight: 600; margin-top: 3px; font-style: italic; }
 
@@ -3293,24 +3293,24 @@
 
   <div class="reg-name-row" id="regNameRow">
     <div>
-      <label>First Name</label>
+      <label for="regFname">First Name</label>
       <input type="text" id="regFname" />
     </div>
     <div>
-      <label>Last Name</label>
+      <label for="regLname">Last Name</label>
       <input type="text" id="regLname" />
     </div>
   </div>
 
   <div id="regEmailGroup">
-    <label>Email</label>
+    <label for="regEmail">Email</label>
     <input type="email" id="regEmail" readonly />
   </div>
 
-  <label>Phone Number (Optional)</label>
+  <label for="regPhone">Phone Number (Optional)</label>
   <input type="tel" id="regPhone" placeholder="(508) 555-0100" />
 
-  <label>Branch</label>
+  <label for="regBranch">Branch</label>
   <!-- Populated dynamically from the Branches sheet by loadBranchOptions().
        These options are only a fallback if that request fails. -->
   <select id="regBranch" onchange="toggleNewBranchFields()">
@@ -3327,7 +3327,7 @@
 
   <!-- Shown only when "Starting a new branch" is selected above -->
   <div id="regNewBranchBlock" class="new-branch-block hidden">
-    <label>Branch Location</label>
+    <label for="regNewBranchLocation">Branch Location</label>
     <input type="text" id="regNewBranchLocation" placeholder="e.g. Lincoln-Sudbury High School, Boston" />
 
     <label style="margin-top:10px;">Branch Type</label>
@@ -3354,9 +3354,9 @@
 
   <label>Profile Photo (Optional)</label>
   <div class="reg-photo-row">
-    <div class="reg-photo-circle" onclick="document.getElementById('regFileInput').click()">
+    <div class="reg-photo-circle" aria-label="Choose profile photo" onclick="document.getElementById('regFileInput').click()">
       <img id="regPhotoPreview" alt="Profile preview" />
-      <span id="regCamIcon" style="font-size:1.5rem;">📷</span>
+      <span id="regCamIcon" style="font-size:1.5rem;" aria-hidden="true">📷</span>
     </div>
     <span class="reg-photo-hint">Optional — a clear, face-forward photo<br>will appear on the volunteer team page.</span>
   </div>
@@ -3397,7 +3397,7 @@
     <div class="subtitle">Advocacy for the Unhoused</div>
 
     <!-- Profile header — tap to add / change photo -->
-    <div class="dash-profile-card dash-profile-tappable" id="dashProfileCard" onclick="openProfilePhotoPicker()">
+    <div class="dash-profile-card dash-profile-tappable" id="dashProfileCard" aria-label="Change profile photo" onclick="openProfilePhotoPicker()">
       <div class="dash-avatar-wrap">
         <img id="dashAvatar" class="dash-avatar"
              src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='24' r='14' fill='%23ddd'/%3E%3Cellipse cx='32' cy='60' rx='22' ry='16' fill='%23ddd'/%3E%3C/svg%3E"
@@ -3559,7 +3559,7 @@
       <label>UDI Number (1-999)</label>
       <div class="input-group">
         <input id="udiDigits" placeholder="1–999" type="number" min="1" max="999">
-        <button id="scanBtn" type="button">📷</button>
+        <button id="scanBtn" type="button" aria-label="Scan with camera">📷</button>
       </div>
 
       <label>Donation Amount ($)</label>
@@ -3747,7 +3747,7 @@
       <input type="number" id="cr-amount" min="0.01" step="0.01" placeholder="e.g. 24.99">
 
       <label>Receipt / Bill Photo</label>
-      <div class="cr-photo-area" id="cr-photo-area" onclick="document.getElementById('cr-photo-input').click()">
+      <div class="cr-photo-area" id="cr-photo-area" aria-label="Choose photo" onclick="document.getElementById('cr-photo-input').click()">
         <div class="cr-photo-placeholder" id="cr-photo-placeholder">
           <i class="bi bi-camera"></i>
           Tap to take a photo or upload
@@ -4544,6 +4544,9 @@
       if (s !== el && !s.contains(el) && !el.contains(s)) s.classList.remove('open');
     });
     el.classList.toggle('open');
+    document.querySelectorAll('#tabAdmin .admin-section > .admin-section-hdr').forEach(function(h) {
+      h.setAttribute('aria-expanded', h.parentElement.classList.contains('open') ? 'true' : 'false');
+    });
   }
   window.toggleAdminSection = toggleAdminSection;
 
@@ -8580,5 +8583,37 @@
   };
 </script>
 
+<script>
+  // VoiceOver/keyboard: anything clickable that isn't a native control gets
+  // role="button" + focus + Enter/Space. Backdrops (onclick guarded by
+  // event.target===this) are dismiss surfaces, not buttons, so they're skipped.
+  (function () {
+    var SEL = 'div[onclick],span[onclick],i[onclick],li[onclick],img[onclick]';
+    function fix(root) {
+      if (!root.querySelectorAll) return;
+      var els = root.matches && root.matches(SEL) ? [root] : [];
+      els = els.concat([].slice.call(root.querySelectorAll(SEL)));
+      els.forEach(function (el) {
+        if (el.hasAttribute('role') || /event\.target\s*===?\s*this/.test(el.getAttribute('onclick'))) return;
+        el.setAttribute('role', 'button');
+        if (!el.hasAttribute('tabindex')) el.tabIndex = 0;
+        if (el.classList.contains('admin-section-hdr'))
+          el.setAttribute('aria-expanded', el.parentElement.classList.contains('open') ? 'true' : 'false');
+      });
+    }
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      var t = e.target;
+      if (t && t.getAttribute && t.getAttribute('role') === 'button' && t.hasAttribute('onclick')) {
+        e.preventDefault();
+        t.click();
+      }
+    });
+    fix(document.body);
+    new MutationObserver(function (muts) {
+      muts.forEach(function (m) { m.addedNodes.forEach(fix); });
+    }).observe(document.body, { childList: true, subtree: true });
+  })();
+</script>
 </body>
 </html>
