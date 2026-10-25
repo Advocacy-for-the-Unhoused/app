@@ -22,17 +22,25 @@ function driveImgId(idOrUrl) {
 async function fetchDriveImage(idOrUrl) {
   const id = driveImgId(idOrUrl);
   if (!id) return '';
-  try {
-    const body = 'action=getImage&id=' + encodeURIComponent(id) +
-      '&actorEmail=' + encodeURIComponent(volunteerEmail || '');
-    const res  = await fetch(SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body
-    });
-    const data = await res.json();
-    return data && data.dataUrl ? data.dataUrl : '';
-  } catch (e) { return ''; }
+  const body = 'action=getImage&id=' + encodeURIComponent(id) +
+    '&actorEmail=' + encodeURIComponent(volunteerEmail || '');
+  // Apps Script intermittently 404s the echo redirect or answers with a stray
+  // error, so retry a couple of times before giving up.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.dataUrl) return data.dataUrl;
+      }
+    } catch (e) { /* network hiccup — retry */ }
+    await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
+  }
+  return '';
 }
 
 // Set an <img>'s src from a private Drive id/URL. Leaves the element untouched
