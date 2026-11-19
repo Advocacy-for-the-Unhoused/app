@@ -224,9 +224,11 @@ AFU already has an **organization** developer account, so the 12-tester /
      device push token; for app functionality only; no ads, no tracking; data
      encrypted in transit; users can request deletion.
    - **Account deletion**: Play requires a **web link** where people can
-     request deletion without the app (in-app deletion alone isn't enough). A
-     page or form on `app.hauhelps.org` explaining how to request deletion
-     works.
+     request deletion without the app (in-app deletion alone isn't enough).
+     Use `https://app.hauhelps.org/delete-account.html` (`delete-account.html`
+     at the repo root; live once merged to `main`). It covers in-app deletion,
+     deletion by email, and deleting only some data (e.g. a phone number),
+     which AFU handles by email within 30 days.
    - **Ads**: no. **Content rating** questionnaire.
    - **Target audience**: some volunteers are under 18. Choose the age groups
      honestly; picking any group **under 13** brings in Google's Families
