@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "475682222670",
+    "project_id": "afu-volunteer-portal",
+    "storage_bucket": "afu-volunteer-portal.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:475682222670:android:52220be9e713dcd3f9091f",
+        "android_client_info": {
+          "package_name": "com.afu.volunteerportal"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAXXor1RYvb-GEKGELpDIBJ5DQL2hNLtts"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
