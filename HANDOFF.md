@@ -8,8 +8,8 @@
 
 ## 1. What this project is
 
-A single-page **PWA** for Advocacy for the Unhoused (AFU) volunteers, wrapped as an
-iOS app via Capacitor. No build step and no framework on the frontend — you edit
+A single-page **PWA** for Advocacy for the Unhoused (AFU) volunteers, wrapped as iOS and
+Android apps via Capacitor. No build step and no framework on the frontend — you edit
 `index.html` / `app.js` directly.
 
 | Layer | Tech |
@@ -20,6 +20,7 @@ iOS app via Capacitor. No build step and no framework on the frontend — you ed
 | Auth | Google Identity Services (JWT) |
 | Push | Firebase Cloud Messaging (FCM) |
 | iOS wrapper | Capacitor → built on Codemagic → TestFlight/App Store |
+| Android wrapper | Capacitor → built on Codemagic → Play Console internal testing → Google Play (see [docs/ANDROID.md](docs/ANDROID.md)) |
 | Hosting | GitHub Pages, custom domain `app.hauhelps.org` (see `CNAME`) |
 | Deploy tool | `clasp` (Apps Script CLI) |
 
@@ -41,6 +42,9 @@ outgoing dev / AFU to grant:
 | **Apple Developer / App Store Connect** | Team member on the AFU team | iOS builds, TestFlight, review |
 | **Codemagic** | Account access **+ a fresh API token** (the old one is being rotated) | CI builds the iOS app |
 | **Firebase** | Access to the FCM project | Push notifications |
+| **Google Play Console** | User on AFU's organization developer account | Android builds, testing, review |
+| **Google Cloud project `1016131808942`** | Access to the project that owns the Google sign-in client IDs | Android OAuth clients (SHA-1s) |
+| **Android upload keystore** | The `.jks` file + passwords (password manager, never git) | Signing Android releases |
 | **DNS for `app.hauhelps.org`** | Registrar/Cloudflare access | Controls the live domain |
 
 > **Deeper context lives in [`docs/internal-notes/`](docs/internal-notes/).** That folder
@@ -182,6 +186,12 @@ publishes to TestFlight. A git push alone does **not** live-update installed app
 new build ships the code. After changing frontend files, make sure `www/` is synced
 (the pre-commit hook does this) or the iOS build gets stale assets.
 
+### Android app
+Same idea: Codemagic's `android-play` workflow runs `npx cap sync android`, builds a
+signed `.aab` and uploads it to Play Console's Internal testing track as a draft.
+`versionCode` is set automatically. Setup, emulator testing and the Google sign-in /
+Firebase / keystore steps are in **[docs/ANDROID.md](docs/ANDROID.md)**.
+
 ---
 
 ## 6. Gotchas that will bite you
@@ -218,7 +228,9 @@ These cost real debugging time. Internalize them before your first change.
 | `service-worker.js` | PWA offline cache |
 | `www/` | Capacitor build target — mirror of root `index.html`/`app.js` |
 | `ios/` | Capacitor iOS project |
-| `codemagic.yaml` | iOS CI/CD config |
+| `android/` | Capacitor Android project |
+| `codemagic.yaml` | iOS + Android CI/CD config |
+| `docs/ANDROID.md` | Android setup, emulator testing, Play Console, Codemagic |
 | `.clasp.json` | Apps Script project ID + deploy config |
 | `DEVELOPER.md` | Full architecture reference — **read this** |
 | `BUG_AUDIT.md` | Historical bug audit notes |

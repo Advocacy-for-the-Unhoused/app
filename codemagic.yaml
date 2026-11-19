@@ -49,3 +49,49 @@ workflows:
         key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
         issuer_id: $APP_STORE_CONNECT_ISSUER_ID
         submit_to_testflight: true
+
+  android-play:
+    name: AFU Android Play Build
+    max_build_duration: 60
+    environment:
+      # Upload keystore uploaded in Codemagic → Team settings → Code signing
+      # identities → Android keystores, with this reference name. Codemagic then
+      # sets CM_KEYSTORE_PATH / CM_KEYSTORE_PASSWORD / CM_KEY_ALIAS /
+      # CM_KEY_PASSWORD, which android/app/build.gradle reads.
+      android_signing:
+        - afu_upload_keystore
+      # Environment group holding GCLOUD_SERVICE_ACCOUNT_CREDENTIALS: the JSON key
+      # of the Google Cloud service account that has access in Play Console.
+      groups:
+        - google_play
+      vars:
+        PACKAGE_NAME: "com.afu.volunteerportal"
+      node: "22"
+      java: 21
+    scripts:
+      - name: Install npm dependencies
+        script: npm install --legacy-peer-deps
+      - name: Sync Capacitor to Android
+        script: npx cap sync android
+      - name: Point Gradle at the Android SDK
+        script: echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/android/local.properties"
+      - name: Build signed app bundle (AAB)
+        script: |
+          # Every Play upload needs a higher versionCode: ask Play for the highest
+          # one already uploaded and add 1. (Before the first manual upload Play
+          # has none, so this falls back to 1.)
+          LATEST=$(google-play get-latest-build-number --package-name "$PACKAGE_NAME" 2>/dev/null || echo 0)
+          export ANDROID_VERSION_CODE=$((LATEST + 1))
+          echo "Building versionCode $ANDROID_VERSION_CODE"
+          cd android
+          ./gradlew bundleRelease
+    artifacts:
+      - android/app/build/outputs/**/*.aab
+    publishing:
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        track: internal
+        # Play only accepts drafts until the app's first release is rolled out
+        # in Play Console; switch to false after that if you want auto-release
+        # to internal testers.
+        submit_as_draft: true

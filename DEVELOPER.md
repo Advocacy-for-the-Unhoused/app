@@ -50,7 +50,7 @@ There is **no build step, no framework, no npm install needed** for the frontend
 | Database | Google Sheets (multiple spreadsheets — see Section 5) |
 | Auth | Google Identity Services (GSI) — JWT-based |
 | Push notifications | Firebase Cloud Messaging (FCM) via Capacitor |
-| Mobile wrapper | Capacitor (iOS — pending Apple enrollment) |
+| Mobile wrapper | Capacitor — iOS (live) and Android (see `docs/ANDROID.md`) |
 | PWA | `service-worker.js` — caches assets for offline |
 | Deploy tool | `clasp` (Google Apps Script CLI) |
 
@@ -432,7 +432,7 @@ Push notifications use **Firebase Cloud Messaging (FCM)**. The setup is fully bu
 
 ### How it works
 
-1. When the app loads on a native device (iOS via Capacitor), `registerPushNotifications()` in `app.js` requests permission and gets an FCM token
+1. When the app loads on a native device (iOS or Android via Capacitor), `registerPushNotifications()` in `app.js` requests permission and gets an FCM token
 2. Token is stored via `action=storeFcmToken` → saved to the "FCM Tokens" sheet in ROSTER_SS_ID
 3. When GAS wants to send a push, it looks up the token by email, gets a Google OAuth token via service account, and calls the FCM HTTP v1 API
 

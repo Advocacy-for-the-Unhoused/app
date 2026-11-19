@@ -6,3 +6,9 @@ ios/App/App.xcworkspace/
 192.png
 512.png
 PASSWORD_VAULT_FEATURE.md
+
+# Android: never commit signing keys or local SDK paths
+*.jks
+*.keystore
+android/keystore.properties
+android/local.properties
