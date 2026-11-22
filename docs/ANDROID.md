@@ -102,6 +102,12 @@ They are **different projects**. That matters:
 If sign-in fails with error **10** / "developer error", the SHA-1 of the build
 you're running isn't registered in project `1016131808942`.
 
+If it fails with **"You CANNOT use scopes without modifying the main
+activity"**, `MainActivity.java` has lost its Social Login hook (the
+`ModifiedMainActivityForSocialLoginPlugin` interface and the `onActivityResult`
+forwarding). Keep both: they let Google return the result of its permission
+screen to the plugin, otherwise sign-in can hang.
+
 ---
 
 ## 3. Firebase (push notifications)
