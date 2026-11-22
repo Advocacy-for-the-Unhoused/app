@@ -84,7 +84,7 @@ function openAppearanceMenu() {
 }
 window.openAppearanceMenu = openAppearanceMenu;
 
-// Keep the iOS status bar (clock, battery) readable: light text on the dark
+// Keep the status bar (clock, battery) readable: light text on the dark
 // theme, dark text on the light theme. Capacitor's 'DARK' style = light text.
 function syncStatusBar() {
   if (!window.Capacitor?.isNativePlatform()) return;
@@ -108,6 +108,69 @@ function haptic(type = 'medium') {
     Haptics.impact({ style: type.toUpperCase() });
   }
 }
+
+// ===== PLATFORM =====
+// 'ios' | 'android' | 'web'. Use for the few places iOS and Android differ
+// (Sign in with Apple is iOS-only; settings wording; biometric names).
+function nativePlatform() {
+  return window.Capacitor?.getPlatform ? window.Capacitor.getPlatform() : 'web';
+}
+window.nativePlatform = nativePlatform;
+const IS_ANDROID = nativePlatform() === 'android';
+
+// ===== ANDROID BACK BUTTON =====
+// Android has a system Back button/gesture. Without a handler Capacitor closes
+// the whole app, even with a popup open. Instead: close the top popup, else
+// go back to Home, else move the app to the background (Android's normal
+// behaviour on an app's main screen).
+const BACK_OVERLAY_SELECTOR = [
+  '.confirm-sheet-overlay', '#cameraModal', '.privacy-modal-overlay',
+  '.rec-help-bg', '.modal-backdrop', '.modal-bg'
+].join(',');
+const BACK_CLOSE_LABEL = /^\s*(cancel|close|close scanner|no thanks|not now|done|back)\s*$/i;
+
+function isShown(el) {
+  if (!el.isConnected || el.classList.contains('hidden')) return false;
+  const cs = getComputedStyle(el);
+  return cs.display !== 'none' && cs.visibility !== 'hidden' && el.getClientRects().length > 0;
+}
+
+function closeTopOverlay() {
+  const open = [...document.querySelectorAll(BACK_OVERLAY_SELECTOR)].filter(isShown);
+  if (!open.length) return false;
+  // Topmost = highest z-index; later in the document wins a tie.
+  const z = el => parseInt(getComputedStyle(el).zIndex, 10) || 0;
+  const top = open.reduce((a, b) => (z(b) >= z(a) ? b : a));
+  const btn = top.querySelector('.confirm-sheet-cancel, #closeScan') ||
+    [...top.querySelectorAll('button')].find(b => isShown(b) && BACK_CLOSE_LABEL.test(b.textContent));
+  if (btn) {
+    btn.click();
+  } else {
+    // Popups without a close button close on a tap outside the box (their
+    // handlers check event.target === overlay); Escape covers the rest.
+    top.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  }
+  return true; // never exit the app while a popup was open
+}
+
+function initAndroidBackButton() {
+  if (!IS_ANDROID) return;
+  const AppPlugin = window.Capacitor.Plugins.App;
+  if (!AppPlugin) return;
+  AppPlugin.addListener('backButton', () => {
+    if (closeTopOverlay()) return;
+    const nav = document.getElementById('mainNav');
+    const home = document.getElementById('tabHome');
+    const signedIn = nav && !nav.classList.contains('hidden');
+    if (signedIn && home && home.classList.contains('hidden') && typeof switchTab === 'function') {
+      switchTab('home');
+      return;
+    }
+    AppPlugin.minimizeApp();
+  });
+}
+document.addEventListener('DOMContentLoaded', initAndroidBackButton);
 
 // ===== JWT PARSE =====
 function parseJwt(token) {
@@ -986,9 +1049,21 @@ async function submitHoursRequest() {
 }
 
 // =====================================================
-// BIOMETRIC AUTH (Face ID / Touch ID via Capacitor)
+// BIOMETRIC AUTH (Face ID / Touch ID on iOS, fingerprint / face unlock on Android)
 // =====================================================
 const BIOMETRIC_AUTH_KEY = 'afu_stored_auth';
+
+// Button label for the device's biometric type. BiometryType values from
+// @aparajita/capacitor-biometric-auth: 1 touchId, 2 faceId (iOS);
+// 3 fingerprint, 4 face, 5 iris (Android).
+function biometryName(biometry) {
+  const types = biometry?.biometryTypes || [biometry?.biometryType];
+  if (types.includes(2)) return 'Face ID';
+  if (types.includes(1)) return 'Touch ID';
+  if (types.includes(3)) return 'Fingerprint';
+  if (types.includes(4)) return 'Face Unlock';
+  return IS_ANDROID ? 'Fingerprint or Face' : 'Face ID';
+}
 
 async function storeAuthForBiometric(payload) {
   if (!window.Capacitor?.isNativePlatform()) return;
@@ -1040,8 +1115,17 @@ async function initBiometricSignIn() {
     const orEl = document.getElementById('biometricSignInOr');
     const lbl  = btn?.querySelector('.biometric-type-label');
 
-    const isFaceId = biometry.biometryTypes?.includes(2); // BiometryType.faceId = 2
-    if (lbl) lbl.textContent = isFaceId ? 'Sign in with Face ID' : 'Sign in with Touch ID';
+    const bioName = biometryName(biometry);
+    if (lbl) lbl.textContent = 'Sign in with ' + bioName;
+    // The built-in icon is a face scan; show a fingerprint for fingerprint sensors.
+    const bioIcon = btn?.querySelector('svg');
+    if (bioIcon && /Fingerprint/.test(bioName)) {
+      const fp = document.createElement('i');
+      fp.className = 'bi bi-fingerprint';
+      fp.setAttribute('aria-hidden', 'true');
+      fp.style.cssText = 'font-size:22px;margin-right:9px;vertical-align:middle;';
+      bioIcon.replaceWith(fp);
+    }
     if (btn)  btn.classList.remove('hidden');
     if (orEl) orEl.classList.remove('hidden');
 
@@ -1073,7 +1157,9 @@ async function biometricSignIn(auto = false) {
       reason: 'Verify your identity to sign in to AFU',
       cancelTitle: 'Sign In Another Way',
       allowDeviceCredential: false,
-      iosFallbackTitle: ''
+      iosFallbackTitle: '',
+      androidTitle: 'Sign in to AFU',
+      androidSubtitle: 'Use your fingerprint or face to continue'
     });
 
     // Biometric passed — sign in with stored credentials
@@ -1244,11 +1330,15 @@ async function askForNotifications(reason, force = false) {
   try {
     const perm = await FirebaseMessaging.checkPermissions();
     if (perm.receive === 'granted') {
-      if (force) showToast('Notifications are on. You can turn them off in the iOS Settings app.', 'info');
+      if (force) showToast(IS_ANDROID
+        ? 'Notifications are on. You can turn them off in your phone’s Settings app → Apps → AFU → Notifications.'
+        : 'Notifications are on. You can turn them off in the iOS Settings app.', 'info');
       return registerPushNotifications();
     }
     if (perm.receive === 'denied') {
-      if (force) showToast('Notifications are off for AFU. To turn them on, open the iOS Settings app → AFU → Notifications.', 'info');
+      if (force) showToast(IS_ANDROID
+        ? 'Notifications are off for AFU. To turn them on, open your phone’s Settings app → Apps → AFU → Notifications.'
+        : 'Notifications are off for AFU. To turn them on, open the iOS Settings app → AFU → Notifications.', 'info');
       return;
     }
     if (!(await confirmSheet({ title: 'Turn on notifications?', message: reason, confirmLabel: 'Turn On Notifications', cancelLabel: 'Not Now' }))) {

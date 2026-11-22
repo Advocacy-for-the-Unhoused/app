@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <!-- Home-screen name; matches the iOS CFBundleDisplayName ("AFU"). -->
+    <string name="app_name">AFU</string>
+    <string name="title_activity_main">AFU</string>
+    <string name="package_name">com.afu.volunteerportal</string>
+    <string name="custom_url_scheme">com.afu.volunteerportal</string>
+    <!-- Push notification channel (shown in Android Settings > Apps > AFU > Notifications). -->
+    <string name="default_notification_channel_id">afu_updates</string>
+    <string name="default_notification_channel_name">AFU updates</string>
+    <string name="default_notification_channel_description">Hours approvals, tasks, meetings and trip reminders</string>
+</resources>
