@@ -60,6 +60,13 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
+    <!-- screenOrientation="portrait" above makes Google Play assume the device
+         MUST support portrait, which hides the app from devices that don't
+         report it (Chromebooks, some tablets/TVs) and blocks Play review.
+         Declaring it optional keeps the portrait lock on phones without
+         limiting where the app can be installed. -->
+    <uses-feature android:name="android.hardware.screen.portrait" android:required="false" />
+
     <!-- Android 13+ notification permission (asked at runtime by the
          FirebaseMessaging plugin). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
